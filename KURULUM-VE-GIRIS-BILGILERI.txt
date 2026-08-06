@@ -1,0 +1,40 @@
+TAIS ABYS WINDOWS MASAÜSTÜ DEMO
+===============================
+
+1) Kurulum ve çalıştırma
+------------------------
+- "TAIS-ABYS-Desktop-Setup-1.0.0-x64.exe" dosyasını çalıştırın.
+- Kurulum sihirbazı "TAIS ABYS" masaüstü ve Başlat menüsü kısayollarını oluşturur.
+- Kısayola çift tıklayın. ABYS kendi Windows penceresinde açılır; tarayıcı veya
+  komut penceresi açmanız gerekmez.
+- Uygulama gereken yerel hizmeti ve boş bir yerel portu otomatik yönetir.
+- Pencere kapatıldığında yerel hizmet de durdurulur. Aynı anda ikinci ABYS örneği açılmaz.
+
+2) Giriş
+--------
+- E-posta: ceo@tais.demo
+- Parola: abys-demo-2026
+- Parola kaynağı: paket içindeki .env.example dosyasındaki
+  TAIS_DEMO_ADMIN_PASSWORD değeri.
+- E-posta büyük/küçük harfe duyarsızdır; baştaki/sondaki boşluklar temizlenir.
+- Bu hesap yalnızca deterministik TAIS gösterimi içindir.
+
+3) Veriler, günlükler ve kaldırma
+---------------------------------
+- Yerel veri: %APPDATA%\TAIS ABYS\data
+- Çalışma günlükleri: %APPDATA%\TAIS ABYS\logs\desktop.log
+- Kaldırma sırasında yerel demo verisi otomatik silinmez.
+- Kaynak koddan kullanılan eski .cmd dosyaları geliştirme/servis tanısı içindir;
+  normal masaüstü kullanımında gerekli değildir.
+
+4) Bitrix24 sınırı
+------------------
+Bu paket Bitrix24 uyumlu sentetik verilerle DEMO MODUNDA çalışır.
+Arayüzde connected=false görünür. Gerçek portal adresi ve geçerli kimlik
+bilgileri doğrulanmadığı sürece canlı Bitrix24 bağlantısı iddia edilmez.
+
+5) Kaynak paket ve güvenlik
+---------------------------
+- .env.local pakete dahil değildir.
+- Gerçek parola, API anahtarı, Bitrix24 tokenı veya müşteri verisi içermez.
+- Kaynak ZIP içinde node_modules, .git, önbellek, günlük ve eski ZIP bulunmaz.

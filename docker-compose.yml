@@ -1,0 +1,27 @@
+services:
+  abys:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      AI_POLICY: ${AI_POLICY:-LOCAL_ONLY}
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:4b-instruct}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ABYS_DB_DIR: /app/.data/abys-db
+    volumes:
+      - abys-data:/app/.data
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+volumes:
+  abys-data:
+  ollama-data:

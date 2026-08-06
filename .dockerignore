@@ -1,0 +1,12 @@
+node_modules
+.next
+.data
+.git
+.env*
+npm-debug.log*
+Dockerfile
+docker-compose.yml
+.dockerignore
+*.tsbuildinfo
+coverage
+evals/overnight-*.log

@@ -1,0 +1,67 @@
+TAIS ABYS WINDOWS MASAÜSTÜ DEMO - FINAL QA
+==========================================
+Tarih: 2026-07-23 (Europe/Istanbul)
+
+TEKNOLOJİ VE PAKET
+------------------
+- Electron 43.2.0, Electron Builder 26.15.3, NSIS x64
+- Next.js 16.2.11 standalone yerel hizmet
+- Paket içi Windows x64 Node.js çalışma zamanı; sistem Node kurulumu gerekmez
+- Otomatik boş loopback portu, tek uygulama örneği, AppData veri/log dizinleri
+- Installer SHA-256:
+  ACFF09A69C9E1B8ED0C287BCAE4A0FA5293780F013F224F9DB6A91B2D492FCE7
+
+GİRİŞ QA
+--------
+- Geçersiz ceo@tais.demo / yanlis-parola: PASS (HTTP 401)
+- Görünür mesaj: "E-posta ya da parola hatalı.": PASS
+- Hatalı denemeden sonra e-posta/parola alanları korunuyor: PASS
+- Geçerli ceo@tais.demo / abys-demo-2026: PASS (HTTP 200)
+- Büyük/küçük harf ve baştaki/sondaki boşluk normalizasyonu: PASS
+- Başarılı giriş sonrası /dashboard yönlendirmesi: PASS
+- Session cookie: HttpOnly, SameSite=Lax, masaüstü HTTP için Secure=false
+- Parola istemci bundle'ına veya loglara yazılmıyor; kaynak .env.example
+
+LOGO QA
+-------
+- Kaynak: assets/branding/abys-original.jpeg (kullanıcının verdiği 1600x1600 dosyanın kopyası)
+- Saydam çıktı: public/logo-abys-original-transparent.png
+- Alfa sınırı: x=172..1427, y=129..1326; 1600x1600 tuval korunuyor
+- 1426x923 içerik alanı: görünür, object-fit=contain
+- 1012x683 içerik alanı: görünür, object-fit=contain
+- Windows ikonu: desktop/assets/abys.ico
+
+KALICI KONTROLLER
+-----------------
+- npx tsc --noEmit: PASS, 0 hata
+- npm run lint: PASS, 0 hata
+- npm test: PASS, 28 test dosyası / 352 test
+- npm audit --omit=dev: PASS, 0 vulnerability
+- npm run build: PASS, Next.js 16.2.11, 59 rota
+- npm run desktop:package: PASS, NSIS x64 installer üretildi
+
+PAKETLENMİŞ UYGULAMA QA
+-----------------------
+- Gerçek görünür BrowserWindow oluşturuldu: PASS
+- İkinci çakışan uygulama örneği engellendi: PASS
+- Başlatma / kapanış / yeniden başlatma: PASS
+- Child hizmet kapanıştan sonra durdu: PASS
+- Dashboard: 200
+- Reports sayfası + executive summary/analysis API: 200
+- Ask ABYS sayfası + mevcut TAIS verisine dayalı kanıtlı cevap: 200
+- Decisions sayfası + decision-cases API: 200
+- Actions sayfası + actions API: 200
+- Risks API: 200
+- Bitrix24 status: mode=demo, connected=false
+
+PAKET İÇERİĞİ
+--------------
+- Installer içinde Node, Next standalone runtime ve saydam özgün logo mevcut
+- Runtime içinde .env, .env.local, log veya PID dosyası yok
+- Kaynak tesliminde node_modules, .git, .env, .env.local, cache, log,
+  eski ZIP, yerel veritabanı ve geçici QA dizinleri hariç tutuldu
+
+BİLİNEN SINIRLAMA
+-----------------
+- Installer Authenticode kod imzasına sahip değildir; Windows SmartScreen
+  bilinmeyen yayıncı uyarısı gösterebilir. Kurumsal sertifika sağlanmadı.

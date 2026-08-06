@@ -1,0 +1,52 @@
+{
+  "_comment": "ORNEK alan eslemesi. Gercek TAIS Bitrix24 portali baglandiginda YALNIZCA bu dosya (kopyasi) degisir; src/lib/integrations/bitrix24 kodu hicbir ozel alan adini sabit yazmaz. Standart Bitrix24 alanlari (TITLE, STAGE_ID, OPPORTUNITY, DATE_MODIFY, ASSIGNED_BY_ID, SOURCE_ID, COMPANY_ID...) esleme gerektirmez; yalnizca kuruma ozel (UF_*, ufCrm_*) alanlar burada tanimlanir.",
+  "company": {
+    "districtField": "UF_CRM_COMPANY_DISTRICT",
+    "categoryField": "UF_CRM_COMPANY_CATEGORY"
+  },
+  "contact": {
+    "roleField": "UF_CRM_CONTACT_ROLE"
+  },
+  "lead": {
+    "categoryField": "UF_CRM_LEAD_CATEGORY"
+  },
+  "deal": {
+    "categoryField": "UF_CRM_DEAL_CATEGORY",
+    "renewalDateField": "UF_CRM_DEAL_RENEWAL_DATE",
+    "startDateField": "UF_CRM_DEAL_START_DATE"
+  },
+  "activity": {
+    "followUpField": "UF_CRM_ACTIVITY_FOLLOW_UP"
+  },
+  "task": {
+    "categoryField": "UF_TASK_CATEGORY",
+    "locationField": "UF_TASK_LOCATION_ID",
+    "customerField": "UF_TASK_CUSTOMER_ID"
+  },
+  "user": {
+    "roleField": "WORK_POSITION"
+  },
+  "smartProcess": {
+    "serviceRequest": {
+      "entityTypeId": 1032,
+      "categoryField": "ufCrm1_CATEGORY",
+      "locationField": "ufCrm1_LOCATION_ID",
+      "customerField": "ufCrm1_CUSTOMER_ID",
+      "matchedTaskField": "ufCrm1_TASK_ID",
+      "openedAtField": "ufCrm1_OPENED_AT"
+    },
+    "complaint": {
+      "entityTypeId": 1034,
+      "categoryField": "ufCrm2_CATEGORY",
+      "locationField": "ufCrm2_LOCATION_ID",
+      "customerField": "ufCrm2_CUSTOMER_ID",
+      "openedAtField": "ufCrm2_OPENED_AT"
+    },
+    "qualityIssue": {
+      "entityTypeId": 1036,
+      "categoryField": "ufCrm3_CATEGORY",
+      "locationField": "ufCrm3_LOCATION_ID",
+      "openedAtField": "ufCrm3_OPENED_AT"
+    }
+  }
+}
