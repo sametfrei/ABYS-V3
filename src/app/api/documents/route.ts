@@ -1,24 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { z } from "zod";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { insertDocument, listDocuments } from "@/lib/db/repos/documents";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
-
-const MAX_CHARS = 400_000;
-const ALLOWED_TYPES = ["txt", "md", "csv", "policy", "report", "procedure", "incident"] as const;
-
-const postSchema = z.object({
-  title: z.string().trim().min(1).max(300),
-  sourceType: z
-    .preprocess((v) => (typeof v === "string" ? v.toLowerCase() : v), z.enum(ALLOWED_TYPES))
-    .optional(),
-  text: z.string().trim().min(1).max(MAX_CHARS),
-  allowedRoles: z.array(z.string().max(100)).optional(),
-});
+import { documentPostSchema } from "@/lib/data/route-schemas";
 
 /** Kurumun belgeleri — yalnızca rolün erişebildikleri (yetki-farkındalıklı). */
 export async function GET() {
@@ -46,7 +34,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
 
-  const parsed = await parseBody(req, postSchema);
+  const parsed = await parseBody(req, documentPostSchema);
   if (!parsed.ok) return parsed.response;
   const body = parsed.data;
 

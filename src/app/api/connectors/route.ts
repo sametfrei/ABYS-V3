@@ -1,0 +1,131 @@
+import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { z } from "zod";
+import { getSession } from "@/lib/auth/core";
+import { hasPermission, permissionError } from "@/lib/auth/permissions";
+import { parseBody } from "@/lib/validation";
+import { SESSION_COOKIE } from "../auth/login/route";
+import { getAdapter, getDefinition, listDefinitions } from "@/lib/connectors/registry";
+import { createConnectorConfig, listConnectorConfigs } from "@/lib/db/repos/connectors";
+import { recordAuditEvent } from "@/lib/db/repos/audit";
+
+const restConfigSchema = z.object({
+  kind: z.literal("rest"),
+  baseUrl: z.string().trim().min(1).max(2000),
+  path: z.string().trim().min(1).max(2000),
+  method: z.enum(["GET", "POST"]).optional(),
+  headers: z.record(z.string().max(300), z.string().max(2000)).optional(),
+  secretEnvVar: z.string().trim().max(200).optional(),
+  authType: z.enum(["none", "api_key", "bearer_token", "basic", "oauth2_client_credentials"]),
+  apiKeyHeader: z.string().trim().max(200).optional(),
+  entity: z.enum([
+    "customer",
+    "supplier",
+    "employee",
+    "product",
+    "order",
+    "invoice",
+    "payment",
+    "account",
+    "project",
+    "inventory",
+    "event",
+  ]),
+  recordsPath: z.string().trim().max(300).optional(),
+  idField: z.string().trim().min(1).max(300),
+  updatedAtField: z.string().trim().max(300).optional(),
+  fieldMap: z.record(z.string().max(100), z.string().max(300)),
+  pagination: z.discriminatedUnion("type", [
+    z.object({ type: z.literal("none") }),
+    z.object({
+      type: z.literal("page"),
+      pageParam: z.string().trim().min(1).max(100),
+      limitParam: z.string().trim().max(100).optional(),
+      pageSize: z.number().int().positive().max(10_000),
+      startPage: z.number().int().positive().optional(),
+    }),
+    z.object({
+      type: z.literal("cursor"),
+      cursorParam: z.string().trim().min(1).max(100),
+      cursorPath: z.string().trim().min(1).max(300),
+    }),
+  ]),
+  updatedSinceParam: z.string().trim().max(100).optional(),
+  maxPages: z.number().int().positive().max(100).optional(),
+  pageSize: z.number().int().positive().max(10_000).optional(),
+});
+
+const postSchema = z.object({
+  connectorId: z.string().trim().min(1).max(100),
+  name: z.string().trim().min(1).max(200),
+  config: restConfigSchema,
+});
+
+/** GET — kayıt defteri tanımları + org'un kayıtlı konfigürasyonları. */
+export async function GET() {
+  const store = await cookies();
+  const session = await getSession(store.get(SESSION_COOKIE)?.value);
+  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!hasPermission(session.role, "view_decisions")) {
+    return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
+  }
+  const configs = await listConnectorConfigs(session.orgId);
+  return NextResponse.json({
+    definitions: listDefinitions(),
+    configs: configs.map((c) => ({
+      id: c.id,
+      connectorId: c.connectorId,
+      name: c.name,
+      enabled: c.enabled,
+      createdAt: c.createdAt,
+      config: c.config,
+    })),
+  });
+}
+
+/** POST — yeni konnektör konfigürasyonu (sır değeri değil, ortam değişkeni adı). */
+export async function POST(req: NextRequest) {
+  const store = await cookies();
+  const session = await getSession(store.get(SESSION_COOKIE)?.value);
+  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!hasPermission(session.role, "ingest_data")) {
+    return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
+  }
+
+  const parsed = await parseBody(req, postSchema);
+  if (!parsed.ok) return parsed.response;
+
+  const definition = getDefinition(parsed.data.connectorId);
+  if (!definition) return NextResponse.json({ error: "Bilinmeyen konnektör." }, { status: 400 });
+  if (definition.status === "planned") {
+    return NextResponse.json(
+      { error: `${definition.label} adaptörü henüz uygulanmadı.` },
+      { status: 400 }
+    );
+  }
+  const adapter = getAdapter(definition.id);
+  if (!adapter) return NextResponse.json({ error: "Adaptör bulunamadı." }, { status: 400 });
+
+  const errors = adapter.validate(parsed.data.config);
+  if (errors.length > 0) {
+    return NextResponse.json({ error: `Geçersiz konfigürasyon: ${errors.join("; ")}` }, { status: 400 });
+  }
+
+  const id = await createConnectorConfig({
+    orgId: session.orgId,
+    connectorId: definition.id,
+    name: parsed.data.name,
+    config: parsed.data.config,
+    createdBy: session.displayName,
+  });
+
+  await recordAuditEvent({
+    orgId: session.orgId,
+    actor: session.displayName,
+    type: "connector_config_created",
+    summary: `Konnektör tanımlandı: ${definition.label} / ${parsed.data.name}`,
+    detail: id,
+  });
+
+  return NextResponse.json({ id });
+}

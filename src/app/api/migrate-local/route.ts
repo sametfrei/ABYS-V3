@@ -31,8 +31,12 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
   }
-  const sectorId = body.sectorId?.trim();
+  const sectorId =
+    typeof body.sectorId === "string" ? body.sectorId.trim() : undefined;
   if (!sectorId) return NextResponse.json({ error: "sectorId gerekli." }, { status: 400 });
+  // Yanlış tipli diziler 500 yerine yok sayılır.
+  const caseItems = Array.isArray(body.cases) ? body.cases : [];
+  const auditItems = Array.isArray(body.auditEvents) ? body.auditEvents : [];
 
   const db = getDb();
   // Daha önce göçmüş localId'ler (migration audit kayıtlarının detail alanında)
@@ -43,7 +47,7 @@ export async function POST(req: NextRequest) {
   const migrated = new Set(prior.rows.map((r) => r.detail));
 
   let cases = 0;
-  for (const item of body.cases ?? []) {
+  for (const item of caseItems) {
     if (!item.localId || migrated.has(item.localId)) continue;
     await insertCases(session.orgId, sectorId, [item.case]);
     await recordAuditEvent({
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest) {
   }
 
   let audits = 0;
-  for (const ev of body.auditEvents ?? []) {
+  for (const ev of auditItems) {
     if (!ev.localId || migrated.has(ev.localId)) continue;
     await recordAuditEvent({
       orgId: session.orgId,

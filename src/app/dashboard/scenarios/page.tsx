@@ -29,9 +29,23 @@ interface Template {
   formulaText: string;
   limitations: string[];
 }
+interface Simulation {
+  samples: number;
+  seed: number;
+  engine: string;
+  metric: { label: string; unit: string };
+  distribution: { p10: number; p50: number; p90: number; mean: number; stdDev: number; min: number; max: number };
+  baseValue: number;
+  probabilityAboveBase: number;
+  probabilityAboveBase20: number;
+  assumptions: { id: string; label: string; unit: string; low: number; mode: number; high: number }[];
+  histogram: { from: number; to: number; count: number }[];
+  note: string;
+}
 interface RunResult {
   runs: { name: string; inputs: Record<string, number>; results: { label: string; value: number; unit: string }[] }[];
   sensitivity: { variable: string; effect: string }[];
+  simulation: Simulation | null;
   provenance: { formulaText: string; limitations: string[]; engine: string; calculatedAt: string; note: string };
   scenarioId: string | null;
 }
@@ -96,7 +110,7 @@ export default function ScenariosPage() {
       const r = await fetch("/api/scenarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectorId, templateId: selected.id, inputs, save, name }),
+        body: JSON.stringify({ sectorId, templateId: selected.id, inputs, save, name, simulate: true }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -212,6 +226,8 @@ export default function ScenariosPage() {
               })}
             </div>
 
+            {result.simulation && <SimulationPanel sim={result.simulation} />}
+
             <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
               <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">DUYARLILIK</p>
               <ul className="space-y-1 mb-4">
@@ -241,6 +257,64 @@ export default function ScenariosPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Monte Carlo dağılımı — aralık, olasılıklar, histogram ve varsayımlar. */
+function SimulationPanel({ sim }: { sim: Simulation }) {
+  const peak = Math.max(...sim.histogram.map((x) => x.count), 1);
+  return (
+    <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
+      <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+        BELİRSİZLİK ARALIĞI — MONTE CARLO
+      </p>
+      <div className="grid grid-cols-3 gap-3 mb-3">
+        {[
+          ["P10 (iyi)", sim.distribution.p10],
+          ["P50 (beklenen)", sim.distribution.p50],
+          ["P90 (kötü)", sim.distribution.p90],
+        ].map(([label, value]) => (
+          <div key={String(label)} className="rounded-lg bg-white/70 px-3 py-2">
+            <p className="text-[11px] text-abys-muted">{label}</p>
+            <p className="font-mono text-lg text-abys-navy">
+              {Number(value).toLocaleString("tr-TR")} {sim.metric.unit}
+            </p>
+          </div>
+        ))}
+      </div>
+      <p className="text-sm text-abys-ink">
+        {sim.metric.label}: taban {sim.baseValue.toLocaleString("tr-TR")} {sim.metric.unit} · ortalama{" "}
+        {sim.distribution.mean.toLocaleString("tr-TR")} · std. sapma{" "}
+        {sim.distribution.stdDev.toLocaleString("tr-TR")}
+      </p>
+      <p className="text-sm text-abys-muted mt-1">
+        Tabanı aşma olasılığı %{Math.round(sim.probabilityAboveBase * 100)} · tabanın %20 üzerini aşma
+        olasılığı %{Math.round(sim.probabilityAboveBase20 * 100)} · {sim.samples.toLocaleString("tr-TR")} örnek,
+        tohum {sim.seed}
+      </p>
+      <div className="flex items-end gap-1 h-16 mt-3" aria-hidden="true">
+        {sim.histogram.map((b, i) => (
+          <div
+            key={i}
+            className="flex-1 bg-abys-accent/30 rounded-t"
+            style={{ height: `${Math.max(2, Math.round((b.count / peak) * 64))}px` }}
+            title={`${Math.round(b.from).toLocaleString("tr-TR")} – ${Math.round(b.to).toLocaleString("tr-TR")}: ${b.count}`}
+          />
+        ))}
+      </div>
+      <p className="text-[11px] tracking-widest text-abys-muted font-semibold mt-4 mb-1">VARSAYIMLAR</p>
+      <ul className="space-y-0.5">
+        {sim.assumptions.map((a) => (
+          <li key={a.id} className="text-xs text-abys-muted">
+            {a.label}: alt {a.low.toLocaleString("tr-TR")} · mod {a.mode.toLocaleString("tr-TR")} · üst{" "}
+            {a.high.toLocaleString("tr-TR")} {a.unit}
+          </li>
+        ))}
+      </ul>
+      <p className="text-[11px] text-abys-muted mt-2">
+        Motor: {sim.engine}. {sim.note}
+      </p>
     </div>
   );
 }

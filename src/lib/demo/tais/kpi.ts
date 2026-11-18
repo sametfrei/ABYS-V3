@@ -8,7 +8,7 @@ import type { TaisCategoryId } from "./data";
  * yalnizca DB'den okunmus satirlari alir, sabit sayi/istatistik icermez ve
  * ayni girdi icin daima ayni ciktiyi uretir (bkz. tests/tais-kpi.test.ts).
  * `loadTaisKpiInputs` tek DB'ye dokunan fonksiyondur; satirlari okuyup bu
- * saf fonksiyonlara aktarir. LLM'e sayi urettirilmez — bkz. docs/AI_ARCHITECTURE.md.
+ * saf fonksiyonlara aktarir. LLM'e sayi urettirilmez — bkz. docs/ARCHITECTURE.md.
  */
 
 export interface TaisTeamRow {
@@ -263,7 +263,7 @@ export interface CommercialKpis {
   salesActivityCount: number;
   /**
    * Lead nitelendirme orani (%) = 'qualified' asamasindaki lead / toplam lead.
-   * NOT: semada lead->deal dogrudan iliski yok (bkz. docs/TAIS_DEMO_SCOPE.md);
+   * NOT: semada lead->deal dogrudan iliski yok;
    * bu yuzden gercek donusum yerine nitelendirme orani proxy olarak kullanilir.
    */
   leadQualificationRatePct: number;

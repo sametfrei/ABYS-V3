@@ -4,8 +4,8 @@
  * Bağlam: /api/analyze, /api/briefing, /api/ingest, /api/assess-risk,
  * /api/decision-cases (POST) bilinçli olarak oturumsuz da çalışabilecek
  * şekilde tasarlanmıştı — ana sayfa "No setup. Pick a role, get answers in
- * seconds." vaadiyle, localStorage tabanlı bir deneme modu sunar
- * (bkz. docs/DECISION_LOG.md). Ama varsayılan açık olması, kimliği
+ * seconds." vaadiyle, localStorage tabanlı bir deneme modu sunar.
+ * Ama varsayılan açık olması, kimliği
  * doğrulanmamış herhangi bir istemcinin AI hesap kaynağını (ve, politika
  * CLOUD_ALLOWED/CLOUD_ONLY ise, bulut maliyetini) tüketmesine izin veriyordu.
  *

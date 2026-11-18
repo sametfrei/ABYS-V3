@@ -18,6 +18,9 @@ const { migrate, getDb } = await import("../src/lib/db/client");
 const { seedTaisDemo, resetTaisDemo, TAIS_ORG_CODE, TAIS_REFERENCE_NOW } = await import(
   "../src/lib/demo/tais/seed"
 );
+const { ensureSeeded } = await import("../src/lib/db/seed");
+const { TAIS_DEMO_EMAIL, TAIS_DEMO_PASSWORD } = await import("../src/lib/demo/tais/constants");
+const { verifyPassword } = await import("../src/lib/auth/core");
 
 interface TableCounts {
   customers: number;
@@ -206,5 +209,68 @@ describe("resetTaisDemo (siifirlanabilirlik)", () => {
     expect(after.orgId).toBe(before.orgId);
     const afterCounts = await countAll(after.orgId);
     expect(afterCounts).toEqual(beforeCounts);
+  });
+});
+
+describe("ensureTaisDemoUser (mevcut kullanici alanlari korunur)", () => {
+  interface DemoUserRow {
+    id: string;
+    org_id: string;
+    password_hash: string;
+    role: string;
+    status: string;
+  }
+
+  async function getDemoUser(): Promise<DemoUserRow | undefined> {
+    const r = await getDb().query<DemoUserRow>(
+      "SELECT id, org_id, password_hash, role, status FROM users WHERE email = $1",
+      [TAIS_DEMO_EMAIL]
+    );
+    return r.rows[0];
+  }
+
+  it("ilk seed demo kullanicisini deterministic parola/rol/status ile olusturur", async () => {
+    const user = await getDemoUser();
+    expect(user).toBeDefined();
+    expect(user!.role).toBe("ceo");
+    expect(user!.status).toBe("active");
+    expect(verifyPassword(TAIS_DEMO_PASSWORD, user!.password_hash)).toBe(true);
+  });
+
+  it("operator degisikliklerini (parola/rol/status) seedTaisDemo ve ensureSeeded ezmez", async () => {
+    const db = getDb();
+    const original = await getDemoUser();
+    expect(original).toBeDefined();
+
+    const operatorHash = "operator-degistirdi-bu-hash";
+    await db.query("UPDATE users SET password_hash = $1, role = $2, status = 'disabled' WHERE email = $3", [
+      operatorHash,
+      "analyst",
+      TAIS_DEMO_EMAIL,
+    ]);
+
+    // seedTaisDemo zaten dolu org'da ensureTaisDemoUser'i calistirir.
+    await seedTaisDemo();
+
+    // Login yolu da ayni fonksiyonu cagirir; env override'i kapatip demo hesabina yonlendir.
+    const savedEmail = process.env.TAIS_DEMO_ADMIN_EMAIL;
+    const savedPassword = process.env.TAIS_DEMO_ADMIN_PASSWORD;
+    try {
+      delete process.env.TAIS_DEMO_ADMIN_EMAIL;
+      delete process.env.TAIS_DEMO_ADMIN_PASSWORD;
+      await ensureSeeded();
+    } finally {
+      if (savedEmail === undefined) delete process.env.TAIS_DEMO_ADMIN_EMAIL;
+      else process.env.TAIS_DEMO_ADMIN_EMAIL = savedEmail;
+      if (savedPassword === undefined) delete process.env.TAIS_DEMO_ADMIN_PASSWORD;
+      else process.env.TAIS_DEMO_ADMIN_PASSWORD = savedPassword;
+    }
+
+    const after = await getDemoUser();
+    expect(after).toBeDefined();
+    expect(after!.id).toBe(original!.id);
+    expect(after!.password_hash).toBe(operatorHash);
+    expect(after!.role).toBe("analyst");
+    expect(after!.status).toBe("disabled");
   });
 });

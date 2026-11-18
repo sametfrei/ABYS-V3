@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from "../../../auth/login/route";
 import { resolveBitrixConfig } from "@/lib/integrations/bitrix24/config";
 import { runDemoSync, runLiveSync } from "@/lib/integrations/bitrix24/sync";
 import { getLastBitrixSyncRun, recordBitrixSyncRun } from "@/lib/db/repos/bitrix24";
+import { quarantineIssue } from "@/lib/db/repos/data-quality";
 
 /**
  * Demo modda sentetik Bitrix24 kayıtlarını mapper/sync zincirinden geçirir;
@@ -33,5 +34,22 @@ export async function POST() {
 
   await recordBitrixSyncRun(session.orgId, session.displayName, result);
 
-  return NextResponse.json(result);
+  // Senkron hatalarını karantinaya yaz: sessizce kaybolmasın, veri kalitesi
+  // ekranında operatör görsün. Karantina yazımı senkron yanıtını düşürmemeli.
+  let quarantined = 0;
+  for (const err of result.errors) {
+    try {
+      await quarantineIssue({
+        orgId: session.orgId,
+        source: "bitrix24",
+        entity: err.entity,
+        reason: err.message,
+      });
+      quarantined++;
+    } catch {
+      // Karantina kaydı başarısız olsa da senkron sonucu döner.
+    }
+  }
+
+  return NextResponse.json({ ...result, quarantined });
 }

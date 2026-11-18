@@ -20,8 +20,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
   }
 
-  const sector = getSector(body.sectorId);
-  const data = body.data?.trim();
+  // Yanlış tipli alanlar TypeError -> 500 yerine 400 üretmeli.
+  const sector = typeof body.sectorId === "string" ? getSector(body.sectorId) : undefined;
+  const data = typeof body.data === "string" ? body.data.trim() : undefined;
 
   if (!sector) {
     return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });

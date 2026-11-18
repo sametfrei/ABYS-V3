@@ -589,4 +589,91 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE actions ADD COLUMN related_risk_id TEXT;
     `,
   },
+  {
+    id: 18,
+    name: "organizasyon hiyerarsisi (grup/sirket/sube) ve ulke/para birimi",
+    sql: `
+      -- Holding -> şirket -> şube ağacı. Eski kayıtlar 'company' olarak kalır.
+      -- country ISO-3166-1 alpha-2 (ör. TR), currency ISO-4217 (ör. TRY).
+      ALTER TABLE organizations ADD COLUMN parent_id TEXT REFERENCES organizations(id);
+      ALTER TABLE organizations ADD COLUMN kind TEXT NOT NULL DEFAULT 'company';
+      ALTER TABLE organizations ADD COLUMN country TEXT;
+      ALTER TABLE organizations ADD COLUMN currency TEXT NOT NULL DEFAULT 'TRY';
+      CREATE INDEX organizations_parent ON organizations(parent_id);
+    `,
+  },
+  {
+    id: 19,
+    name: "veri kalitesi: karantina (kaynak, varlik, gerekce, ham satir)",
+    sql: `
+      -- Entegrasyonlarda eşleştirilemeyen/geçersiz satırlar burada tutulur;
+      -- sessizce atılmaz veya tüm senkronu düşürmez. payload sır içermemeli.
+      CREATE TABLE data_quality_issues (
+        id          TEXT PRIMARY KEY,
+        org_id      TEXT NOT NULL REFERENCES organizations(id),
+        source      TEXT NOT NULL,
+        entity      TEXT NOT NULL,
+        source_ref  TEXT,
+        reason      TEXT NOT NULL,
+        payload     JSONB,
+        status      TEXT NOT NULL DEFAULT 'pending', -- pending|resolved|discarded
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+        resolved_at TIMESTAMPTZ,
+        resolved_by TEXT
+      );
+      CREATE INDEX dq_org_status ON data_quality_issues(org_id, status, created_at DESC);
+    `,
+  },
+  {
+    id: 20,
+    name: "konnektor SDK: konfigurasyon, senkron calistirmalari ve kanonik kayitlar",
+    sql: `
+      -- Kimlik bilgileri BURADA TUTULMAZ: config yalnızca ortam değişkeni
+      -- adını (secretEnvVar) taşır. Kanonik kayıtlar sağlayıcıdan bağımsızdır
+      -- ve (org, config, entity, external_id) üzerinden idempotent yazılır.
+      CREATE TABLE connector_configs (
+        id           TEXT PRIMARY KEY,
+        org_id       TEXT NOT NULL REFERENCES organizations(id),
+        connector_id TEXT NOT NULL,
+        name         TEXT NOT NULL,
+        config       JSONB NOT NULL,
+        enabled      BOOLEAN NOT NULL DEFAULT true,
+        created_by   TEXT NOT NULL,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX connector_configs_org ON connector_configs(org_id, connector_id);
+
+      CREATE TABLE connector_sync_runs (
+        id            TEXT PRIMARY KEY,
+        org_id        TEXT NOT NULL REFERENCES organizations(id),
+        config_id     TEXT NOT NULL REFERENCES connector_configs(id),
+        status        TEXT NOT NULL, -- running|success|failed
+        started_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+        finished_at   TIMESTAMPTZ,
+        pages         INTEGER NOT NULL DEFAULT 0,
+        read_count    INTEGER NOT NULL DEFAULT 0,
+        written_count INTEGER NOT NULL DEFAULT 0,
+        skipped_count INTEGER NOT NULL DEFAULT 0,
+        checkpoint    TEXT,
+        error         TEXT,
+        warnings      JSONB
+      );
+      CREATE INDEX connector_runs_config ON connector_sync_runs(org_id, config_id, started_at DESC);
+
+      CREATE TABLE connector_records (
+        id                TEXT PRIMARY KEY,
+        org_id            TEXT NOT NULL REFERENCES organizations(id),
+        config_id         TEXT NOT NULL REFERENCES connector_configs(id),
+        entity            TEXT NOT NULL,
+        external_id       TEXT NOT NULL,
+        data              JSONB NOT NULL,
+        source_updated_at TIMESTAMPTZ,
+        synced_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE UNIQUE INDEX connector_records_identity
+        ON connector_records(org_id, config_id, entity, external_id);
+      CREATE INDEX connector_records_org_entity ON connector_records(org_id, entity, synced_at DESC);
+    `,
+  },
 ];

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { getActiveProvider } from "@/lib/ai/provider";
 import { getRole } from "@/lib/roles";
 import { cookies } from "next/headers";
@@ -6,7 +7,29 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
+import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
+
+const MAX_SCENARIO_LEN = 4000;
+
+/**
+ * POST /api/analyze gövdesi. `org_id` ve bilinmeyen alanlar zod tarafından
+ * sessizce atılır (kurum kimliği yalnızca oturumdan gelir). Metin alanları
+ * şemada trim edilir; boşluktan ibaret senaryo 400 döner.
+ */
+const analyzeBodySchema = z.object({
+  roleId: z
+    .string({ error: "Geçersiz rol." })
+    .refine((id) => getRole(id) !== undefined, "Geçersiz rol."),
+  scenario: z
+    .string({ error: "Senaryo metni boş olamaz." })
+    .trim()
+    .min(1, "Senaryo metni boş olamaz.")
+    .max(
+      MAX_SCENARIO_LEN,
+      `Senaryo metni çok uzun (${MAX_SCENARIO_LEN} karakter sınırı).`
+    ),
+});
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -29,24 +52,14 @@ export async function POST(req: NextRequest) {
   } else if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
-  let body: { roleId?: string; scenario?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
-  }
+  const parsed = await parseBody(req, analyzeBodySchema);
+  if (!parsed.ok) return parsed.response;
 
-  const role = getRole(body.roleId);
-  const scenario = body.scenario?.trim();
+  const role = getRole(parsed.data.roleId);
+  const scenario = parsed.data.scenario;
 
   if (!role) {
     return NextResponse.json({ error: "Geçersiz rol." }, { status: 400 });
-  }
-  if (!scenario) {
-    return NextResponse.json({ error: "Senaryo metni boş olamaz." }, { status: 400 });
-  }
-  if (scenario.length > 4000) {
-    return NextResponse.json({ error: "Senaryo metni çok uzun (4000 karakter sınırı)." }, { status: 400 });
   }
 
   try {

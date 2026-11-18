@@ -6,8 +6,15 @@ import "./globals.css";
 // çevrimdışı/kısıtlı ağlarda üretim derlemesini kırıyordu ve dış bağımlılıktı.
 
 export const metadata: Metadata = {
-  title: "ABYS Intelligence",
-  description: "Company intelligence, calmly delivered.",
+  title: {
+    default: "ABYS — Awareness & Business Yield System",
+    template: "%s · ABYS",
+  },
+  description:
+    "Kurumsal farkındalık ve karar-destek platformu: riskler, kanıt ve önerilen aksiyon — 30 saniyede netlik.",
+  applicationName: "ABYS",
+  // Kurumsal iç uygulama: arama motorlarında indekslenmemeli.
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

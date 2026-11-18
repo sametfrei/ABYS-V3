@@ -7,6 +7,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { getSector, type SectorId } from "@/lib/sectors";
 import { getTemplates, getTemplate, runComparison } from "@/lib/scenario-engine";
+import { runMonteCarlo } from "@/lib/scenario-simulation";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 
 /**
@@ -64,6 +65,9 @@ export async function POST(req: NextRequest) {
     save?: boolean;
     name?: string;
     caseId?: string;
+    simulate?: boolean;
+    samples?: number;
+    seed?: number;
   };
   try {
     body = await req.json();
@@ -87,6 +91,13 @@ export async function POST(req: NextRequest) {
   }
 
   const { runs, sensitivity } = runComparison(template, inputs);
+  const simulation =
+    body.simulate === true
+      ? runMonteCarlo(template, inputs, {
+          samples: typeof body.samples === "number" ? body.samples : undefined,
+          seed: typeof body.seed === "number" ? body.seed : undefined,
+        })
+      : null;
   const calculatedAt = new Date().toISOString();
 
   let scenarioId: string | null = null;
@@ -101,12 +112,12 @@ export async function POST(req: NextRequest) {
         session.orgId,
         sector.id,
         template.id,
-        body.name?.trim() || template.label,
+        (typeof body.name === "string" ? body.name.trim() : "") || template.label,
         JSON.stringify(inputs),
         JSON.stringify(runs),
         template.formulaText,
         session.displayName,
-        body.caseId ?? null,
+        typeof body.caseId === "string" ? body.caseId : null,
       ]
     );
     await recordAuditEvent({
@@ -122,6 +133,7 @@ export async function POST(req: NextRequest) {
     scenarioId,
     runs,
     sensitivity,
+    simulation,
     // İzlenebilirlik paketi — her sonuçla birlikte döner (md.13 şartı)
     provenance: {
       templateId: template.id,

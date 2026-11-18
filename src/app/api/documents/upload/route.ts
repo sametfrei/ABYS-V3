@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from "../../auth/login/route";
 import { insertDocument } from "@/lib/db/repos/documents";
 import { extractText } from "@/lib/documents/extract";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { documentUploadTitleSchema, parseAllowedRoles } from "@/lib/data/route-schemas";
 
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
@@ -41,18 +42,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Dosya çok büyük (10MB sınırı)." }, { status: 413 });
   }
 
-  const title = String(form.get("title") ?? "").trim() || file.name.replace(/\.[^.]+$/, "");
-
-  let allowedRoles: string[] | undefined;
-  const allowedRolesRaw = form.get("allowedRoles");
-  if (typeof allowedRolesRaw === "string" && allowedRolesRaw.trim()) {
-    try {
-      const parsed = JSON.parse(allowedRolesRaw);
-      if (Array.isArray(parsed)) allowedRoles = parsed.map(String);
-    } catch {
-      return NextResponse.json({ error: "allowedRoles geçerli bir JSON dizi olmalı." }, { status: 400 });
-    }
+  // Başlık: trim + 200 karakter sınırı; boşsa dosya adına düş (mevcut davranış).
+  const fallbackTitle = file.name.replace(/\.[^.]+$/, "");
+  const titleParsed = documentUploadTitleSchema.safeParse(
+    String(form.get("title") ?? "").trim() || fallbackTitle
+  );
+  if (!titleParsed.success) {
+    const message = titleParsed.error.issues
+      .map((issue) => `${issue.path.join(".") || "başlık"}: ${issue.message}`)
+      .join("; ");
+    return NextResponse.json({ error: `Geçersiz başlık: ${message}` }, { status: 400 });
   }
+  const title = titleParsed.data;
+
+  // allowedRoles: yalnızca tanımlı RBAC rolleri; bilinmeyen rol 400.
+  const rolesParsed = parseAllowedRoles(form.get("allowedRoles"));
+  if (!rolesParsed.ok) {
+    return NextResponse.json({ error: rolesParsed.error }, { status: 400 });
+  }
+  const allowedRoles = rolesParsed.allowedRoles;
 
   const buf = Buffer.from(await file.arrayBuffer());
   let text: string;

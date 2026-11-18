@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { DecisionIntelligencePanel } from "@/components/DecisionIntelligencePanel";
 import { loadProfile } from "@/lib/profile";
 import { useStored } from "@/lib/use-stored";
 import { useSession } from "@/lib/use-session";
@@ -568,6 +569,7 @@ function CaseCard({
           <ConfidencePanel c={c} />
           <EvidencePanel c={c} defaultOpen={detailByDefault} />
           <CounterfactualPanel c={c} />
+          {serverMode && <DecisionIntelligencePanel caseId={c.id} />}
           <CausalPanel c={c} serverMode={serverMode} />
           <OptionsPanel c={c} onDecided={onDecided} decidedBy={decidedBy} serverMode={serverMode} />
         </div>

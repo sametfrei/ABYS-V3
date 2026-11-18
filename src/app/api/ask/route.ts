@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { z } from "zod";
+import { parseBody } from "@/lib/validation";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
@@ -40,13 +42,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
-  let body: { question?: string };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
-  }
-  const question = body.question?.trim();
+  // Yanlış tipli gövde TypeError -> 500 yerine 400 üretir; aşırı uzun soru sınırlanır.
+  const askSchema = z.object({
+    question: z.string().max(2000, "soru en fazla 2000 karakter olabilir"),
+  });
+  const parsed = await parseBody(req, askSchema);
+  if (!parsed.ok) return parsed.response;
+  const question = parsed.data.question.trim();
   if (!question) return NextResponse.json({ error: "Soru gerekli." }, { status: 400 });
 
   await migrate();

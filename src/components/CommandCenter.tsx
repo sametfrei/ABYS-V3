@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ForecastPreview } from "@/components/ForecastPreview";
 
 /**
  * Yönetim Komuta Merkezi paneli (Faz 4). Oturumdayken dashboard'ın en üstünde
@@ -77,6 +78,9 @@ export function CommandCenter() {
 
       {/* Yapılandırılmış yönetici brifingi — en kritik açık vaka (izlenebilir) */}
       {data.brief && <ExecutiveBrief brief={data.brief} />}
+
+      {/* Öngörü önizlemesi — yalnızca org'un gerçek KPI serisi varsa görünür */}
+      <ForecastPreview />
 
       {/* Özet şerit — 30 saniyelik kavrama */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">

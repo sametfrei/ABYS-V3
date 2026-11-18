@@ -9,6 +9,7 @@ import {
   buildAuthorizationUrl,
   OIDC_STATE_COOKIE,
   OIDC_VERIFIER_COOKIE,
+  OIDC_NONCE_COOKIE,
   OIDC_COOKIE_TTL_SECONDS,
 } from "@/lib/auth/oidc";
 
@@ -30,6 +31,7 @@ export async function GET() {
   }
 
   const state = generateState();
+  const nonce = generateState();
   const { verifier, challenge } = generatePkce();
   const authUrl = buildAuthorizationUrl({
     authorizationEndpoint: discovery.authorization_endpoint,
@@ -37,6 +39,7 @@ export async function GET() {
     redirectUri: config.redirectUri,
     state,
     codeChallenge: challenge,
+    nonce,
   });
 
   const store = await cookies();
@@ -49,6 +52,7 @@ export async function GET() {
   };
   store.set(OIDC_STATE_COOKIE, state, cookieOpts);
   store.set(OIDC_VERIFIER_COOKIE, verifier, cookieOpts);
+  store.set(OIDC_NONCE_COOKIE, nonce, cookieOpts);
 
   return NextResponse.redirect(authUrl);
 }

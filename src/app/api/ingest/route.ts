@@ -9,6 +9,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { parseTable } from "@/lib/data/parse-table";
+import { sectorIdSchema } from "@/lib/data/route-schemas";
 import { SESSION_COOKIE } from "../auth/login/route";
 
 export const maxDuration = 600;
@@ -101,7 +102,10 @@ export async function POST(req: NextRequest) {
   }
 
   const rawText = rawTextInput?.trim();
-  const sector = getSector(sectorIdInput);
+  // sectorId yalnızca tanımlı sektörlerden biri olabilir; geçersiz/boş -> 400
+  // (mevcut davranış korunur).
+  const sectorParsed = sectorIdSchema.safeParse(sectorIdInput);
+  const sector = sectorParsed.success ? getSector(sectorParsed.data) : undefined;
 
   if (!rawText) {
     return NextResponse.json({ error: "Metin boş olamaz." }, { status: 400 });

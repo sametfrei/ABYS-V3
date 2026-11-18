@@ -10,7 +10,7 @@
 
 export const TAIS_ORG_CODE = "tais-ikf-demo";
 export const TAIS_ORG_NAME = "TAIS IKF MMC";
-/** sectors.ts SectorId listesinde "Integrated Facility Management" yok — sentetik varsayim (bkz. docs/TAIS_DEMO_SCOPE.md #7). */
+/** sectors.ts SectorId listesinde "Integrated Facility Management" yok — sentetik varsayim. */
 export const TAIS_SECTOR_ID = "other";
 export const TAIS_SEED = 20260722;
 /** Demo "bugun"u — tum senaryo tarihleri buna gore hesaplanir. */

@@ -6,7 +6,7 @@ import { SEVERITY_META } from "@/lib/signals";
 
 /**
  * TAIS "30 saniyelik yönetici ekranı" — Yönetim Merkezi'nin TAIS demo
- * kurumu için varsayılan açılış görünümü (bkz. docs/TAIS_DEMO_SCOPE.md).
+ * kurumu için varsayılan açılış görünümü (bkz. docs/DATA_MODEL.md).
  * Veri /api/tais/executive-summary'den gelir (org-izolasyonlu, filtreli).
  * Org TAIS demo verisi taşımıyorsa uç 404 döner ve bu bileşen null render
  * eder — genel ABYS dashboard'ı (CommandCenter) bozulmadan kalır.

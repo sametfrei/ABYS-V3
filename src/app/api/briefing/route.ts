@@ -37,8 +37,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
   }
 
-  const sector = getSector(session?.sectorId ?? body.sectorId);
-  const role = getRole(session?.role ?? body.roleId) ?? (session ? {
+  // Yanlış tipli alanlar TypeError -> 500 yerine 400 üretmeli.
+  const sector = getSector(
+    session?.sectorId ?? (typeof body.sectorId === "string" ? body.sectorId : undefined)
+  );
+  const role = getRole(
+    session?.role ?? (typeof body.roleId === "string" ? body.roleId : undefined)
+  ) ?? (session ? {
     id: session.role,
     label: session.role,
     tagline: "",
@@ -46,7 +51,9 @@ export async function POST(req: NextRequest) {
     placeholder: "",
     focus: "Kurum kayıtları ve yönetim öncelikleri",
   } : undefined);
-  const companyName = session?.orgName ?? body.companyName?.trim();
+  const companyName =
+    session?.orgName ??
+    (typeof body.companyName === "string" ? body.companyName.trim() : undefined);
 
   if (!sector || !role || !companyName) {
     return NextResponse.json({ error: "Eksik profil bilgisi." }, { status: 400 });
@@ -60,7 +67,8 @@ export async function POST(req: NextRequest) {
       roleLabel: role.label,
       roleFocus: role.focus,
       riskCategoryLabels: sector.riskCategories.map((r) => r.label),
-      realFindings: body.realFindings,
+      realFindings:
+        typeof body.realFindings === "string" ? body.realFindings : undefined,
     });
     return NextResponse.json({ briefing });
   } catch (err) {

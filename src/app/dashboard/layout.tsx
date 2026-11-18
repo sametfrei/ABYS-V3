@@ -9,11 +9,19 @@ import { useStored } from "@/lib/use-stored";
 import { useSession } from "@/lib/use-session";
 import { getSector } from "@/lib/sectors";
 import { getRole } from "@/lib/roles";
+import { hasPermission } from "@/lib/auth/permissions";
 import { listEntities } from "@/lib/entities";
 import type { HandledSignal } from "@/lib/entities";
 
 const NAV = [
   { href: "/dashboard", label: "Yönetim Merkezi", icon: DashboardIcon },
+  { href: "/dashboard/organization", label: "Organizasyon", icon: AdvisorsIcon },
+  { href: "/dashboard/decision-ledger", label: "Karar Defteri", icon: DecisionsIcon },
+  { href: "/dashboard/forecast", label: "Tahmin", icon: ScenarioIcon },
+  { href: "/dashboard/process", label: "Süreç Zekâsı", icon: AnalysisIcon },
+  { href: "/dashboard/options", label: "Karar Seçenekleri", icon: ScenarioIcon },
+  { href: "/dashboard/kpi", label: "KPI Verisi", icon: AnalysisIcon },
+  { href: "/dashboard/data-quality", label: "Veri Kalitesi", icon: AlertsIcon },
   { href: "/dashboard/ask", label: "Ask ABYS", icon: AskIcon },
   { href: "/dashboard/decisions", label: "Karar Merkezi", icon: DecisionsIcon },
   { href: "/dashboard/actions", label: "Aksiyonlar", icon: ActionsIcon },
@@ -23,7 +31,10 @@ const NAV = [
   { href: "/dashboard/reports", label: "Raporlar", icon: ReportsIcon },
   { href: "/dashboard/alerts", label: "Riskler ve Sinyaller", icon: AlertsIcon },
   { href: "/dashboard/integrations", label: "Veri Kaynakları", icon: IntegrationsIcon },
+  { href: "/dashboard/connectors", label: "Sistem Bağlantıları", icon: IntegrationsIcon },
+  { href: "/dashboard/discovery", label: "İş Keşfi", icon: AnalysisIcon },
   { href: "/dashboard/advisors", label: "Danışman Analitiği", icon: AdvisorsIcon },
+  { href: "/dashboard/audit", label: "Denetim Günlüğü", icon: ReportsIcon },
   { href: "/dashboard/settings", label: "Ayarlar", icon: SettingsIcon },
 ];
 
@@ -81,6 +92,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const activeProfile = sessionUser ? null : profile;
   const sector = activeProfile ? getSector(activeProfile.sectorId) : null;
   const role = activeProfile ? getRole(activeProfile.roleId) : null;
+  // Denetim günlüğü yalnızca view_audit izinli kurumsal oturumlarda gösterilir;
+  // gerçek yetki sunucuda uygulanır. Yerel profil akışı bu girdiyi görmez.
+  const visibleNav = NAV.filter((item) => {
+    if (item.href === "/dashboard/audit") {
+      return sessionUser != null && hasPermission(sessionUser.role, "view_audit");
+    }
+    if (item.href === "/dashboard/organization") {
+      return sessionUser != null;
+    }
+    if (item.href === "/dashboard/data-quality" || item.href === "/dashboard/connectors") {
+      return sessionUser != null && hasPermission(sessionUser.role, "ingest_data");
+    }
+    if (item.href === "/dashboard/kpi") {
+      return sessionUser != null && hasPermission(sessionUser.role, "edit_kpi");
+    }
+    if (
+      item.href === "/dashboard/decision-ledger" ||
+      item.href === "/dashboard/forecast" ||
+      item.href === "/dashboard/process" ||
+      item.href === "/dashboard/discovery"
+    ) {
+      return sessionUser != null && hasPermission(sessionUser.role, "view_decisions");
+    }
+    if (item.href === "/dashboard/options") {
+      return sessionUser != null && hasPermission(sessionUser.role, "run_analysis");
+    }
+    return true;
+  });
 
   return (
     <div className="min-h-screen flex">
@@ -91,7 +130,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <nav className="flex-1 space-y-1">
-          {NAV.map((item) => {
+          {visibleNav.map((item) => {
             const active =
               item.href === "/dashboard"
                 ? pathname === "/dashboard"
@@ -150,7 +189,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}
             className="w-full text-left text-xs text-abys-muted hover:text-abys-ink px-3 py-1.5"
           >
-            Sign out
+            Çıkış yap
           </button>
         </div>
       </aside>

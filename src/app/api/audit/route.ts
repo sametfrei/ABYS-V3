@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { verifyAuditChain } from "@/lib/db/repos/audit";
+import { parseAuditLimit } from "@/lib/data/route-schemas";
 
 /**
  * Kurumun denetim günlüğü — view_audit izni gerekir (denetçi, yönetim).
@@ -23,7 +24,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ verify: result });
   }
 
-  const limit = Math.min(Number(req.nextUrl.searchParams.get("limit") ?? 100), 500);
+  const parsedLimit = parseAuditLimit(req.nextUrl.searchParams.get("limit"));
+  if (!parsedLimit.ok) {
+    return NextResponse.json({ error: `Geçersiz limit: ${parsedLimit.error}` }, { status: 400 });
+  }
+  const limit = parsedLimit.limit;
   await migrate();
   const r = await getDb().query<{
     id: string;

@@ -89,6 +89,20 @@ ulaşmak için kullanılır (Docker Desktop/Windows/Mac'te varsayılan olarak
 Ortam değişkenleri yukarıdaki [Ortam değişkenleri](#ortam-değişkenleri-envlocal)
 tablosuyla aynıdır.
 
+## Canlı geliştirme ortamı (yalnızca localhost)
+
+İki ekran birbirinden bağımsızdır ve yalnızca `127.0.0.1` üzerinde dinler:
+
+| Ekran | Komut | Adres |
+|---|---|---|
+| Canlı frontend önizleme (HMR) | `npm run dev:preview` | http://127.0.0.1:3100 |
+| Agent Command Center (salt okunur) | `npm run agent:center` | http://127.0.0.1:3200 |
+
+- Önizleme, üretim verisinden ayrı bir PGlite dizini (`.data/dev-preview`) ve
+  deterministik demo AI politikası kullanır; mevcut `.data`/kullanıcı verisine dokunmaz.
+- Command Center, Claude Code alt-agent transkriptlerini okur; yalnızca GET kabul
+  eder, localhost dışı Host başlığını reddeder, hiçbir dosya yazmaz ve sır göstermez.
+
 ## Komutlar
 
 ```bash
@@ -96,6 +110,7 @@ npm run dev      # geliştirme sunucusu
 npm run build    # üretim derlemesi (internet gerektirmez)
 npm run lint     # 0 hata / 0 uyarı beklenir
 npx tsc --noEmit # tip kontrolü
+npm run smoke:e2e # çalışan sunucuya uçtan uca duman testi (BASE_URL ile adres)
 npm run eval     # AI değerlendirme süiti (CPU'da senaryo başına ~5-6 dk)
 ```
 
@@ -109,6 +124,15 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 | `/login` | Kurumsal giriş |
 | `/onboarding` | Prototip profil akışı (Faz 2 öncesi kalıntı) |
 | `/dashboard` | Yönetim Merkezi |
+| `/dashboard/organization` | Organizasyon hiyerarşisi — holding / şirket / şube + konsolide metrikler |
+| `/dashboard/data-quality` | Veri kalitesi karantinası — `ingest_data` rolleri |
+| `/dashboard/decision-ledger` | Karar Defteri — alınan kararlar, beklenen etki, gerçekleşen sonuç ve dersler |
+| `/dashboard/forecast` | Tahmin — KPI serisinden geriye dönük test edilmiş model ve olasılık aralığı |
+| `/dashboard/process` | Süreç Zekâsı — entegrasyon olay günlüğünden gözlenen akış, süreler ve darboğazlar |
+| `/dashboard/options` | Karar Seçenekleri — çok kriterli puanlama, ağırlıklı sıralama ve Pareto sınırı |
+| `/dashboard/kpi` | KPI Verisi — metrik tanımı, tek/toplu zaman serisi girişi ve düzeltme (`edit_kpi`) |
+| `/dashboard/connectors` | Sistem Bağlantıları — REST/OData konnektör tanımı, senkron ve geçmiş (`ingest_data`) |
+| `/dashboard/discovery` | İş Keşfi — bağlı veriden sektör/alt sektör çıkarımı, kanıtlar ve önerilen KPI çerçevesi |
 | `/dashboard/ask` | Ask ABYS |
 | `/dashboard/decisions` | Karar Merkezi |
 | `/dashboard/actions` | Aksiyonlar |
@@ -118,13 +142,18 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 | `/dashboard/reports` | Raporlar |
 | `/dashboard/alerts` | Riskler ve Sinyaller |
 | `/dashboard/integrations` | Veri Kaynakları |
-| `/dashboard/settings` | Ayarlar |
+| `/dashboard/advisors` | Danışman Analitiği |
+| `/dashboard/audit` | Denetim Günlüğü — `view_audit` rolleri; hash zinciri doğrulama |
+| `/dashboard/settings` | Ayarlar — parola değiştirme, aktif oturum yönetimi; `sys_admin` için kullanıcı/rol yönetimi |
 
 ## API uçları
 
 | Uç | Not |
 |---|---|
 | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me` | Oturum yönetimi |
+| `POST /api/auth/password` | Oturum sahibinin kendi parolasını değiştirmesi (mevcut parola doğrulaması; diğer oturumlar iptal edilir) |
+| `GET/DELETE /api/auth/sessions` | Aktif oturumları listeleme ve iptal (yalnızca oturum sahibinin kendi oturumları) |
+| `GET /api/health` | Sağlık kontrolü — veritabanı erişilemezse `503` |
 | `POST /api/analyze` | AI analiz — oturum gerekli (yalnızca `ABYS_PUBLIC_DEMO=1` iken oturumsuz) |
 | `POST /api/briefing` | AI brifing — oturum gerekli (aynı istisna) |
 | `POST /api/ingest` | Veri içe alma — oturum gerekli (aynı istisna) |
@@ -132,6 +161,20 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 | `GET/POST /api/actions` | Aksiyon listesi/oluşturma |
 | `POST /api/assess-risk` | Risk değerlendirme |
 | `GET /api/audit` | Denetim günlüğü |
+| `GET /api/organizations` | Oturum org'unun hiyerarşik alt ağacı (holding/şirket/şube) |
+| `GET /api/organizations/consolidation` | Alt ağaç için konsolide risk/karar/aksiyon sayıları + bugünün öncelikli 3 kararı |
+| `GET/POST/PATCH /api/data-quality` | Veri kalitesi karantinası: listele, kaydet, çöz/at (`ingest_data`); Bitrix24 senkron hataları buraya yazılır |
+| `GET /api/decision-ledger` | Karar geçmişi + özet (iyileşti/değişmedi/kötüleşti) — `view_decisions`, org kapsamlı |
+| `GET /api/forecast` | KPI serileri ve geriye dönük test edilmiş tahmin (naive/SES/trend + P10–P90) — `view_decisions` |
+| `GET /api/anomalies` | KPI serilerinde median/MAD tabanlı erken uyarı taraması — `view_decisions` |
+| `GET /api/process-mining` | `integration_events` olay günlüğünden geçişler, medyan/P90 süreler ve darboğazlar — `view_decisions` |
+| `POST /api/decision-options/evaluate` | Çok kriterli seçenek değerlendirmesi: min-max normalizasyon, ağırlıklı skor, Pareto sınırı — `run_analysis` |
+| `GET/POST/DELETE /api/kpi-values` | KPI zaman serisi: noktaları listele, toplu kaydet (≤500), düzelt/sil — yazma `edit_kpi`, okuma `view_decisions` |
+| `GET/POST /api/connectors` | Konnektör kataloğu (SAP, Oracle, Dynamics, Salesforce, ...) + org konfigürasyonları; POST `ingest_data` |
+| `POST /api/connectors/[id]/sync` | Konnektörü çalıştırır (REST/OData, sayfalama, checkpoint, retry); kanonik kayıtlar idempotent yazılır |
+| `GET /api/connectors/[id]/runs` | Senkron geçmişi + kanonik kayıt sayıları |
+| `GET /api/decision-cases/[id]/intelligence` | Çok kaynaklı karar brifingi: kanıt, tahmin, anomali, nedensel bağ, geçmiş sonuç + güven gerekçesi — `view_decisions` |
+| `GET /api/discovery` | İşletme keşfi: sektör/alt sektör sınıflandırması, kanıtlar, güven düzeyi ve KPI kullanılabilirlik durumu — `view_decisions` |
 | `GET/POST /api/decision-cases` | Karar vakaları |
 | `GET/POST /api/decisions` | Karar kayıtları |
 | `GET/POST /api/documents` | Kurumsal hafıza belgeleri |
@@ -146,6 +189,7 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 | `GET /api/trace` | Karar kanıt izi |
 | `GET/POST /api/webhook-config` | Webhook yapılandırması |
 | `POST /api/webhook/[orgId]` | İmzalı webhook alım ucu |
+| `GET/POST /api/users`, `PATCH /api/users/[id]` | Kullanıcı yönetimi — `manage_users` (sys_admin) |
 
 ## Proje düzeni (çekirdek)
 
@@ -156,33 +200,45 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 - `src/lib/auth/` — scrypt parola hash, sunucu oturumu, rol × izin matrisi
 - `src/lib/db/` — PGlite bağlantısı, migration'lar, repository'ler, seed
 - `evals/` — 13 kriterlik değerlendirme süiti
-- `docs/` — mimari, güvenlik modeli, AI mimarisi, test stratejisi, plan, karar günlüğü
+- `docs/` — mimari haritası, veri modeli ve agent takımı sözleşmesi
 
-Daha ayrıntılı mimari ve güvenlik dokümantasyonu için: `docs/ARCHITECTURE.md`,
-`docs/SECURITY_MODEL.md`, `docs/AI_ARCHITECTURE.md`, `docs/TEST_STRATEGY.md`.
+Mimari, veri modeli ve agent sözleşmesi için: `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`,
+`docs/agents/README.md`.
 
 ## Durum
 
-Prototip → üretim geçişi fazlar halinde ilerliyor: `docs/IMPLEMENTATION_PLAN.md`.
+Görev dağıtımı, dosya sahipliği ve teslim yaklaşımı Lead Architect tarafından yönetilir:
+`docs/agents/README.md`.
 
 ## Bilinen sınırlar
 
 - `/api/analyze`, `/api/briefing`, `/api/ingest`, `/api/assess-risk`,
   `/api/decision-cases` (POST) varsayılan olarak oturum ister; yalnızca
   `ABYS_PUBLIC_DEMO=1` açıkça ayarlandığında IP hız sınırlı, org'a
-  kalıcılaşmayan bir demo modu geri açılır (gerekçe: `docs/DECISION_LOG.md`).
-- Merkezi girdi şeması doğrulama (zod, `src/lib/validation.ts`) 8 route'a
-  bağlı; `decision-cases`, `analyze`, `ingest`, `audit`, `documents/upload`
-  henüz elle doğrulama yapıyor.
+  kalıcılaşmayan bir demo modu geri açılır (gerekçe: `src/lib/public-demo.ts`, `src/lib/rate-limit.ts`).
+- Merkezi girdi doğrulama: `parseBody` (`src/lib/validation.ts`) + zod şemaları.
+  `analyze`, `decision-cases`, `audit`, `documents`, `ingest` ve auth uçları
+  doğrulanır.
 - Genel amaçlı rate limiting yok; AI uçları ve API anahtarları için var.
-- Login için hız sınırı yok (kaba kuvvet parola denemesi engellenmiyor).
-- SSO var (OIDC Authorization Code + PKCE) ama id_token JWKS ile
-  doğrulanmıyor ve gerçek bir sağlayıcıya karşı canlı test edilmedi.
+- Login kaba kuvvet koruması: e-posta başına 15 dakikada 5 başarısız deneme
+  (IP'den bağımsız, XFF değiştirerek atlatılamaz); `ABYS_TRUST_PROXY=1` iken
+  ek olarak güvenilen son hop IP başına 20; aşımda `429` + `Retry-After`
+  (`src/lib/rate-limit.ts`, `src/app/api/auth/login/route.ts`).
+- Demo seed'i yıkıcı değildir: mevcut kullanıcının parolası, rolü ve durumu
+  her girişte yeniden yazılmaz (`src/lib/demo/tais/seed.ts`).
+- SSO var (OIDC Authorization Code + PKCE). id_token imzası JWKS ile RS256
+  üzerinden doğrulanır (`src/lib/auth/oidc.ts:verifyIdToken`; `alg: none`/HS*
+  reddedilir), `nonce` ve çoklu `aud` için `azp`, `email_verified=true`
+  doğrulanır; discovery belgesinin issuer'ı kontrol edilir ve uç noktalar
+  HTTPS + 5 sn timeout ile çağrılır. Gerçek bir sağlayıcıya karşı canlı test
+  edilmedi.
 - Denetim günlüğü sha256 hash zinciriyle bağlı (`GET /api/audit?verify=1`
   ile doğrulanabilir) ama DB dosyasına doğrudan erişimi olan biri zinciri
   baştan üretebilir — dış saldırgana değil, kazara satır değişikliğine
   karşı bir kanıt.
-- Otomatik test süiti VAR: 16 dosya, 201 test (`npm test`, vitest) +
-  `evals/` süiti (bkz. `docs/TEST_STRATEGY.md`, `docs/CURRENT_STATE_AUDIT.md`).
-- `manage_users` izni tanımlı ama onu kullanan bir kullanıcı yönetimi
-  arayüzü yok.
+- Ürün yol haritası ve yetenek durum matrisi: `docs/ROADMAP.md`.
+- Otomatik test süiti VAR: 50 dosya (`npm test`, vitest) + `evals/` süiti
+  (sahiplik ve doğrulama: `docs/agents/README.md`).
+- Kullanıcı yönetimi mevcut: `sys_admin` Ayarlar ekranından kullanıcı listeler,
+  oluşturur, rol/durum günceller ve geçici parola sıfırlar
+  (`/api/users`, `PATCH /api/users/[id]`, `src/components/UserManagement.tsx`).

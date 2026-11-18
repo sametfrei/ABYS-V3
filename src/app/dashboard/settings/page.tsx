@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { UserManagement } from "@/components/UserManagement";
+import { ChangePassword } from "@/components/ChangePassword";
+import { SessionManagement } from "@/components/SessionManagement";
 import { SECTORS, type SectorId } from "@/lib/sectors";
 import { ROLES, type RoleId } from "@/lib/roles";
 import { loadProfile, saveProfile, type AbysProfile } from "@/lib/profile";
@@ -19,13 +22,19 @@ export default function SettingsPage() {
   if (session) {
     return (
       <div>
-        <PageHeader eyebrow="TAIS AYARLARI" title="Kurum" accent="bilgileri." desc="Kurumsal oturum bilgileri sunucu oturumundan okunur ve bu demo ekranında değiştirilemez." />
+        <PageHeader eyebrow="AYARLAR" title="Kurum" accent="bilgileri." desc="Kurumsal oturum bilgileri sunucu oturumundan okunur; kurum ve rol bu ekrandan değiştirilemez." />
         <div className="px-10 pb-16 max-w-2xl space-y-3 text-sm text-abys-ink">
           <p><span className="text-abys-muted">Kurum: </span>{session.orgName}</p>
           <p><span className="text-abys-muted">Kullanıcı: </span>{session.displayName}</p>
           <p><span className="text-abys-muted">Rol: </span>{session.role}</p>
           <p><span className="text-abys-muted">Veri modu: </span>Bitrix24 uyumlu demo verisi</p>
         </div>
+        {/* Oturumlu her rol kendi parolasını değiştirebilir; yetki sunucudadır. */}
+        <ChangePassword />
+        {/* Oturum sahibi kendi aktif oturumlarını görür/kapatır; kapsam sunucudadır. */}
+        <SessionManagement />
+        {/* Yetki kararı sunucudadır; bu bölüm yalnızca sys_admin oturumunda gösterilir. */}
+        {session.role === "sys_admin" && <UserManagement />}
       </div>
     );
   }

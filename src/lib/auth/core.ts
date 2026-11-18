@@ -78,7 +78,7 @@ export async function getSession(sessionId: string | undefined): Promise<Session
             o.code AS org_code, o.name AS org_name, o.sector_id
      FROM sessions s JOIN users u ON u.id = s.user_id
      JOIN organizations o ON o.id = s.org_id
-     WHERE s.id = $1 AND u.status = 'active'`,
+     WHERE s.id = $1 AND u.status = 'active' AND u.org_id = s.org_id`,
     [sessionId]
   );
   const row = r.rows[0];

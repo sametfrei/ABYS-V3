@@ -127,10 +127,14 @@ async function taisCustomerCount(orgId: string): Promise<number> {
 
 /**
  * TAIS demo kurumuna giris yapabilecek tek hesabi olusturur (idempotent —
- * e-posta zaten varsa deterministik demo kimlik bilgileriyle günceller).
+ * e-posta zaten varsa kullaniciya HIC dokunmaz). Varlik kontrolu parola
+ * hash'inden ONCE yapilir; boylece mevcut kullanicida gereksiz scrypt maliyeti
+ * olusmaz. Onemli: operatoerun degistirdigi parola/rol/status her seed veya
+ * giris denemesinde ezilmemelidir (aksi halde devre disi hesap yeniden
+ * etkinlesir, rol yukselir ve parola demo varsayilanina doner).
  * "Onayla/Ertele" gibi karar durumu
- * degisikliklerinin `record_decision` izni gerektirmesi nedeniyle rol "ceo"
- * secildi (bkz. src/lib/auth/permissions.ts).
+ * degisikliklerinin `record_decision` izni gerektirmesi nedeniyle yeni
+ * olusturulan kullaniciya rol "ceo" verilir (bkz. src/lib/auth/permissions.ts).
  */
 async function ensureTaisDemoUser(
   orgId: string,
@@ -139,16 +143,8 @@ async function ensureTaisDemoUser(
 ): Promise<void> {
   const db = getDb();
   const existing = await db.query<{ id: string }>("SELECT id FROM users WHERE email = $1", [email]);
+  if (existing.rows[0]) return;
   const passwordHash = hashPassword(password);
-  if (existing.rows[0]) {
-    await db.query(
-      `UPDATE users
-       SET org_id = $1, display_name = $2, role = $3, password_hash = $4, status = 'active'
-       WHERE id = $5`,
-      [orgId, "TAIS Genel Müdür", "ceo", passwordHash, existing.rows[0].id]
-    );
-    return;
-  }
   await db.query(
     "INSERT INTO users (id, org_id, email, display_name, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
     [newId(), orgId, email, "TAIS Genel Müdür", "ceo", passwordHash]

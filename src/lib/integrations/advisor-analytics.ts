@@ -21,7 +21,7 @@ import { getDb, migrate } from "@/lib/db/client";
  *   olay akışında hiç session bilgisi yoksa bu alan null'dır (segment sınırı
  *   doğrulanamadığından "bilinmiyor" bile denemez — UYDURMA yok).
  *
- * `idleMinutes` KULLANIMDAN KALDIRILDI (bkz. docs/INTEGRATION.md) ama geriye
+ * `idleMinutes` KULLANIMDAN KALDIRILDI (bkz. docs/ARCHITECTURE.md) ama geriye
  * dönük uyumluluk için bir sürüm boyunca eski düz (session'dan bağımsız)
  * hesabıyla aynı değerle doldurulmaya devam eder.
  */

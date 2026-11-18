@@ -37,11 +37,12 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
   }
-  const name = body.name?.trim();
+  const name = typeof body.name === "string" ? body.name.trim() : undefined;
   if (!name) return NextResponse.json({ error: "Anahtar adı gerekli." }, { status: 400 });
 
-  const scopes = (body.scopes ?? ["events:write"]).filter((s): s is Scope =>
-    VALID_SCOPES.includes(s as Scope)
+  // Yanlış tipli scopes 500 yerine varsayılana düşer; geçersiz kapsamlar elenir.
+  const scopes = (Array.isArray(body.scopes) ? body.scopes : ["events:write"]).filter(
+    (s): s is Scope => VALID_SCOPES.includes(s as Scope)
   );
   if (scopes.length === 0) {
     return NextResponse.json(

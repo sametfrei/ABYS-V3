@@ -9,17 +9,35 @@ import {
   getOidcConfig,
   getDiscoveryDocument,
   exchangeCodeForToken,
-  decodeAndValidateIdToken,
+  verifyIdToken,
   OIDC_STATE_COOKIE,
   OIDC_VERIFIER_COOKIE,
+  OIDC_NONCE_COOKIE,
 } from "@/lib/auth/oidc";
+
+/**
+ * State/verifier çerezlerini SİLİNDİĞİ path ile temizler. `cookies.delete`
+ * varsayılan "/" path'i kullanır; çerez "/api/auth/oidc" altında set edildiği
+ * için silme etkisiz kalırdı.
+ */
+function clearOidcCookies(res: NextResponse): void {
+  const options = {
+    path: "/api/auth/oidc",
+    maxAge: 0,
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: authCookieIsSecure(),
+  };
+  res.cookies.set(OIDC_STATE_COOKIE, "", options);
+  res.cookies.set(OIDC_VERIFIER_COOKIE, "", options);
+  res.cookies.set(OIDC_NONCE_COOKIE, "", options);
+}
 
 function redirectWithError(req: NextRequest, message: string): NextResponse {
   const url = new URL("/login", req.url);
   url.searchParams.set("sso_error", message);
   const res = NextResponse.redirect(url);
-  res.cookies.delete(OIDC_STATE_COOKIE);
-  res.cookies.delete(OIDC_VERIFIER_COOKIE);
+  clearOidcCookies(res);
   return res;
 }
 
@@ -42,19 +60,27 @@ export async function GET(req: NextRequest) {
   const store = await cookies();
   const expectedState = store.get(OIDC_STATE_COOKIE)?.value;
   const verifier = store.get(OIDC_VERIFIER_COOKIE)?.value;
+  const expectedNonce = store.get(OIDC_NONCE_COOKIE)?.value;
 
-  if (providerError) {
-    return redirectWithError(req, `Kimlik sağlayıcı hata döndürdü: ${providerError}`);
-  }
-  if (!code || !state || !expectedState || !verifier || state !== expectedState) {
+  // Önce state/verifier doğrulanır; sağlayıcıdan gelen serbest metin
+  // (`error=...`) state doğrulanmadan kullanıcıya yansıtılmaz.
+  if (!state || !expectedState || !verifier || !expectedNonce || state !== expectedState) {
     return redirectWithError(req, "Oturum durumu eşleşmedi; giriş iptal edildi. Lütfen tekrar deneyin.");
+  }
+  if (providerError) {
+    console.error("OIDC sağlayıcı hatası:", providerError.slice(0, 200));
+    return redirectWithError(req, "Kimlik sağlayıcı girişi reddetti. Lütfen tekrar deneyin.");
+  }
+  if (!code) {
+    return redirectWithError(req, "Giriş kodu alınamadı. Lütfen tekrar deneyin.");
   }
 
   let discovery;
   try {
     discovery = await getDiscoveryDocument(config.issuer);
   } catch (err) {
-    return redirectWithError(req, err instanceof Error ? err.message : "OIDC yapılandırması alınamadı.");
+    console.error("OIDC discovery hatası:", err instanceof Error ? err.message : err);
+    return redirectWithError(req, "SSO yapılandırması alınamadı. Yöneticinize başvurun.");
   }
 
   let idToken: string;
@@ -69,14 +95,21 @@ export async function GET(req: NextRequest) {
     });
     idToken = tokenResult.idToken;
   } catch (err) {
-    return redirectWithError(req, err instanceof Error ? err.message : "Token değişimi başarısız.");
+    console.error("OIDC token değişimi hatası:", err instanceof Error ? err.message : err);
+    return redirectWithError(req, "SSO girişi tamamlanamadı. Lütfen tekrar deneyin.");
   }
 
   let email: string;
   try {
-    email = decodeAndValidateIdToken(idToken, { issuer: config.issuer, clientId: config.clientId });
+    email = await verifyIdToken(idToken, {
+      issuer: config.issuer,
+      clientId: config.clientId,
+      jwksUri: discovery.jwks_uri ?? "",
+      nonce: expectedNonce,
+    });
   } catch (err) {
-    return redirectWithError(req, err instanceof Error ? err.message : "Kimlik jetonu doğrulanamadı.");
+    console.error("OIDC id_token doğrulama hatası:", err instanceof Error ? err.message : err);
+    return redirectWithError(req, "Kimlik doğrulaması başarısız. Lütfen tekrar deneyin.");
   }
 
   await ensureSeeded();
@@ -99,8 +132,7 @@ export async function GET(req: NextRequest) {
   });
 
   const res = NextResponse.redirect(new URL("/dashboard", req.url));
-  res.cookies.delete(OIDC_STATE_COOKIE);
-  res.cookies.delete(OIDC_VERIFIER_COOKIE);
+  clearOidcCookies(res);
   res.cookies.set(SESSION_COOKIE, sessionId, {
     httpOnly: true,
     sameSite: "lax",

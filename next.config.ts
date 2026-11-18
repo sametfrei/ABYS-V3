@@ -18,6 +18,24 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   ...(process.env.BUILD_STANDALONE === "1" ? { output: "standalone" as const } : {}),
   serverExternalPackages: ["@electric-sql/pglite"],
+  // Güvenli varsayılan başlıklar. CSP bilinçli olarak eklenmedi: Next.js
+  // inline runtime script'leriyle çakışmadan ayrı bir nonce stratejisi gerekir.
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

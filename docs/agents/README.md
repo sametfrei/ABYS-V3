@@ -12,10 +12,12 @@ intelligence layer on top of existing ERP/CRM/accounting systems; it does not re
 - Embedded Postgres (PGlite) via `src/lib/db/client.ts`; hand-written SQL repositories in `src/lib/db/repos/`; ordered append-only migrations in `src/lib/db/migrations.ts`. Every business table carries `org_id`.
 - Auth: `src/lib/auth/*` (scrypt, server-side sessions, OIDC), RBAC in `src/lib/auth/permissions.ts`, hash-chained audit log in `src/lib/db/repos/audit.ts` (single write path).
 - AI: `src/lib/ai/*` (provider policy `AI_POLICY`, number verifier `verify-cases.ts`). Models explain; code computes every number.
-- Deterministic intelligence: `src/lib/demo/tais/*`, `src/lib/scenario-engine.ts`, `src/lib/scenarios.ts`, `src/lib/calculators.ts`, `src/lib/kpi.ts`.
+- Deterministic intelligence: `src/lib/demo/tais/*`, `src/lib/scenario-engine.ts`, `src/lib/scenario-simulation.ts` (tohumlanmış Monte Carlo), `src/lib/forecasting.ts` (geriye dönük testli tahmin), `src/lib/anomaly.ts` (median/MAD erken uyarı), `src/lib/process-mining.ts` (olay günlüğünden süreç akışı), `src/lib/scenarios.ts`, `src/lib/calculators.ts`, `src/lib/kpi.ts`.
 - Integrations: `src/lib/integrations/*` (Bitrix24 is the reference connector), `src/app/api/connectors/*`, webhooks, API keys.
-- Tests: Vitest in `tests/` (28 files). Evals in `evals/`.
-- Roadmap and known gaps: the assessment document "ABYS — Technical Assessment & Autonomous Development Roadmap".
+- Tests: Vitest in `tests/` (50 files). Evals in `evals/`.
+- Mimari haritası: `docs/ARCHITECTURE.md`; veri modeli: `docs/DATA_MODEL.md`; ürün yol haritası ve kanıt durumu: `docs/ROADMAP.md`.
+- Denetim zinciri kararlı: `recordAuditEvent` yazımları sıralanır ve `created_at` kesin artar;
+  tam süit geçer. Kilit yalnızca süreç içidir (çok örnekli dağıtımda DB kilidi gerekir).
 
 ## Delivery approach
 
@@ -37,18 +39,65 @@ limitations before release.
 2. Security and data integrity beat speed. No secrets in code, logs or commits. `org_id` comes from the session, never from the request.
 3. Stay in your lane (see ownership below). If a task needs a file you do not own, stop and tell the Lead what change is needed and why.
 4. Subagents never start other subagents. Do not use the Agent tool.
-5. Do not run `git commit`, `git push`, `npm install`, or anything destructive; the Lead integrates, commits and runs the full test suite.
+5. Do not run `git commit`, `git push`, `npm install`, or anything destructive; the Lead integrates, commits and runs the full test suite. The PreToolUse Bash guard enforces this for every subagent.
 6. Write code comments in the repo's existing language (Turkish). Report to the Lead in Turkish, concisely, listing files read/changed and anything unverified.
 7. Never claim something works without evidence (a test you ran, a file/line you read). Mark assumptions as assumptions.
 
 ## File ownership (one writer per file)
-| Area | Owner | Notes |
-| --- | --- | --- |
-| `src/lib/integrations/**`, `src/lib/data/**`, `src/lib/db/**` (incl. migrations), `src/app/api/{ingest,connectors,webhook,integration,integrations,webhook-config,migrate-local}/**`, `config/**`, matching tests | data-integration-engineer | New migrations are append-only; tell the Lead before touching a table another area reads |
-| `src/lib/demo/tais/**`, `src/lib/{scenario-engine,scenarios,calculators,kpi,signals,domain-knowledge}.ts`, `src/lib/ai/{verify-cases,decision-prompt}.ts`, `evals/**`, matching tests | intelligence-engineer | Pure functions; no DB or framework imports in new engine code |
-| `src/app/dashboard/**`, `src/app/{page,layout}.tsx`, `src/app/{login,onboarding}/**`, `src/components/**`, `src/app/globals.css`, `public/**` | frontend-ux-engineer | Reuse existing components and Tailwind tokens |
-| `src/lib/auth/**`, `src/app/api/auth/**`, `package.json`, lockfile, `next.config.ts`, `Dockerfile`, `docker-compose.yml`, `.github/**`, `CLAUDE.md`, `AGENTS.md`, `docs/**` | **Lead only** | Security-sensitive or cross-cutting |
-| Everything | codebase-architect and security-qa-reviewer: **read-only** | They never edit |
 
-Two agents never work on overlapping files at the same time. The Lead serializes any task touching shared files
-(for example a new table used by both integration and engine code) and runs agents in parallel only for independent areas.
+Every file in the repo has exactly one writer. The globs below are exhaustive: if a file is not matched, stop and ask
+the Lead. A new migration is append-only; tell the Lead before touching a table another area reads.
+
+| Area | Owner |
+| --- | --- |
+| `src/lib/integrations/**`, `src/lib/data/**`, `src/lib/db/**` (client, migrations, repos, seed), `src/lib/documents/**`, `config/**`, `scripts/demo-tais-bootstrap.ts`, `scripts/demo-tais-reset.ts`, matching tests | data-integration-engineer |
+| `src/app/api/{ingest,connectors,webhook,webhook-config,integration,integrations,migrate-local,audit,documents,demo}/**` (18 routes) | data-integration-engineer |
+| `src/lib/demo/tais/**`, `src/lib/{scenario-engine,scenarios,calculators,kpi,signals,domain-knowledge,market-pulse}.ts`, `src/lib/ai/{verify-cases,decision-prompt}.ts`, `evals/**`, matching tests | intelligence-engineer |
+| `src/app/api/{actions,analyze,ask,assess-risk,briefing,causal,command-center,decision-cases,decisions,kpi-definitions,market-pulse,outcomes,scenarios,signals,trace,tais}/**` (18 routes) | intelligence-engineer |
+| `src/app/dashboard/**`, `src/app/{page,layout}.tsx`, `src/app/{login,onboarding}/**`, `src/components/**`, `src/app/globals.css`, `public/**`, `assets/**` | frontend-ux-engineer |
+| `src/lib/{entities,constraints,decisions,profile,roles,sectors,use-session,use-stored,ndjson-client}.ts` | frontend-ux-engineer |
+| `src/lib/auth/**`, `src/app/api/auth/**`, `src/app/api/health/**` | **Lead only** |
+| `src/lib/ai/{provider.ts,providers/**,embeddings.ts,stream-route.ts}`, `src/lib/{public-demo,rate-limit,validation}.ts` | **Lead only** |
+| `package.json`, lockfile, `next.config.ts`, `Dockerfile`, `docker-compose.yml`, `.github/**`, `.claude/**`, `CLAUDE.md`, `AGENTS.md`, `README.md`, `docs/**` | **Lead only** |
+| `scripts/{build-desktop.mjs,windows/**}`, `desktop/**`, `TAIS-ABYS-*.cmd`, `KURULUM-VE-GIRIS-BILGILERI.txt`, `FINAL-QA-REPORT.txt`, `SHA256SUMS.txt` | **Lead only** |
+| Everything | codebase-architect and security-qa-reviewer: **read-only** (they never edit; they may run read-only Git via the Bash guard) |
+
+**Route adapters:** API handlers are thin adapters owned by the agent above. They may import `src/lib/db/repos/**`, but
+their owner never edits those repo files. The intelligence rule "no DB or framework imports in new engine code" applies
+to `src/lib` engine modules, not to route handlers.
+
+## Test ownership (50 files)
+
+| Owner | Test files |
+| --- | --- |
+| **Lead** | `api-auth, permissions, login-flow, oidc, password-change, sessions-api, ask-validation, api-type-robustness, organizations, data-quality, decision-ledger, scenario-simulation, forecasting, anomaly, process-mining, decision-options, kpi-values, connectors, decision-brief, health, public-demo-gate, ollama-diagnosis-retry, tais-windows-package, users-api` |
+| data-integration-engineer | `audit-chain, data-route-validation, users-repo, bitrix24-api, bitrix24-mapper, bitrix-sync-quarantine, integration-gateway, webhook, tenant-isolation, document-access, parse-table, advisor-analytics` |
+| intelligence-engineer | `kpi, scenario-engine, verify-cases, decision-prompt, decision-cases-validation, tais-ask, tais-bootstrap, tais-consistency, tais-decisions, tais-executive-summary, tais-kpi, tais-risks, tais-seed` |
+| frontend-ux-engineer | None today. Future `tests/frontend-*.test.ts`; adding `jsdom`/`@testing-library` needs Lead approval. |
+
+The owner of a production file owns its test. Multi-area tests (for example `tenant-isolation`) are written by
+data-integration-engineer, reviewed by security-qa-reviewer, approved by the Lead. security-qa-reviewer never writes
+tests; it only recommends them.
+
+## Verification and reporting
+
+- Canonical check: `bash scripts/agent-verify.sh <changed files...> <owned test files...>` (runs
+  `npx tsc --noEmit`, `npx eslint` on non-test paths, and `npx vitest run` on `tests/*.test.ts` paths).
+  `node_modules` is installed by the Lead; agents never run `npm install`/`npm ci`.
+- Every report ends with: files read, files changed, commands run and results, what could not be verified, assumptions,
+  and blocking issues.
+- Separate verified (read/run) from assumed. Never claim a check passed unless the command was run.
+
+## Parallel work protocol
+
+- **Concurrency cap: at most 5 specialist agents at once** (run only those the task needs; Lead does simple work directly).
+  Keep the 50-specialist-profile goal, but never run 50 agents simultaneously.
+- Agents never gate each other: the Lead integrates each completed slice immediately and does not wait for background work.
+- Tasks are small, single-output, with explicit file ownership and acceptance criteria. No broad research briefs.
+- If an agent shows no progress for ~5 minutes, query it, shrink the task, or take it over as Lead.
+- The Lead serializes any task touching shared files or a table read by another area, and runs agents in parallel only
+  on disjoint file sets.
+- Before editing, an agent runs `git status --short`; if owned files contain unexpected changes, it stops and reports.
+- Two agents never edit the same file at the same time.
+- `git stash`, `git checkout`, `git reset`, `git clean`, `git commit` and `git push` are forbidden for every subagent.
+  The Lead performs the final integration and commit only with explicit user approval.

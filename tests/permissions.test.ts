@@ -9,6 +9,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: false,
     record_decision: false,
     ingest_data: false,
+    edit_kpi: false,
     view_audit: true,
     manage_users: false,
   },
@@ -17,6 +18,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: true,
     record_decision: true,
     ingest_data: false,
+    edit_kpi: true,
     view_audit: true,
     manage_users: false,
   },
@@ -25,6 +27,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: true,
     record_decision: true,
     ingest_data: false,
+    edit_kpi: true,
     view_audit: true,
     manage_users: false,
   },
@@ -33,6 +36,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: true,
     record_decision: true,
     ingest_data: false,
+    edit_kpi: true,
     view_audit: false,
     manage_users: false,
   },
@@ -41,6 +45,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: true,
     record_decision: true,
     ingest_data: false,
+    edit_kpi: true,
     view_audit: true,
     manage_users: false,
   },
@@ -49,6 +54,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: true,
     record_decision: false,
     ingest_data: false,
+    edit_kpi: true,
     view_audit: false,
     manage_users: false,
   },
@@ -57,6 +63,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: false,
     record_decision: false,
     ingest_data: false,
+    edit_kpi: false,
     view_audit: true,
     manage_users: false,
   },
@@ -65,6 +72,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: false,
     record_decision: false,
     ingest_data: true,
+    edit_kpi: true,
     view_audit: false,
     manage_users: false,
   },
@@ -73,6 +81,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     run_analysis: false,
     record_decision: false,
     ingest_data: false,
+    edit_kpi: true,
     view_audit: true,
     manage_users: true,
   },
@@ -84,11 +93,12 @@ const PERMISSIONS: Permission[] = [
   "run_analysis",
   "record_decision",
   "ingest_data",
+  "edit_kpi",
   "view_audit",
   "manage_users",
 ];
 
-describe("hasPermission — 9 rol x 6 izin matrisi", () => {
+describe("hasPermission — 9 rol x 7 izin matrisi", () => {
   for (const role of ROLES) {
     describe(`rol: ${role}`, () => {
       for (const permission of PERMISSIONS) {

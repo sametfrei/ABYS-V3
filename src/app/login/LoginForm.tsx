@@ -16,7 +16,7 @@ export function LoginForm({
   initialSsoError: string | null;
 }) {
   const router = useRouter();
-  const [email, setEmail] = useState("ceo@tais.demo");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(initialSsoError);
@@ -121,6 +121,10 @@ export function LoginForm({
             {busy ? "Giriş yapılıyor…" : "Giriş yap →"}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-xs text-abys-muted">
+          Parolanızı unuttuysanız kurum yöneticinize başvurun.
+        </p>
 
         {ssoEnabled && (
           <a

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { cookies } from "next/headers";
 import { getActiveProvider } from "@/lib/ai/provider";
 import { getSector } from "@/lib/sectors";
@@ -13,6 +14,7 @@ import { SESSION_COOKIE } from "../auth/login/route";
 import { insertCases, listCasesForOrg, buildServerMemory } from "@/lib/db/repos/decisions";
 import { logModelRun } from "@/lib/db/repos/model-runs";
 import { getDb } from "@/lib/db/client";
+import { parseBody } from "@/lib/validation";
 
 /** Kurumun kayıtlı vakaları (oturum gerekli; org daima oturumdan). */
 export async function GET(req: NextRequest) {
@@ -36,20 +38,31 @@ export async function GET(req: NextRequest) {
 
 export const maxDuration = 600;
 
-export async function POST(req: NextRequest) {
-  let body: {
-    sectorId?: string;
-    data?: string;
-    constraints?: string;
-    decisionMemory?: string;
-  };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
-  }
+const MAX_DATA_LEN = 12000;
 
-  const data = body.data?.trim();
+/**
+ * POST /api/decision-cases gövdesi. `org_id` ve bilinmeyen alanlar zod
+ * tarafından sessizce atılır — kurum kimliği yalnızca oturumdan gelir.
+ * `data` trim edilir; boşluktan ibaret veri 400 döner. `constraints` ve
+ * `decisionMemory` isteğe bağlıdır ve mevcut varsayılan davranış korunur.
+ */
+const decisionCasesBodySchema = z.object({
+  sectorId: z.string({ error: "sectorId metin olmalı." }).optional(),
+  data: z
+    .string({ error: "Operasyonel veri boş olamaz." })
+    .trim()
+    .min(1, "Operasyonel veri boş olamaz.")
+    .max(MAX_DATA_LEN, `Veri çok uzun (${MAX_DATA_LEN} karakter sınırı).`),
+  constraints: z.string({ error: "Kısıtlar metin olmalı." }).optional(),
+  decisionMemory: z.string({ error: "Karar hafızası metin olmalı." }).optional(),
+});
+
+export async function POST(req: NextRequest) {
+  const parsedBody = await parseBody(req, decisionCasesBodySchema);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
+
+  const data = body.data;
 
   const cookieStore = await cookies();
   const session = await getSession(cookieStore.get(SESSION_COOKIE)?.value);
@@ -57,12 +70,6 @@ export async function POST(req: NextRequest) {
 
   if (!sector) {
     return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });
-  }
-  if (!data) {
-    return NextResponse.json({ error: "Operasyonel veri boş olamaz." }, { status: 400 });
-  }
-  if (data.length > 12000) {
-    return NextResponse.json({ error: "Veri çok uzun (12000 karakter sınırı)." }, { status: 400 });
   }
 
   const constraints =
