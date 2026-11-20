@@ -159,3 +159,24 @@ export async function listForecastSnapshots(params: {
 export function summarizeSnapshots(records: ForecastSnapshotRecord[]) {
   return summarizeForecastCalibration(records.map((record) => record.evaluation));
 }
+
+export interface ForecastSnapshotLedgerRow {
+  id: string;
+  label: string;
+  createdAt: string;
+}
+
+/**
+ * Saklama planı için hafif kayıt listesi (yalnızca kimlik, etiket, tarih).
+ * Ağır lateral birleşim yapılmaz; tüm satırlar org kapsamındadır.
+ */
+export async function listForecastSnapshotLedger(
+  orgId: string
+): Promise<ForecastSnapshotLedgerRow[]> {
+  await migrate();
+  const r = await getDb().query<{ id: string; label: string; created_at: string | Date }>(
+    `SELECT id, label, created_at FROM forecast_snapshots WHERE org_id = $1 ORDER BY created_at DESC, id DESC`,
+    [orgId]
+  );
+  return r.rows.map((row) => ({ id: row.id, label: row.label, createdAt: iso(row.created_at) }));
+}

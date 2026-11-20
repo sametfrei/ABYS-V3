@@ -230,4 +230,45 @@ describe("Tahmin anlık görüntüsü kalibrasyonu", () => {
     expect(second.skipped).toBe(1);
     expect(second.results.find((r) => r.label === "Ciro")?.status).toBe("skipped_recent");
   });
+
+  it("saklama planı yalnızca raporlar, kayıt silmez ve kurum kapsamlıdır", async () => {
+    const { GET: retention } = await import("../src/app/api/forecast/snapshots/retention/route");
+    const db = getDb();
+    const rows: Array<[string, string, string]> = [
+      ["ret-old", ORG, "2024-01-01T00:00:00Z"],
+      ["ret-new", ORG, "2026-11-20T00:00:00Z"],
+      ["ret-other", ORG_B, "2024-01-01T00:00:00Z"],
+    ];
+    for (const [id, org, createdAt] of rows) {
+      await db.query(
+        `INSERT INTO forecast_snapshots
+           (id, org_id, label, model, evidence, horizon, series_points, p10, p50, p90, last_observed_at, created_by, created_at)
+         VALUES ($1, $2, 'Saklama', 'naive', 'test', 1, 8, 1, 2, 3, $3, 'Test', $3)`,
+        [id, org, createdAt]
+      );
+    }
+
+    nextHeaders.__setTestCookie(SESSION_COOKIE, await createSession("user-forecast", ORG));
+    const res = await retention(
+      new Request("http://localhost/api/forecast/snapshots/retention?maxAgeDays=365&maxPerLabel=60")
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      policy: { maxAgeDays: number; maxPerLabel: number };
+      archiveIds: string[];
+      reasons: Record<string, string>;
+      dryRun: boolean;
+    };
+    expect(body.policy).toEqual({ maxAgeDays: 365, maxPerLabel: 60 });
+    expect(body.dryRun).toBe(true);
+    expect(body.archiveIds).toContain("ret-old");
+    expect(body.archiveIds).not.toContain("ret-new");
+    expect(body.archiveIds).not.toContain("ret-other");
+    expect(body.reasons["ret-old"]).toBe("expired");
+
+    const stillThere = await db.query("SELECT id FROM forecast_snapshots WHERE org_id = $1", [ORG]);
+    expect(stillThere.rows.map((row) => (row as { id: string }).id).sort()).toEqual(
+      expect.arrayContaining(["ret-old", "ret-new"])
+    );
+  });
 });
