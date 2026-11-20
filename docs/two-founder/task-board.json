@@ -636,6 +636,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "/login renders in TR or EN from the abys_lang cookie, offers a language switch before authentication, and keeps error copy truthful about remaining Turkish-only text.",
       "evidence": "Full suite 80 files/736 tests passed (9 skipped); eslint, tsc and production build clean. Rendered /login with and without abys_lang=en and confirmed Kurumsal/Enterprise, E-posta/Email strings from the running server."
+    },
+    {
+      "id": "TB-030",
+      "commit": "46fa72d",
+      "title": "Scheduled forecast snapshot capture",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "backend-api-engineer",
+        "reliability-observability-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/app/api/forecast/snapshots/capture/route.ts",
+        "src/lib/db/repos/forecast-snapshots.ts",
+        "tests/forecast-snapshots.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "A single authenticated call captures one snapshot per forecastable KPI label, is safe to re-run within 20 hours per label, and reports insufficient/unforecastable labels instead of dropping them.",
+      "evidence": "Full suite 80 files/737 tests passed (9 skipped); eslint, tsc and production build clean. Test asserts first call captures the forecastable label, second call skips it, and a label below the minimum observation count is reported as insufficient_data."
     }
   ]
 }
