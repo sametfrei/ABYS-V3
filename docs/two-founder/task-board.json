@@ -91,6 +91,18 @@
       "acceptanceCriteria": "First executive viewport makes the 3-5 most important developments and next action clear using existing data only; preserve ABYS identity; tsc and targeted eslint pass.",
       "ownerProcess": "Founder A resumed thread 01a1f8d2-cba6-76b1-8556-ad8b51b5f7d9",
       "evidence": "Founder A changed only CommandCenter.tsx (214 insertions, 6 deletions). Founder B independently reran tsc, eslint and production build: 94-page build passed. Browser visual verification remains pending."
+    },
+    {
+      "id": "TF-009",
+      "title": "Forecast evidence, uncertainty and limitations",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": ["predictive-causal-intelligence-engineer", "executive-ux-engineer"],
+      "files": ["src/app/dashboard/forecast/page.tsx", "tests/forecast-evidence.test.ts", "docs/two-founder/founder-a/WORKSTREAM-003.md"],
+      "status": "COMPLETED",
+      "acceptanceCriteria": "Show only forecast evidence present in the existing API payload; expose MAE, P10-P90, observation freshness and assumptions; state unavailable data honestly; introduce no invented confidence or causal claims.",
+      "ownerProcess": "Founder A resumed thread 01a1f8d2-cba6-76b1-8556-ad8b51b5f7d9",
+      "evidence": "Founder A changed only the forecast page (69 insertions, 7 deletions). Founder B reviewed the payload contract, reran tsc and eslint, and the production build passed with 94 routes. Browser visual verification remains pending."
     }
   ]
 }

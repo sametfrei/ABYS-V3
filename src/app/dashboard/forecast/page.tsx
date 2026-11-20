@@ -73,6 +73,72 @@ function fmt(n: number): string {
   return n.toLocaleString("tr-TR", { maximumFractionDigits: 2 });
 }
 
+function formatObservationTime(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString("tr-TR");
+}
+
+function ForecastEvidencePanel({ data }: { data: ForecastData }) {
+  const forecast = data.forecast;
+  const firstPoint = forecast?.points[0];
+  const evidenceLabel = forecast ? EVIDENCE_LABEL[forecast.evidence] ?? "Kanıt düzeyi belirtilmedi" : null;
+  const hasMae = forecast !== null && Number.isFinite(forecast.selectedMae);
+  const observationTime = formatObservationTime(data.provenance.lastAt);
+  const hasRange = Boolean(firstPoint && Number.isFinite(firstPoint.p10) && Number.isFinite(firstPoint.p90));
+  const assumptions = data.provenance.assumptions ?? [];
+
+  return (
+    <section aria-labelledby="forecast-evidence-heading" className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
+      <h2 id="forecast-evidence-heading" className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
+        TAHMİN KANITI VE SINIRLARI
+      </h2>
+      <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="rounded-lg bg-white/70 px-3 py-2">
+          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">Kanıt düzeyi</dt>
+          <dd className="mt-0.5 text-sm font-medium text-abys-ink">{evidenceLabel ?? "Bu yanıtta yok"}</dd>
+          <dd className="mt-0.5 text-[11px] text-abys-muted">
+            {forecast && hasMae ? `Geriye dönük test MAE ${fmt(forecast.selectedMae)}` : "MAE bu yanıtta yok."}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-white/70 px-3 py-2">
+          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">Veri tazeliği</dt>
+          <dd className="mt-0.5 text-sm font-medium text-abys-ink">{observationTime ?? "Bu yanıtta yok"}</dd>
+          <dd className="mt-0.5 text-[11px] text-abys-muted">
+            {observationTime ? "Son gözlem zamanı" : "Son gözlem zamanı bu yanıtta yok."}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-white/70 px-3 py-2">
+          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">Belirsizlik aralığı</dt>
+          <dd className="mt-0.5 text-sm font-medium text-abys-ink">
+            {firstPoint && hasRange ? `${fmt(firstPoint.p10)} – ${fmt(firstPoint.p90)}` : "Bu yanıtta yok"}
+          </dd>
+          <dd className="mt-0.5 text-[11px] text-abys-muted">
+            {firstPoint && hasRange ? "İlk dönem, P10–P90" : "P10–P90 aralığı üretilmedi."}
+          </dd>
+        </div>
+      </dl>
+      {!forecast && (
+        <p className="mt-3 rounded-lg bg-white/60 px-3 py-2 text-xs text-abys-muted">
+          Yeterli veri olmadığı için kanıt düzeyi, geriye dönük MAE ve P10–P90 belirsizlik aralığı bu yanıtta yok.
+        </p>
+      )}
+      <div className="mt-4 pt-3 border-t border-abys-cream-border">
+        <p className="text-[10px] tracking-wide text-abys-muted font-semibold uppercase mb-1">Varsayımlar ve sınırlar</p>
+        {assumptions.length > 0 ? (
+          <ul className="space-y-0.5 text-xs text-abys-muted">
+            {assumptions.map((assumption, index) => (
+              <li key={index}>• {assumption}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-xs text-abys-muted">Bu yanıtta varsayım veya sınırlama metni yok.</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 /** Basit tarih serisi grafiği — geçmiş + tahmin aralığı. */
 function SeriesChart({ history, points }: { history: number[]; points: ForecastPoint[] }) {
   const all = [
@@ -246,6 +312,8 @@ export default function ForecastPage() {
 
         {data && !loading && (
           <div className="space-y-4">
+            <ForecastEvidencePanel data={data} />
+
             <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <p className="text-sm font-medium text-abys-ink">{data.label}</p>
@@ -278,7 +346,7 @@ export default function ForecastPage() {
                         <p className="text-[11px] text-abys-muted">+{p.step} dönem</p>
                         <p className="font-mono text-lg text-abys-navy">{fmt(p.value)}</p>
                         <p className="text-[11px] text-abys-muted">
-                          {fmt(p.p10)} – {fmt(p.p90)}
+                          P10–P90: {fmt(p.p10)} – {fmt(p.p90)}
                         </p>
                       </div>
                     ))}
@@ -322,12 +390,6 @@ export default function ForecastPage() {
               <p>
                 Kullanılan gözlem: {data.provenance.numericPoints} · dışlanan (sayısal olmayan): {data.provenance.excludedPoints}
               </p>
-              <p>Son gözlem: {data.provenance.lastAt ? new Date(data.provenance.lastAt).toLocaleString("tr-TR") : "—"}</p>
-              <ul className="space-y-0.5 pt-1">
-                {data.provenance.assumptions.map((a, i) => (
-                  <li key={i}>• {a}</li>
-                ))}
-              </ul>
             </div>
           </div>
         )}

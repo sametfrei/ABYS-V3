@@ -152,9 +152,11 @@ export function forecastSeries(series: number[], horizon = 1): ForecastResult | 
   candidates.sort((a, b) => a.mae - b.mae || a.rmse - b.rmse);
   const selected = candidates[0];
   const alpha = selected.model === "ses" ? selected.params.alpha ?? 0.3 : 0;
-  const residuals = errorsFor(clean, selected.model, alpha).sort((a, b) => a - b);
-  const q10 = quantile(residuals, 0.1);
-  const q90 = quantile(residuals, 0.9);
+  const residuals = errorsFor(clean, selected.model, alpha);
+  const residualBias = mean(residuals);
+  const centeredResiduals = residuals.map((error) => error - residualBias).sort((a, b) => a - b);
+  const q10 = quantile(centeredResiduals, 0.1);
+  const q90 = quantile(centeredResiduals, 0.9);
 
   // Çok adımlı tahmin: seçilen modelin yapısına göre özyinelemeli.
   const points: ForecastPoint[] = [];
@@ -171,7 +173,7 @@ export function forecastSeries(series: number[], horizon = 1): ForecastResult | 
     const slope = den === 0 ? 0 : num / den;
     const intercept = yMean - slope * xMean;
     for (let step = 1; step <= h; step++) {
-      const v = intercept + slope * (n - 1 + step);
+      const v = intercept + slope * (n - 1 + step) + residualBias;
       const scale = Math.sqrt(step);
       points.push({
         step,
@@ -181,7 +183,7 @@ export function forecastSeries(series: number[], horizon = 1): ForecastResult | 
       });
     }
   } else {
-    const v = predictNext(clean, selected.model, alpha);
+    const v = predictNext(clean, selected.model, alpha) + residualBias;
     for (let step = 1; step <= h; step++) {
       const scale = Math.sqrt(step);
       points.push({
@@ -212,7 +214,8 @@ export function forecastSeries(series: number[], horizon = 1): ForecastResult | 
     selectedMae: selected.mae,
     evidence,
     note:
-      "Modeller tek adımlı geriye dönük testte MAE ile karşılaştırıldı; aralıklar artık hataların P10–P90 " +
-      "yüzdeliklerinden türetilir ve ufukla √h ölçeğinde genişler. Bu bir istatistiksel garanti değildir.",
+      "Modeller tek adımlı geriye dönük testte MAE ile karşılaştırıldı; merkez tahmin geriye dönük hata " +
+      "ortalamasıyla düzeltilir, aralıklar merkezlenmiş hataların P10–P90 yüzdeliklerinden türetilir ve " +
+      "ufukla √h ölçeğinde genişler. Bu bir istatistiksel garanti değildir.",
   };
 }
