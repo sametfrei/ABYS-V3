@@ -537,6 +537,28 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "A saved forecast is scored against the next real observation: interval hit/miss, absolute error and pending counts from stored data only; no forecast is scored against the data it was fitted on; results stay org-scoped.",
       "evidence": "Full suite 79 files/728 tests passed (9 skipped); eslint, tsc and production build clean. tests/forecast-snapshots.test.ts covers evaluation math, save-then-realize flow, 422 on insufficient observations and cross-org isolation."
+    },
+    {
+      "id": "TB-025",
+      "commit": "e7f540e",
+      "title": "Forecast interval calibration from realized coverage",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-scientist",
+        "frontend-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/forecast-calibration.ts",
+        "src/app/api/forecast/route.ts",
+        "src/app/dashboard/forecast/page.tsx",
+        "tests/forecasting.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Once at least 5 saved forecasts are measured, P10-P90 half-widths are scaled by the ratio of 80% target coverage to observed coverage within 0.5-3x; the raw model intervals remain available and the adjustment plus its rationale is shown rather than silently applied.",
+      "evidence": "Full suite 79 files/731 tests passed (9 skipped); eslint, tsc and production build clean. tests/forecasting.test.ts covers insufficient-evidence, 0% coverage widening to 3x with adjustedPoints returned, above-target narrowing to 0.8x, scaling math and identity at factor 1."
     }
   ]
 }
