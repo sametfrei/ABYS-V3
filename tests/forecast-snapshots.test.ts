@@ -1,0 +1,173 @@
+import { randomUUID } from "node:crypto";
+import os from "node:os";
+import path from "node:path";
+import { NextRequest } from "next/server";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+process.env.ABYS_DB_DIR = path.join(
+  os.tmpdir(),
+  `abys-forecast-snapshots-${process.pid}-${randomUUID()}`
+);
+
+vi.mock("next/headers", () => {
+  const store = new Map<string, string>();
+  return {
+    cookies: async () => ({
+      get: (name: string) => {
+        const value = store.get(name);
+        return value === undefined ? undefined : { name, value };
+      },
+      set: (name: string, value: string) => store.set(name, value),
+      delete: (name: string) => store.delete(name),
+    }),
+    __setTestCookie: (name: string, value: string | undefined) => {
+      if (value === undefined) store.delete(name);
+      else store.set(name, value);
+    },
+  };
+});
+
+const nextHeaders = (await import("next/headers")) as unknown as {
+  __setTestCookie: (name: string, value: string | undefined) => void;
+};
+const { migrate, getDb } = await import("../src/lib/db/client");
+const { createSession, hashPassword } = await import("../src/lib/auth/core");
+const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { GET, POST } = await import("../src/app/api/forecast/snapshots/route");
+const { evaluateForecastSnapshot, summarizeForecastCalibration } = await import(
+  "../src/lib/forecast-calibration"
+);
+
+const ORG = "org-forecast-snap";
+const ORG_B = "org-forecast-snap-b";
+const LABEL = "Günlük ciro";
+
+function postRequest(body: unknown): NextRequest {
+  return new NextRequest("http://localhost/api/forecast/snapshots", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+function getRequest(label?: string): NextRequest {
+  return new NextRequest(
+    `http://localhost/api/forecast/snapshots${label ? `?label=${encodeURIComponent(label)}` : ""}`
+  );
+}
+
+describe("Tahmin anlık görüntüsü kalibrasyonu", () => {
+  beforeAll(async () => {
+    await migrate();
+    const db = getDb();
+    for (const [id, name] of [
+      [ORG, "Forecast Org"],
+      [ORG_B, "Forecast Org B"],
+    ]) {
+      await db.query("INSERT INTO organizations (id, name, sector_id) VALUES ($1, $2, $3)", [
+        id,
+        name,
+        "aviation",
+      ]);
+    }
+    await db.query(
+      "INSERT INTO users (id, org_id, email, display_name, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
+      ["user-forecast", ORG, "forecast@test.local", "Forecast CEO", "ceo", hashPassword("mevcut-parola-123")]
+    );
+    await db.query(
+      "INSERT INTO users (id, org_id, email, display_name, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
+      ["user-forecast-b", ORG_B, "forecast-b@test.local", "Forecast B", "ceo", hashPassword("mevcut-parola-123")]
+    );
+    await db.query(
+      "INSERT INTO datasets (id, org_id, sector_id, source_label, raw_content, ingested_by) VALUES ($1, $2, $3, $4, $5, $6)",
+      ["ds-forecast", ORG, "aviation", "test.csv", "kpi", "tester"]
+    );
+    // 8 geçmiş gözlem, artan zaman damgaları.
+    for (let i = 0; i < 8; i++) {
+      await db.query(
+        "INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+        [`kpi-${i}`, ORG, "ds-forecast", LABEL, String(100 + i * 10), `2026-01-0${i + 1}T00:00:00Z`]
+      );
+    }
+    nextHeaders.__setTestCookie(SESSION_COOKIE, await createSession("user-forecast", ORG));
+  });
+
+  afterAll(async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, undefined);
+    await getDb().close();
+  });
+
+  it("değerlendirme aralık isabetini ve hatayı doğru hesaplar", () => {
+    const trip = evaluateForecastSnapshot({ p10: 150, p50: 170, p90: 190 }, 180);
+    expect(trip).toMatchObject({ status: "evaluated", actual: 180, insideRange: true, absError: 10, rangeWidth: 40 });
+    const miss = evaluateForecastSnapshot({ p10: 150, p50: 170, p90: 190 }, 220);
+    expect(miss.insideRange).toBe(false);
+    expect(miss.absError).toBe(50);
+    const pending = evaluateForecastSnapshot({ p10: 150, p50: 170, p90: 190 }, null);
+    expect(pending.status).toBe("pending");
+    expect(pending.insideRange).toBeNull();
+
+    const summary = summarizeForecastCalibration([trip, miss, pending]);
+    expect(summary).toMatchObject({
+      total: 3,
+      evaluated: 2,
+      pending: 1,
+      hits: 1,
+      misses: 1,
+      hitRate: 0.5,
+      meanAbsError: 30,
+    });
+  });
+
+  it("tahmini kaydeder, sonraki gözlemle ölçer ve özet döndürür", async () => {
+    const created = await POST(postRequest({ label: LABEL }));
+    expect(created.status).toBe(200);
+
+    const before = (await (await GET(getRequest(LABEL))).json()) as {
+      snapshots: Array<{ evaluation: { status: string } }>;
+      summary: { evaluated: number; pending: number };
+    };
+    expect(before.snapshots).toHaveLength(1);
+    expect(before.summary).toMatchObject({ evaluated: 0, pending: 1 });
+
+    // Snapshot'tan sonra gelen ilk gözlem gerçek değer olur.
+    await getDb().query(
+      "INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+      ["kpi-later", ORG, "ds-forecast", LABEL, "175", "2026-02-01T00:00:00Z"]
+    );
+
+    const after = (await (await GET(getRequest(LABEL))).json()) as {
+      snapshots: Array<{
+        model: string;
+        p10: number;
+        p50: number;
+        p90: number;
+        evaluation: { status: string; actual: number; insideRange: boolean; absError: number };
+      }>;
+      summary: { evaluated: number; hitRate: number; meanAbsError: number };
+    };
+    expect(after.snapshots[0].evaluation).toMatchObject({
+      status: "evaluated",
+      actual: 175,
+    });
+    expect(after.snapshots[0].evaluation.absError).toBeCloseTo(
+      Math.abs(175 - after.snapshots[0].p50),
+      6
+    );
+    expect(after.summary.evaluated).toBe(1);
+    expect(after.summary.hitRate).toBe(after.snapshots[0].evaluation.insideRange ? 1 : 0);
+  });
+
+  it("yetersiz gözlemde 422 döner ve kayıt oluşmaz", async () => {
+    const res = await POST(postRequest({ label: "Hiç olmayan metrik" }));
+    expect(res.status).toBe(422);
+    const listed = (await (await GET(getRequest("Hiç olmayan metrik"))).json()) as { snapshots: unknown[] };
+    expect(listed.snapshots).toHaveLength(0);
+  });
+
+  it("başka kurumun anlık görüntüleri görünmez", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, await createSession("user-forecast-b", ORG_B));
+    const other = (await (await GET(getRequest())).json()) as { snapshots: unknown[] };
+    expect(other.snapshots).toHaveLength(0);
+  });
+});

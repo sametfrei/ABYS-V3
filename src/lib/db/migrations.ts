@@ -1061,4 +1061,30 @@ export const MIGRATIONS: Migration[] = [
           CHECK (uncertainty IS NULL OR uncertainty IN ('low', 'medium', 'high'));
     `,
   },
+  {
+    id: 35,
+    name: "tahmin anlik goruntusu: gerceklesen degerle karsilastirma",
+    sql: `
+      -- Bir tahmin uretildigi andaki ilk adımı (P10/P50/P90) saklar. Sonraki
+      -- KPI gözlemi geldiğinde bu anlık görüntü gerçek değerle karşılaştırılır;
+      -- böylece "tahmin ettik, ölçtük" döngüsü uydurma metrik olmadan kurulur.
+      CREATE TABLE forecast_snapshots (
+        id               TEXT PRIMARY KEY,
+        org_id           TEXT NOT NULL REFERENCES organizations(id),
+        label            TEXT NOT NULL,
+        model            TEXT NOT NULL,
+        evidence         TEXT NOT NULL,
+        horizon          INTEGER NOT NULL CHECK (horizon BETWEEN 1 AND 12),
+        series_points    INTEGER NOT NULL CHECK (series_points >= 6),
+        p10              DOUBLE PRECISION NOT NULL,
+        p50              DOUBLE PRECISION NOT NULL,
+        p90              DOUBLE PRECISION NOT NULL,
+        last_observed_at TIMESTAMPTZ NOT NULL,
+        created_by       TEXT NOT NULL,
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX forecast_snapshots_org_label
+        ON forecast_snapshots(org_id, label, created_at DESC);
+    `,
+  },
 ];

@@ -355,6 +355,8 @@ export default function ForecastPage() {
               )}
             </div>
 
+            {data.forecast && <ForecastSnapshotPanel label={data.label} />}
+
             {data.forecast && (
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
                 <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">MODEL KARŞILAŞTIRMASI — GERİYE DÖNÜK TEST</p>
@@ -394,6 +396,165 @@ export default function ForecastPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+interface SnapshotRow {
+  id: string;
+  model: string;
+  p10: number;
+  p50: number;
+  p90: number;
+  createdAt: string;
+  createdBy: string;
+  evaluation: {
+    status: "pending" | "evaluated";
+    actual: number | null;
+    insideRange: boolean | null;
+    absError: number | null;
+  };
+}
+
+interface SnapshotSummary {
+  total: number;
+  evaluated: number;
+  pending: number;
+  hits: number;
+  misses: number;
+  hitRate: number | null;
+  meanAbsError: number | null;
+}
+
+function ForecastSnapshotPanel({ label }: { label: string }) {
+  const [snapshots, setSnapshots] = useState<SnapshotRow[]>([]);
+  const [summary, setSummary] = useState<SnapshotSummary | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [note, setNote] = useState("");
+
+  async function load() {
+    const res = await fetch(`/api/forecast/snapshots?label=${encodeURIComponent(label)}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const body = (await res.json()) as { snapshots?: SnapshotRow[]; summary?: SnapshotSummary };
+    setSnapshots(Array.isArray(body.snapshots) ? body.snapshots : []);
+    setSummary(body.summary ?? null);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/forecast/snapshots?label=${encodeURIComponent(label)}`, { cache: "no-store" })
+      .then(async (res) =>
+        res.ok ? ((await res.json()) as { snapshots?: SnapshotRow[]; summary?: SnapshotSummary }) : null
+      )
+      .then((body) => {
+        if (cancelled || !body) return;
+        setSnapshots(Array.isArray(body.snapshots) ? body.snapshots : []);
+        setSummary(body.summary ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [label]);
+
+  async function save() {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    setNote("");
+    try {
+      const res = await fetch("/api/forecast/snapshots", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Tahmin kaydedilemedi.");
+      }
+      setNote("Tahmin kaydedildi. Sonraki gözlem geldiğinde otomatik ölçülecek.");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Tahmin kaydedilemedi.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <p className="text-xs tracking-widest text-abys-muted font-semibold">TAHMİN KALİBRASYONU — GERÇEKLEŞEN</p>
+        <button
+          onClick={save}
+          disabled={busy}
+          className="text-xs rounded-full border border-abys-navy/25 text-abys-navy px-3 py-1.5 hover:bg-white/60 disabled:opacity-50"
+        >
+          {busy ? "Kaydediliyor…" : "Bu tahmini ölçüm için kaydet"}
+        </button>
+      </div>
+      <p className="text-[11px] text-abys-muted">
+        Kaydedilen ilk adım (P10–P90), sonraki gerçek KPI gözlemiyle karşılaştırılır. Sonuç bir garanti değil,
+        kendi geçmiş isabetimizdir.
+      </p>
+      {error && <p className="mt-2 text-xs text-abys-critical">{error}</p>}
+      {note && <p className="mt-2 text-xs text-abys-healthy">{note}</p>}
+      {summary && summary.total > 0 && (
+        <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
+            <p className="text-abys-muted">Ölçülen</p>
+            <p className="mt-1 font-semibold text-abys-ink">
+              {summary.evaluated}/{summary.total}
+            </p>
+            <p className="text-[11px] text-abys-muted">{summary.pending} bekliyor</p>
+          </div>
+          <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
+            <p className="text-abys-muted">Aralık isabeti</p>
+            <p className="mt-1 font-semibold text-abys-ink">
+              {summary.hitRate === null ? "—" : `%${Math.round(summary.hitRate * 100)}`}
+            </p>
+            <p className="text-[11px] text-abys-muted">
+              {summary.hits} isabet · {summary.misses} ıska
+            </p>
+          </div>
+          <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
+            <p className="text-abys-muted">Ortalama |hata|</p>
+            <p className="mt-1 font-semibold text-abys-ink">
+              {summary.meanAbsError === null ? "—" : fmt(summary.meanAbsError)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
+            <p className="text-abys-muted">Son kayıt</p>
+            <p className="mt-1 font-semibold text-abys-ink">
+              {snapshots[0] ? new Date(snapshots[0].createdAt).toLocaleDateString("tr-TR") : "—"}
+            </p>
+          </div>
+        </div>
+      )}
+      {snapshots.length > 0 && (
+        <ul className="mt-3 space-y-1 text-[11px] list-none p-0 m-0">
+          {snapshots.slice(0, 5).map((snap) => (
+            <li key={snap.id} className="flex flex-wrap items-center gap-2 text-abys-muted">
+              <span className="text-abys-ink">{new Date(snap.createdAt).toLocaleDateString("tr-TR")}</span>
+              <span>
+                P10–P90 {fmt(snap.p10)} – {fmt(snap.p90)}
+              </span>
+              {snap.evaluation.status === "evaluated" ? (
+                <span className={snap.evaluation.insideRange ? "text-abys-healthy" : "text-abys-critical"}>
+                  gerçek {fmt(snap.evaluation.actual ?? 0)} · {snap.evaluation.insideRange ? "aralıkta" : "aralık dışında"}
+                  {snap.evaluation.absError !== null && ` · |hata| ${fmt(snap.evaluation.absError)}`}
+                </span>
+              ) : (
+                <span>ölçüm bekliyor</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {summary && summary.total === 0 && (
+        <p className="mt-2 text-xs text-abys-muted">Henüz kaydedilmiş tahmin yok.</p>
+      )}
     </div>
   );
 }

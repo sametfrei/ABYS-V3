@@ -52,6 +52,7 @@ Durum ölçeği:
 | Deterministik KPI zaman serisi girişi | E2E (test) | `/api/kpi-values`, `/dashboard/kpi` |
 | Sektör paketi formüllerinin çalıştırılabilir hesaplayıcıları | E2E (test) | `src/lib/industry/kpi-calculators.ts`; eksik alan/sıfır paydada değer üretilmez |
 | Tahmin (naive/SES/trend, geriye dönük test, P10–P90) | E2E (test) | `src/lib/forecasting.ts`, `tests/forecasting.test.ts` |
+| Tahmin kalibrasyonu · kaydedilen tahmin vs gerçekleşen | E2E (test) | migration 35 `forecast_snapshots`; `POST/GET /api/forecast/snapshots`; üretilen ilk adım (P10/P50/P90) saklanır, sonraki sayısal KPI gözlemiyle karşılaştırılır; aralık isabeti, ıska ve ortalama mutlak hata kayıtlı değerlerden türetilir; `src/lib/forecast-calibration.ts`, `/dashboard/forecast` paneli; `tests/forecast-snapshots.test.ts` |
 | Erken uyarı (median/MAD) | E2E (test) | `src/lib/anomaly.ts`, `tests/anomaly.test.ts` |
 | Monte Carlo (tohumlu, üçgensel, P10/P50/P90) | E2E (test) | `src/lib/scenario-simulation.ts`, `tests/scenario-simulation.test.ts` |
 | Çok kriterli seçenek değerlendirme + Pareto | E2E (test) | `src/lib/decision-options.ts`, `/dashboard/options` |
@@ -97,7 +98,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020) ve kök neden bağlantılarında kanıt üst verisiyle kanıt seviyesi türetimi (TB-022).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
 2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.
