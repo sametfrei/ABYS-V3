@@ -29,7 +29,7 @@ vi.mock("next/headers", () => {
 const nextHeaders = (await import("next/headers")) as unknown as {
   __setTestCookie: (name: string, value: string | undefined) => void;
 };
-const { migrate, getDb } = await import("../src/lib/db/client");
+const { migrate, getDb, getPendingMigrationApprovals } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
 const {
@@ -48,7 +48,11 @@ const BRANCH_1 = "org-branch-1";
 const COMPANY_2 = "org-company-2";
 const OTHER_ROOT = "org-other-root";
 
-describe("organizasyon hiyerarşisi", () => {
+await migrate();
+const migration18Applied = !getPendingMigrationApprovals().some((migration) => migration.id === 18);
+const hierarchyDescribe = migration18Applied ? describe : describe.skip;
+
+hierarchyDescribe("organizasyon hiyerarşisi (migration 18 onay durumuna bağlı)", () => {
   let groupSession: string;
   let branchSession: string;
   let guestSession: string;

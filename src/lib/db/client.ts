@@ -21,6 +21,13 @@ declare global {
   // Dev'de HMR yeni migration ekleyebilir; uygulanan sayı takip edilir ki
   // önbelleklenmiş "hazır" sözü yeni migration'ları atlamasın.
   var __abysDbMigratedCount: number | undefined;
+  var __abysDbPendingMigrations: PendingMigrationApproval[] | undefined;
+}
+
+export interface PendingMigrationApproval {
+  id: number;
+  name: string;
+  approvalEnv: string;
 }
 
 export function getDb(): PGlite {
@@ -28,6 +35,23 @@ export function getDb(): PGlite {
     globalThis.__abysDb = new PGlite(DB_DIR);
   }
   return globalThis.__abysDb;
+}
+
+/** Onay gerektiren migration'ların çalışma anında sessizce uygulanmasını engeller. */
+export function migrationApprovalError(
+  migration: { id: number; name: string; approvalEnv?: string },
+  env: NodeJS.ProcessEnv = process.env
+): string | null {
+  if (!migration.approvalEnv) return null;
+  if (env[migration.approvalEnv] === "true") return null;
+  return (
+    `Migration ${migration.id} (${migration.name}) açık onay gerektiriyor. ` +
+    `Uygulamak için ${migration.approvalEnv}=true ayarlanmalı; açık onay olmadan uygulanmadı.`
+  );
+}
+
+export function getPendingMigrationApprovals(): PendingMigrationApproval[] {
+  return [...(globalThis.__abysDbPendingMigrations ?? [])];
 }
 
 /** Migration'ları bir kez uygular; her API route'u await migrate() ile başlar. */
@@ -52,8 +76,15 @@ async function runMigrations(): Promise<void> {
   const { MIGRATIONS } = await import("./migrations");
   const done = await db.query<{ id: number }>("SELECT id FROM _migrations");
   const doneIds = new Set(done.rows.map((r) => r.id));
+  const pending: PendingMigrationApproval[] = [];
   for (const m of MIGRATIONS) {
     if (doneIds.has(m.id)) continue;
+    const approvalError = migrationApprovalError(m);
+    if (approvalError && m.approvalEnv) {
+      pending.push({ id: m.id, name: m.name, approvalEnv: m.approvalEnv });
+      console.warn(approvalError);
+      continue;
+    }
     await db.exec("BEGIN");
     try {
       await db.exec(m.sql);
@@ -64,4 +95,5 @@ async function runMigrations(): Promise<void> {
       throw new Error(`Migration ${m.id} (${m.name}) başarısız: ${err instanceof Error ? err.message : err}`);
     }
   }
+  globalThis.__abysDbPendingMigrations = pending;
 }

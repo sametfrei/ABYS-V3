@@ -126,6 +126,17 @@
       "status": "COMPLETED",
       "acceptanceCriteria": "Current tree passes tests, TypeScript, full lint, production build and a running-server smoke; delivery evidence and external gates are recorded honestly.",
       "evidence": "76 test files and 708 tests passed; 94-route production build passed; full ESLint passed; live HTTP smoke passed 22/22; audit chain valid; migration head 33 with migration 18 still gated."
+    },
+    {
+      "id": "TB-012",
+      "title": "Trust foundation and migration governance",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": ["database-persistence-engineer", "application-security-engineer", "reliability-observability-engineer"],
+      "files": ["src/lib/db/client.ts", "src/lib/db/migrations.ts", "src/lib/db/migration-guard.ts", "src/lib/demo/tais/seed.ts", "src/app/api/auth/login/route.ts", "src/app/api/auth/oidc/callback/route.ts", "src/app/api/health/route.ts", "src/app/api/organizations/route.ts", "src/app/api/organizations/consolidation/route.ts"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Login and OIDC do not auto-seed demo data; migration 18 remains approval-gated; health exposes pending approvals; hierarchy endpoints fail safely while migration 18 is pending; demo reset remains transactionally safe.",
+      "evidence": "Targeted governance/auth/organization suites passed: 6 files, 32 tests; migration-18 dependent suite skipped as designed; tsc and eslint passed."
     }
   ]
 }

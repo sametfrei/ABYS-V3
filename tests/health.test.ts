@@ -19,6 +19,12 @@ describe("GET /api/health", () => {
   it("veritabanı erişilebilirse 200 ve db:up döner", async () => {
     const res = await health();
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ ok: true, service: "abys", db: "up" });
+    expect(await res.json()).toMatchObject({
+      ok: true,
+      service: "abys",
+      db: "up",
+      schemaReady: false,
+      pendingMigrations: [expect.objectContaining({ id: 18 })],
+    });
   });
 });

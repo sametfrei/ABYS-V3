@@ -18,7 +18,6 @@ const { migrate, getDb } = await import("../src/lib/db/client");
 const { seedTaisDemo, resetTaisDemo, TAIS_ORG_CODE, TAIS_REFERENCE_NOW } = await import(
   "../src/lib/demo/tais/seed"
 );
-const { ensureSeeded } = await import("../src/lib/db/seed");
 const { TAIS_DEMO_EMAIL, TAIS_DEMO_PASSWORD } = await import("../src/lib/demo/tais/constants");
 const { verifyPassword } = await import("../src/lib/auth/core");
 
@@ -237,7 +236,7 @@ describe("ensureTaisDemoUser (mevcut kullanici alanlari korunur)", () => {
     expect(verifyPassword(TAIS_DEMO_PASSWORD, user!.password_hash)).toBe(true);
   });
 
-  it("operator degisikliklerini (parola/rol/status) seedTaisDemo ve ensureSeeded ezmez", async () => {
+  it("operator degisikliklerini (parola/rol/status) explicit demo seed ezmez", async () => {
     const db = getDb();
     const original = await getDemoUser();
     expect(original).toBeDefined();
@@ -258,7 +257,7 @@ describe("ensureTaisDemoUser (mevcut kullanici alanlari korunur)", () => {
     try {
       delete process.env.TAIS_DEMO_ADMIN_EMAIL;
       delete process.env.TAIS_DEMO_ADMIN_PASSWORD;
-      await ensureSeeded();
+      await seedTaisDemo();
     } finally {
       if (savedEmail === undefined) delete process.env.TAIS_DEMO_ADMIN_EMAIL;
       else process.env.TAIS_DEMO_ADMIN_EMAIL = savedEmail;

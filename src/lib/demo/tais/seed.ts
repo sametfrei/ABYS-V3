@@ -600,24 +600,48 @@ async function wipeTaisDecisionChain(orgId: string): Promise<void> {
   const caseIdsSubquery = `SELECT id FROM decision_cases WHERE org_id = $1 AND category_id LIKE $2`;
   const recordIdsSubquery = `SELECT id FROM decision_records WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`;
   const marker = `${TAIS_DECISION_MARKER_PREFIX}%`;
-  await db.query(`DELETE FROM outcomes WHERE org_id = $1 AND decision_id IN (${recordIdsSubquery})`, [
-    orgId,
-    marker,
-  ]);
-  await db.query(`DELETE FROM actions WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [orgId, marker]);
-  await db.query(`DELETE FROM causal_links WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [
-    orgId,
-    marker,
-  ]);
-  await db.query(`UPDATE scenarios SET case_id = NULL WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [
-    orgId,
-    marker,
-  ]);
-  await db.query(`DELETE FROM decision_records WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [
-    orgId,
-    marker,
-  ]);
-  await db.query(`DELETE FROM decision_cases WHERE org_id = $1 AND category_id LIKE $2`, [orgId, marker]);
+  await db.transaction(async (tx) => {
+    await tx.query(`DELETE FROM decision_case_signals WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [
+      orgId,
+      marker,
+    ]);
+    // Demo reseti kontrollü bir bakım işlemidir. Yalnızca bu transaction
+    // içinde append-only olay trigger'ı devre dışı bırakılır; normal üretim
+    // yollarında olay geçmişi UPDATE/DELETE edilemez. DDL ve silmeler aynı
+    // transaction'dadır; hata halinde trigger durumu da geri alınır.
+    await tx.exec("ALTER TABLE action_events DISABLE TRIGGER action_events_append_only");
+    await tx.query(`DELETE FROM action_events WHERE org_id = $1 AND decision_id IN (${recordIdsSubquery})`, [
+      orgId,
+      marker,
+    ]);
+    await tx.query(
+      `DELETE FROM action_execution_attempts WHERE org_id = $1 AND decision_id IN (${recordIdsSubquery})`,
+      [orgId, marker]
+    );
+    await tx.query(
+      `DELETE FROM action_execution_intents WHERE org_id = $1 AND decision_id IN (${recordIdsSubquery})`,
+      [orgId, marker]
+    );
+    await tx.query(`DELETE FROM outcomes WHERE org_id = $1 AND decision_id IN (${recordIdsSubquery})`, [
+      orgId,
+      marker,
+    ]);
+    await tx.query(`DELETE FROM actions WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [orgId, marker]);
+    await tx.query(`DELETE FROM causal_links WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [
+      orgId,
+      marker,
+    ]);
+    await tx.query(`UPDATE scenarios SET case_id = NULL WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [
+      orgId,
+      marker,
+    ]);
+    await tx.query(`DELETE FROM decision_records WHERE org_id = $1 AND case_id IN (${caseIdsSubquery})`, [
+      orgId,
+      marker,
+    ]);
+    await tx.query(`DELETE FROM decision_cases WHERE org_id = $1 AND category_id LIKE $2`, [orgId, marker]);
+    await tx.exec("ALTER TABLE action_events ENABLE TRIGGER action_events_append_only");
+  });
 }
 
 /** Cocuk tablolardan ebeveyne dogru, org_id kapsaminda TAIS demo verisini siler. */

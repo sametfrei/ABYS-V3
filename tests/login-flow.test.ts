@@ -9,11 +9,13 @@ process.env.ABYS_DB_DIR = path.join(
   `abys-login-flow-test-${process.pid}-${randomUUID()}`
 );
 process.env.AUTH_COOKIE_SECURE = "false";
-process.env.TAIS_DEMO_ADMIN_EMAIL = "ceo@tais.demo";
-process.env.TAIS_DEMO_ADMIN_PASSWORD = "abys-demo-2026";
 // IP bazlı testler güvenilen proxy modunu varsayar; XFF yok sayma testi
 // bu değişkeni geçici olarak kaldırır.
 process.env.ABYS_TRUST_PROXY = "1";
+
+const TEST_ORG = "org-login-flow";
+const TEST_EMAIL = "ceo@example.test";
+const TEST_PASSWORD = "login-test-parola-123";
 
 const cookieWrites: Array<{
   name: string;
@@ -33,6 +35,7 @@ const { POST, SESSION_COOKIE } = await import("../src/app/api/auth/login/route")
 const { getDb, migrate } = await import("../src/lib/db/client");
 const {
   authCookieIsSecure,
+  hashPassword,
   verifyPassword,
 } = await import("../src/lib/auth/core");
 const {
@@ -54,15 +57,44 @@ function loginRequest(email: string, password: string, ip = "203.0.113.10") {
 
 beforeAll(async () => {
   await migrate();
+  const db = getDb();
+  await db.query(
+    "INSERT INTO organizations (id, name, sector_id) VALUES ($1, $2, $3)",
+    [TEST_ORG, "Login Test Org", "other"]
+  );
+  await db.query(
+    "INSERT INTO users (id, org_id, email, display_name, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
+    ["login-ceo", TEST_ORG, TEST_EMAIL, "Test CEO", "ceo", hashPassword(TEST_PASSWORD)]
+  );
 });
 
 afterAll(async () => {
   await getDb().close();
 });
 
-describe("TAIS demo login flow", () => {
+describe("Kurumsal login akışı", () => {
+  it("giriş isteği demo kurum veya demo kullanıcı tohumlamaz", async () => {
+    resetRateLimits();
+    const before = await getDb().query<{ users: number; demo_users: number }>(
+      `SELECT count(*)::int AS users,
+              count(*) FILTER (WHERE email = 'ceo@tais.demo')::int AS demo_users
+         FROM users`
+    );
+    const response = await POST(
+      loginRequest("ceo@tais.demo", "abys-demo-2026", "203.0.113.90")
+    );
+    expect(response.status).toBe(401);
+    const after = await getDb().query<{ users: number; demo_users: number }>(
+      `SELECT count(*)::int AS users,
+              count(*) FILTER (WHERE email = 'ceo@tais.demo')::int AS demo_users
+         FROM users`
+    );
+    expect(after.rows[0]).toEqual(before.rows[0]);
+    expect(after.rows[0]?.demo_users).toBe(0);
+  });
+
   it("invalid credentials return a visible Turkish authentication error", async () => {
-    const response = await POST(loginRequest("ceo@tais.demo", "yanlis-parola"));
+    const response = await POST(loginRequest(TEST_EMAIL, "yanlis-parola"));
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({ error: LOGIN_INVALID_ERROR });
     expect(getLoginErrorMessage(401, { error: LOGIN_INVALID_ERROR })).toBe(
@@ -72,12 +104,12 @@ describe("TAIS demo login flow", () => {
 
   it("valid credentials tolerate email casing and surrounding whitespace", async () => {
     const response = await POST(
-      loginRequest("  CEO@TAIS.DEMO  ", "abys-demo-2026")
+      loginRequest("  CEO@EXAMPLE.TEST  ", TEST_PASSWORD)
     );
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({
       user: {
-        email: "ceo@tais.demo",
+        email: TEST_EMAIL,
         role: "ceo",
       },
     });
@@ -91,19 +123,19 @@ describe("TAIS demo login flow", () => {
     });
   });
 
-  it("existing TAIS user is synchronized to the documented password", async () => {
+  it("mevcut kullanıcı parolası doğrulanır", async () => {
     const user = await getDb().query<{ password_hash: string }>(
       "SELECT password_hash FROM users WHERE email = $1",
-      ["ceo@tais.demo"]
+      [TEST_EMAIL]
     );
     expect(user.rows).toHaveLength(1);
-    expect(verifyPassword("abys-demo-2026", user.rows[0]!.password_hash)).toBe(true);
+    expect(verifyPassword(TEST_PASSWORD, user.rows[0]!.password_hash)).toBe(true);
   });
 
   it("parola kırpılmaz: baş/son boşluklu deneme reddedilir", async () => {
     resetRateLimits();
     const response = await POST(
-      loginRequest("ceo@tais.demo", "  abys-demo-2026  ", "203.0.113.77")
+      loginRequest(TEST_EMAIL, `  ${TEST_PASSWORD}  `, "203.0.113.77")
     );
     expect(response.status).toBe(401);
   });
@@ -136,13 +168,13 @@ describe("login rate limiting (kaba kuvvet koruması)", () => {
     resetRateLimits();
     for (let i = 0; i < 5; i++) {
       const response = await POST(
-        loginRequest("ceo@tais.demo", "yanlis-parola", "198.51.100.11")
+        loginRequest(TEST_EMAIL, "yanlis-parola", "198.51.100.11")
       );
       expect(response.status).toBe(401);
     }
 
     const blocked = await POST(
-      loginRequest("ceo@tais.demo", "yanlis-parola", "198.51.100.11")
+      loginRequest(TEST_EMAIL, "yanlis-parola", "198.51.100.11")
     );
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get("retry-after")).toMatch(/^\d+$/);
@@ -152,28 +184,28 @@ describe("login rate limiting (kaba kuvvet koruması)", () => {
   it("aynı IP'den farklı e-posta, IP tavanına kadar engellenmez", async () => {
     resetRateLimits();
     for (let i = 0; i < 5; i++) {
-      await POST(loginRequest("ceo@tais.demo", "yanlis", "198.51.100.12"));
+      await POST(loginRequest(TEST_EMAIL, "yanlis", "198.51.100.12"));
     }
     expect(
-      (await POST(loginRequest("ceo@tais.demo", "yanlis", "198.51.100.12"))).status
+      (await POST(loginRequest(TEST_EMAIL, "yanlis", "198.51.100.12"))).status
     ).toBe(429);
 
-    const other = await POST(loginRequest("baska@tais.demo", "yanlis", "198.51.100.12"));
+    const other = await POST(loginRequest("baska@example.test", "yanlis", "198.51.100.12"));
     expect(other.status).toBe(401);
   });
 
   it("başarılı giriş e-posta+IP sayacını sıfırlar", async () => {
     resetRateLimits();
     for (let i = 0; i < 4; i++) {
-      await POST(loginRequest("ceo@tais.demo", "yanlis", "198.51.100.13"));
+      await POST(loginRequest(TEST_EMAIL, "yanlis", "198.51.100.13"));
     }
 
     const ok = await POST(
-      loginRequest("ceo@tais.demo", "abys-demo-2026", "198.51.100.13")
+      loginRequest(TEST_EMAIL, TEST_PASSWORD, "198.51.100.13")
     );
     expect(ok.status).toBe(200);
 
-    const after = await POST(loginRequest("ceo@tais.demo", "yanlis", "198.51.100.13"));
+    const after = await POST(loginRequest(TEST_EMAIL, "yanlis", "198.51.100.13"));
     expect(after.status).toBe(401);
   });
 

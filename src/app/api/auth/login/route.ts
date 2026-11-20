@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { getDb } from "@/lib/db/client";
-import { ensureSeeded } from "@/lib/db/seed";
+import { getDb, migrate } from "@/lib/db/client";
 import { authCookieIsSecure, verifyPassword, createSession } from "@/lib/auth/core";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { checkLoginRate, recordLoginFailure, resetLoginRate } from "@/lib/rate-limit";
@@ -40,7 +39,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  await ensureSeeded();
+  await migrate();
   const db = getDb();
   const r = await db.query<{
     id: string;

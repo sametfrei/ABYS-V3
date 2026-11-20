@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDb } from "@/lib/db/client";
+import { getDb, getPendingMigrationApprovals, migrate } from "@/lib/db/client";
 
 /**
  * Sağlık kontrolü — konteyner/orchestrator probe'ları için.
@@ -8,8 +8,16 @@ import { getDb } from "@/lib/db/client";
  */
 export async function GET() {
   try {
+    await migrate();
     await getDb().query("SELECT 1");
-    return NextResponse.json({ ok: true, service: "abys", db: "up" });
+    const pendingMigrations = getPendingMigrationApprovals();
+    return NextResponse.json({
+      ok: true,
+      service: "abys",
+      db: "up",
+      schemaReady: pendingMigrations.length === 0,
+      pendingMigrations,
+    });
   } catch {
     return NextResponse.json(
       { ok: false, service: "abys", db: "down" },

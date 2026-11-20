@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { listOrganizationSubtree } from "@/lib/db/repos/organizations";
+import { migrationRequiredPayload, pendingMigration } from "@/lib/db/migration-guard";
 
 /**
  * GET /api/organizations — oturum org'unun hiyerarşik alt ağacı.
@@ -19,6 +20,10 @@ export async function GET() {
   }
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
+  }
+  const requiredMigration = pendingMigration(18);
+  if (requiredMigration) {
+    return NextResponse.json(migrationRequiredPayload(requiredMigration), { status: 503 });
   }
 
   const orgs = await listOrganizationSubtree(session.orgId);

@@ -7,6 +7,7 @@ import {
   getOrganizationConsolidation,
   getTopOpenDecisions,
 } from "@/lib/db/repos/organizations";
+import { migrationRequiredPayload, pendingMigration } from "@/lib/db/migration-guard";
 
 /**
  * GET /api/organizations/consolidation — holding/şirket/şube konsolide görünüm.
@@ -20,6 +21,10 @@ export async function GET() {
   }
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
+  }
+  const requiredMigration = pendingMigration(18);
+  if (requiredMigration) {
+    return NextResponse.json(migrationRequiredPayload(requiredMigration), { status: 503 });
   }
 
   const [organizations, topDecisions] = await Promise.all([

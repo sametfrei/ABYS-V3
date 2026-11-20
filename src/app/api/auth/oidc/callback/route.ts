@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getDb } from "@/lib/db/client";
-import { ensureSeeded } from "@/lib/db/seed";
+import { getDb, migrate } from "@/lib/db/client";
 import { authCookieIsSecure, createSession } from "@/lib/auth/core";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { SESSION_COOKIE } from "@/app/api/auth/login/route";
@@ -112,7 +111,7 @@ export async function GET(req: NextRequest) {
     return redirectWithError(req, "Kimlik doğrulaması başarısız. Lütfen tekrar deneyin.");
   }
 
-  await ensureSeeded();
+  await migrate();
   const db = getDb();
   const r = await db.query<{ id: string; org_id: string; display_name: string }>(
     "SELECT id, org_id, display_name FROM users WHERE email = $1 AND status = 'active'",

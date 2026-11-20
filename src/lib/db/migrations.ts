@@ -7,6 +7,8 @@ export interface Migration {
   id: number;
   name: string;
   sql: string;
+  /** Doluysa migration ancak bu ortam değişkeni tam olarak "true" iken uygulanır. */
+  approvalEnv?: string;
 }
 
 export const MIGRATIONS: Migration[] = [
@@ -592,6 +594,7 @@ export const MIGRATIONS: Migration[] = [
   {
     id: 18,
     name: "organizasyon hiyerarsisi (grup/sirket/sube) ve ulke/para birimi",
+    approvalEnv: "ABYS_MIGRATION_18_APPROVED",
     sql: `
       -- Holding -> şirket -> şube ağacı. Eski kayıtlar 'company' olarak kalır.
       -- country ISO-3166-1 alpha-2 (ör. TR), currency ISO-4217 (ör. TRY).
@@ -674,6 +677,370 @@ export const MIGRATIONS: Migration[] = [
       CREATE UNIQUE INDEX connector_records_identity
         ON connector_records(org_id, config_id, entity, external_id);
       CREATE INDEX connector_records_org_entity ON connector_records(org_id, entity, synced_at DESC);
+    `,
+  },
+  {
+    id: 21,
+    name: "is baglami: onayli profil, kpi kaynagi ve aktivasyon surumu",
+    sql: `
+      -- Keşif önerisinin yönetici tarafından onaylanmış sürümleri. snapshot,
+      -- sınıflandırma kanıtlarını ve o anda gözlenen kanonik alan şemasını taşır;
+      -- böylece sonraki veri değişimleri geçmiş kararları sessizce yeniden yazmaz.
+      CREATE TABLE business_profiles (
+        id                    TEXT PRIMARY KEY,
+        org_id                TEXT NOT NULL REFERENCES organizations(id),
+        version               INTEGER NOT NULL,
+        status                TEXT NOT NULL DEFAULT 'confirmed',
+        industry_pack_id      TEXT NOT NULL,
+        industry_pack_version INTEGER NOT NULL,
+        subsector_id          TEXT,
+        confidence            INTEGER NOT NULL,
+        source_fingerprint    TEXT NOT NULL,
+        snapshot              JSONB NOT NULL,
+        created_by            TEXT NOT NULL,
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, version)
+      );
+      CREATE INDEX business_profiles_org_time
+        ON business_profiles(org_id, created_at DESC);
+
+      -- KPI tanımının kaynağı görünür olmalı: elle yazılmış bir tanımın sektör
+      -- paketi aktivasyonuyla sessizce ezilmesini engellemek için ayrı alanlar.
+      ALTER TABLE kpi_definitions ADD COLUMN source TEXT NOT NULL DEFAULT 'manual';
+      ALTER TABLE kpi_definitions ADD COLUMN source_ref TEXT;
+      CREATE INDEX kpi_definitions_org_source
+        ON kpi_definitions(org_id, source, source_ref);
+    `,
+  },
+  {
+    id: 22,
+    name: "konnektor: kanonik sozlesme reddi, kaynak sema ve esleme onerileri",
+    sql: `
+      -- Kaynak şeması yalnızca alan yolları ve JSON tiplerini taşır; kaynak
+      -- değerleri veya kimlik bilgileri bu kolonlara yazılmaz. Reddedilen
+      -- kayıtlar sessizce kaybolmaz; data_quality_issues ile çalıştırmaya bağlanır.
+      ALTER TABLE connector_sync_runs ADD COLUMN rejected_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE connector_sync_runs ADD COLUMN source_schema JSONB;
+      ALTER TABLE connector_sync_runs ADD COLUMN mapping_suggestions JSONB;
+
+      ALTER TABLE data_quality_issues ADD COLUMN code TEXT;
+      ALTER TABLE data_quality_issues ADD COLUMN connector_run_id TEXT REFERENCES connector_sync_runs(id);
+      CREATE INDEX dq_connector_run
+        ON data_quality_issues(org_id, connector_run_id, created_at DESC);
+    `,
+  },
+  {
+    id: 23,
+    name: "varlik kimligi: kaynaklar arasi deterministik kanonik baglantilar",
+    sql: `
+      -- Kaynak kaydı silinmez; kimlik çözümlemesi ayrı, yeniden üretilebilir bir
+      -- projeksiyondur. Yalnızca güçlü eşleşmeler (e-posta/SKU) kaynaklar arası
+      -- birleşir. Ham e-posta veya SKU bu tabloya yazılmaz; yalnızca hash kimliği.
+      CREATE TABLE canonical_entity_links (
+        id                  TEXT PRIMARY KEY,
+        org_id              TEXT NOT NULL REFERENCES organizations(id),
+        canonical_entity_id TEXT NOT NULL,
+        entity              TEXT NOT NULL,
+        source_config_id    TEXT NOT NULL REFERENCES connector_configs(id),
+        source_external_id  TEXT NOT NULL,
+        match_strategy      TEXT NOT NULL,
+        match_confidence    INTEGER NOT NULL CHECK (match_confidence BETWEEN 0 AND 100),
+        resolved_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, source_config_id, entity, source_external_id)
+      );
+      CREATE INDEX canonical_entity_links_identity
+        ON canonical_entity_links(org_id, entity, canonical_entity_id);
+      CREATE INDEX canonical_entity_links_source
+        ON canonical_entity_links(org_id, source_config_id, entity, source_external_id);
+    `,
+  },
+  {
+    id: 24,
+    name: "konnektor: zamanlanmis senkron, tetikleyici ve due indeksi",
+    sql: `
+      ALTER TABLE connector_configs
+        ADD COLUMN schedule_interval_minutes INTEGER
+          CHECK (schedule_interval_minutes IS NULL OR schedule_interval_minutes BETWEEN 5 AND 525600);
+      ALTER TABLE connector_configs ADD COLUMN next_run_at TIMESTAMPTZ;
+      ALTER TABLE connector_configs ADD COLUMN last_scheduled_at TIMESTAMPTZ;
+      CREATE INDEX connector_configs_due
+        ON connector_configs(next_run_at)
+        WHERE enabled = true AND schedule_interval_minutes IS NOT NULL;
+
+      -- Bir çalıştırmanın manuel mi yoksa zamanlayıcı tarafından mı başlatıldığı
+      -- gözlemlenebilirlik için ayrı tutulur; eski kayıtlar manuel kabul edilir.
+      ALTER TABLE connector_sync_runs ADD COLUMN trigger TEXT NOT NULL DEFAULT 'manual';
+      CREATE INDEX connector_runs_trigger
+        ON connector_sync_runs(org_id, trigger, started_at DESC);
+    `,
+  },
+  {
+    id: 25,
+    name: "karar defteri: sayisal beklenen ve gerceklesen ekonomik etki",
+    sql: `
+      -- Ekonomik etki yalnızca açık para birimi ve kanıtla sayısallaştırılır.
+      -- Farklı para birimleri asla sessizce toplanmaz; mutabakat aynı para
+      -- birimindeki beklenen/gerçekleşen çiftler üzerinden hesaplanır.
+      ALTER TABLE decision_records ADD COLUMN expected_value NUMERIC;
+      ALTER TABLE decision_records ADD COLUMN expected_value_low NUMERIC;
+      ALTER TABLE decision_records ADD COLUMN expected_value_high NUMERIC;
+      ALTER TABLE decision_records ADD COLUMN value_currency TEXT;
+      ALTER TABLE decision_records ADD COLUMN value_basis TEXT;
+      ALTER TABLE decision_records ADD COLUMN value_assumptions JSONB;
+      ALTER TABLE decision_records ADD CONSTRAINT decision_expected_value_range CHECK (
+        expected_value IS NULL OR (
+          (expected_value_low IS NULL OR expected_value_low <= expected_value) AND
+          (expected_value_high IS NULL OR expected_value_high >= expected_value)
+        )
+      );
+      ALTER TABLE decision_records ADD CONSTRAINT decision_expected_currency CHECK (
+        expected_value IS NULL OR value_currency ~ '^[A-Z]{3}$'
+      );
+
+      ALTER TABLE outcomes ADD COLUMN actual_value NUMERIC;
+      ALTER TABLE outcomes ADD COLUMN value_currency TEXT;
+      ALTER TABLE outcomes ADD COLUMN measurement_start TIMESTAMPTZ;
+      ALTER TABLE outcomes ADD COLUMN measurement_end TIMESTAMPTZ;
+      ALTER TABLE outcomes ADD COLUMN evidence TEXT;
+      ALTER TABLE outcomes ADD CONSTRAINT outcome_actual_currency CHECK (
+        actual_value IS NULL OR value_currency ~ '^[A-Z]{3}$'
+      );
+      ALTER TABLE outcomes ADD CONSTRAINT outcome_measurement_window CHECK (
+        measurement_start IS NULL OR measurement_end IS NULL OR measurement_end >= measurement_start
+      );
+    `,
+  },
+  {
+    id: 26,
+    name: "kanonik altin kayit: kaynak guven sirasi",
+    sql: `
+      -- Altın kayıt, kaynak kayıtlarının üzerine yazılan ikinci bir gerçek
+      -- değildir; alan bazında yeniden üretilebilir bir seçimdir. Düşük sayı
+      -- daha yüksek güveni ifade eder. Politika yoksa kaynak güncellik sırası
+      -- deterministik bir sonraki kuraldır.
+      CREATE TABLE canonical_survivorship_policies (
+        org_id           TEXT NOT NULL REFERENCES organizations(id),
+        entity           TEXT NOT NULL,
+        source_config_id TEXT NOT NULL REFERENCES connector_configs(id),
+        priority         INTEGER NOT NULL CHECK (priority BETWEEN 1 AND 1000),
+        updated_by       TEXT NOT NULL,
+        updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (org_id, entity, source_config_id)
+      );
+      CREATE INDEX canonical_survivorship_policy_order
+        ON canonical_survivorship_policies(org_id, entity, priority, source_config_id);
+    `,
+  },
+  {
+    id: 27,
+    name: "dijital ikiz: kaynak kayit gecmisi",
+    sql: `
+      -- Kaynak kayıtları güncellenirken önceki gözlem kaybolmaz. Geçmiş satırı,
+      -- ABYS'nin kaydı gördüğü zamanı (captured_at) ve o sırada geçerli
+      -- kanonik kimliği taşır. Yalnızca içerik veya kimlik değiştiğinde satır
+      -- eklenir; aynı senkronun tekrarı geçmişi şişirmez.
+      CREATE TABLE connector_record_history (
+        id                  TEXT PRIMARY KEY,
+        org_id              TEXT NOT NULL REFERENCES organizations(id),
+        config_id           TEXT NOT NULL REFERENCES connector_configs(id),
+        entity              TEXT NOT NULL,
+        external_id         TEXT NOT NULL,
+        canonical_entity_id TEXT NOT NULL,
+        data                JSONB NOT NULL,
+        source_updated_at   TIMESTAMPTZ,
+        captured_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX connector_history_source
+        ON connector_record_history(org_id, config_id, entity, external_id, captured_at DESC);
+      CREATE INDEX connector_history_canonical
+        ON connector_record_history(org_id, canonical_entity_id, captured_at DESC);
+    `,
+  },
+  {
+    id: 28,
+    name: "konnektor eslemesi: onayli ve surumlu konfigurasyon gecmisi",
+    sql: `
+      -- Eşleme değişikliği mevcut konfigürasyonun üzerine sessizce yazılmaz.
+      -- Her onaylı değişiklik append-only bir sürüm bırakır; böylece hangi
+      -- alanın hangi kaynak şemaya göre, kim tarafından onaylandığı izlenir.
+      ALTER TABLE connector_configs
+        ADD COLUMN config_version INTEGER NOT NULL DEFAULT 1
+          CHECK (config_version > 0);
+
+      CREATE TABLE connector_config_versions (
+        id                    TEXT PRIMARY KEY,
+        org_id                TEXT NOT NULL REFERENCES organizations(id),
+        config_id             TEXT NOT NULL REFERENCES connector_configs(id),
+        version               INTEGER NOT NULL CHECK (version > 0),
+        config                JSONB NOT NULL,
+        change_summary        TEXT NOT NULL,
+        source_run_id         TEXT REFERENCES connector_sync_runs(id),
+        approved_suggestions  JSONB NOT NULL DEFAULT '[]',
+        created_by            TEXT NOT NULL,
+        created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, config_id, version)
+      );
+      CREATE INDEX connector_config_versions_time
+        ON connector_config_versions(org_id, config_id, version DESC);
+
+      -- Migration öncesindeki mevcut konfigürasyon da kaybolmadan 1. sürüm
+      -- olarak arşivlenir. Backfill kimliği deterministiktir.
+      INSERT INTO connector_config_versions
+        (id, org_id, config_id, version, config, change_summary, created_by, created_at)
+      SELECT md5(org_id || ':' || id), org_id, id, 1, config,
+             'Mevcut konfigürasyon migration sırasında arşivlendi.', created_by, created_at
+        FROM connector_configs
+       ON CONFLICT (org_id, config_id, version) DO NOTHING;
+    `,
+  },
+  {
+    id: 29,
+    name: "konnektor esleme surumleri: append-only korumasi",
+    sql: `
+      -- Onaylı eşleme snapshot'ları değiştirilemez veya silinemez. Repository
+      -- yolu zaten yalnızca INSERT yapar; bu trigger doğrudan SQL hatasına karşı
+      -- savunma derinliği sağlar.
+      CREATE OR REPLACE FUNCTION prevent_connector_config_version_mutation()
+      RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'connector_config_versions append-only: UPDATE/DELETE yasak';
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER connector_config_versions_append_only
+        BEFORE UPDATE OR DELETE ON connector_config_versions
+        FOR EACH ROW EXECUTE FUNCTION prevent_connector_config_version_mutation();
+    `,
+  },
+  {
+    id: 30,
+    name: "aksiyon yonetisimi: degismez yurutme olaylari",
+    sql: `
+      -- Aksiyon durumları serbest metin olarak sessizce değiştirilmez. Her
+      -- geçiş, aktörü ve gerekçe/ilerleme notuyla birlikte append-only bir
+      -- olay bırakır. Aksiyonun mevcut durumu ile olay geçmişi birbirinden
+      -- bağımsız iki gerçek değildir; repository ikisini tek transaction'da
+      -- yazar. Karar durumu da yürütme geçişleriyle bağlantılıdır.
+      CREATE TABLE action_events (
+        id            TEXT PRIMARY KEY,
+        org_id        TEXT NOT NULL REFERENCES organizations(id),
+        action_id     TEXT NOT NULL REFERENCES actions(id),
+        decision_id   TEXT NOT NULL REFERENCES decision_records(id),
+        from_status   TEXT,
+        to_status     TEXT NOT NULL,
+        progress_note TEXT,
+        actor_id      TEXT NOT NULL,
+        actor_name    TEXT NOT NULL,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX action_events_action
+        ON action_events(org_id, action_id, created_at DESC, id DESC);
+      CREATE INDEX action_events_decision
+        ON action_events(org_id, decision_id, created_at DESC);
+
+      CREATE OR REPLACE FUNCTION prevent_action_event_mutation()
+      RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'action_events append-only: UPDATE/DELETE yasak';
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER action_events_append_only
+        BEFORE UPDATE OR DELETE ON action_events
+        FOR EACH ROW EXECUTE FUNCTION prevent_action_event_mutation();
+    `,
+  },
+  {
+    id: 31,
+    name: "yurutme hazirligi: idempotent execution intent",
+    sql: `
+      -- Dış sistem çağrısı yapılmadan önce hazırlanan niyet kaydı. Aynı
+      -- idempotency anahtarı ikinci kez aynı içerikle gelirse mevcut kayıt
+      -- döner; farklı aksiyon/içerikle gelirse sessizce ezilmez.
+      CREATE TABLE action_execution_intents (
+        id                TEXT PRIMARY KEY,
+        org_id            TEXT NOT NULL REFERENCES organizations(id),
+        action_id         TEXT NOT NULL REFERENCES actions(id),
+        decision_id       TEXT NOT NULL REFERENCES decision_records(id),
+        idempotency_key   TEXT NOT NULL,
+        mode              TEXT NOT NULL CHECK (mode IN ('manual', 'system')),
+        target_system     TEXT,
+        summary           TEXT NOT NULL,
+        payload           JSONB NOT NULL DEFAULT '{}'::jsonb,
+        payload_hash      TEXT NOT NULL,
+        status            TEXT NOT NULL DEFAULT 'prepared'
+                            CHECK (status IN ('prepared', 'approved', 'cancelled')),
+        prepared_by_id    TEXT NOT NULL,
+        prepared_by_name  TEXT NOT NULL,
+        approved_by_id    TEXT,
+        approved_by_name  TEXT,
+        approved_at       TIMESTAMPTZ,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, idempotency_key)
+      );
+      CREATE INDEX action_execution_intents_action
+        ON action_execution_intents(org_id, action_id, created_at DESC);
+      CREATE INDEX action_execution_intents_status
+        ON action_execution_intents(org_id, status, created_at DESC);
+    `,
+  },
+  {
+    id: 32,
+    name: "guvenli yurutme: intent basina tek denetlenebilir adaptor denemesi",
+    sql: `
+      -- Onaylı niyetin dış adaptöre en fazla bir kez gönderilmesini sağlayan
+      -- deneme kaydı. Aynı intent için ikinci eşzamanlı deneme unique index ile
+      -- reddedilir; başarı/başarısızlık ve sağlayıcı referansı burada tutulur.
+      CREATE TABLE action_execution_attempts (
+        id                TEXT PRIMARY KEY,
+        org_id            TEXT NOT NULL REFERENCES organizations(id),
+        intent_id         TEXT NOT NULL REFERENCES action_execution_intents(id),
+        action_id         TEXT NOT NULL REFERENCES actions(id),
+        decision_id       TEXT NOT NULL REFERENCES decision_records(id),
+        adapter_id        TEXT NOT NULL,
+        target_system     TEXT NOT NULL,
+        idempotency_key   TEXT NOT NULL,
+        payload_hash      TEXT NOT NULL,
+        status            TEXT NOT NULL DEFAULT 'in_progress'
+                            CHECK (status IN ('in_progress', 'succeeded', 'failed')),
+        response_status   INTEGER,
+        response_reference TEXT,
+        error_code        TEXT,
+        error_message     TEXT,
+        actor_id          TEXT NOT NULL,
+        actor_name        TEXT NOT NULL,
+        started_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+        finished_at       TIMESTAMPTZ,
+        UNIQUE (org_id, intent_id)
+      );
+      CREATE INDEX action_execution_attempts_action
+        ON action_execution_attempts(org_id, action_id, started_at DESC);
+      CREATE INDEX action_execution_attempts_status
+        ON action_execution_attempts(org_id, status, started_at DESC);
+    `,
+  },
+  {
+    id: 33,
+    name: "karar kaniti: sinyal-vaka arasinda acik ve denetlenebilir bag",
+    sql: `
+      -- Bir sinyal vaka kanıtı sayılacaksa bunun açık bir bağı olmalıdır.
+      -- Benzer başlık/sektör gibi zayıf sezgilerle otomatik eşleme yapılmaz.
+      CREATE TABLE decision_case_signals (
+        id             TEXT PRIMARY KEY,
+        org_id         TEXT NOT NULL REFERENCES organizations(id),
+        case_id        TEXT NOT NULL REFERENCES decision_cases(id),
+        signal_id      TEXT NOT NULL REFERENCES signals(id),
+        link_reason    TEXT NOT NULL,
+        linked_by_id   TEXT NOT NULL,
+        linked_by_name TEXT NOT NULL,
+        created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, case_id, signal_id)
+      );
+      CREATE INDEX decision_case_signals_case
+        ON decision_case_signals(org_id, case_id, created_at DESC);
+      CREATE INDEX decision_case_signals_signal
+        ON decision_case_signals(org_id, signal_id);
     `,
   },
 ];
