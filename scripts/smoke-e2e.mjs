@@ -166,6 +166,22 @@ async function main() {
     bad("tahmin kalibrasyon özeti", "summary eksik");
   }
 
+  const retention = await req("/api/forecast/snapshots/retention?maxAgeDays=365&maxPerLabel=60", { cookie });
+  expectStatus("tahmin saklama planı", retention.status, 200);
+  if (
+    retention.json &&
+    retention.json.dryRun === true &&
+    Array.isArray(retention.json.archiveIds) &&
+    typeof retention.json.archiveCount === "number"
+  ) {
+    ok(
+      "saklama planı (salt okunur)",
+      `${retention.json.archiveCount} arşiv adayı · politika ${retention.json.policy?.maxAgeDays}g/${retention.json.policy?.maxPerLabel}`
+    );
+  } else {
+    bad("saklama planı (salt okunur)", "dryRun/archiveIds eksik");
+  }
+
   // 8) Oturum kapatma
   const logout = await req("/api/auth/logout", { method: "POST", cookie });
   if (logout.status === 200 || logout.status === 204) ok("oturum kapatma", `HTTP ${logout.status}`);
