@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21",
+  "updatedAt": "2026-11-21T00:00:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -681,6 +681,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Only open/in-progress actions past their due date are marked overdue, with the number of days late; command center exposes the count and the action card shows a critical badge.",
       "evidence": "Full suite 81 files/741 tests passed (9 skipped); eslint, tsc and production build clean. Unit tests cover status gating, missing/invalid dates and day math; command-center test asserts overdueCount 1 after setting a past due date."
+    },
+    {
+      "id": "TB-032",
+      "commit": "b02f932",
+      "title": "Forecast snapshot audit trail",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer",
+        "security-auditor",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/app/api/forecast/snapshots/route.ts",
+        "src/app/api/forecast/snapshots/capture/route.ts",
+        "tests/forecast-snapshots.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Manual snapshot creation and scheduled capture both append hash-chained audit events (forecast_snapshot_created, forecast_snapshots_captured) scoped to the caller's org; no audit event is written when nothing was captured.",
+      "evidence": "Full suite 81 files/741 tests passed (9 skipped); eslint, tsc and production build clean; running-server smoke 33/33. Tests assert the audit rows exist with non-null prev_hash and org scoping."
     }
   ]
 }
