@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogoMark } from "@/components/Logo";
@@ -12,31 +12,46 @@ import { getRole } from "@/lib/roles";
 import { hasPermission } from "@/lib/auth/permissions";
 import { listEntities } from "@/lib/entities";
 import type { HandledSignal } from "@/lib/entities";
+import { DASHBOARD_NAV } from "@/lib/navigation";
+import {
+  DEFAULT_LOCALE,
+  LOCALES,
+  persistLocale,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+} from "@/lib/i18n";
 
-const NAV = [
-  { href: "/dashboard", label: "Yönetim Merkezi", icon: DashboardIcon },
-  { href: "/dashboard/organization", label: "Organizasyon", icon: AdvisorsIcon },
-  { href: "/dashboard/decision-ledger", label: "Karar Defteri", icon: DecisionsIcon },
-  { href: "/dashboard/forecast", label: "Tahmin", icon: ScenarioIcon },
-  { href: "/dashboard/process", label: "Süreç Zekâsı", icon: AnalysisIcon },
-  { href: "/dashboard/options", label: "Karar Seçenekleri", icon: ScenarioIcon },
-  { href: "/dashboard/kpi", label: "KPI Verisi", icon: AnalysisIcon },
-  { href: "/dashboard/data-quality", label: "Veri Kalitesi", icon: AlertsIcon },
-  { href: "/dashboard/ask", label: "Ask ABYS", icon: AskIcon },
-  { href: "/dashboard/decisions", label: "Karar Merkezi", icon: DecisionsIcon },
-  { href: "/dashboard/actions", label: "Aksiyonlar", icon: ActionsIcon },
-  { href: "/dashboard/scenarios", label: "Senaryo Laboratuvarı", icon: ScenarioIcon },
-  { href: "/dashboard/memory", label: "Kurumsal Hafıza", icon: MemoryIcon },
-  { href: "/dashboard/analysis", label: "Analiz", icon: AnalysisIcon },
-  { href: "/dashboard/reports", label: "Raporlar", icon: ReportsIcon },
-  { href: "/dashboard/alerts", label: "Riskler ve Sinyaller", icon: AlertsIcon },
-  { href: "/dashboard/integrations", label: "Veri Kaynakları", icon: IntegrationsIcon },
-  { href: "/dashboard/connectors", label: "Sistem Bağlantıları", icon: IntegrationsIcon },
-  { href: "/dashboard/discovery", label: "İş Keşfi", icon: AnalysisIcon },
-  { href: "/dashboard/advisors", label: "Danışman Analitiği", icon: AdvisorsIcon },
-  { href: "/dashboard/audit", label: "Denetim Günlüğü", icon: ReportsIcon },
-  { href: "/dashboard/settings", label: "Ayarlar", icon: SettingsIcon },
-];
+const ICONS: Record<string, (props: { className?: string }) => React.ReactElement> = {
+  "/dashboard": DashboardIcon,
+  "/dashboard/organization": AdvisorsIcon,
+  "/dashboard/decision-ledger": DecisionsIcon,
+  "/dashboard/forecast": ScenarioIcon,
+  "/dashboard/process": AnalysisIcon,
+  "/dashboard/options": ScenarioIcon,
+  "/dashboard/kpi": AnalysisIcon,
+  "/dashboard/data-quality": AlertsIcon,
+  "/dashboard/ask": AskIcon,
+  "/dashboard/decisions": DecisionsIcon,
+  "/dashboard/actions": ActionsIcon,
+  "/dashboard/scenarios": ScenarioIcon,
+  "/dashboard/memory": MemoryIcon,
+  "/dashboard/analysis": AnalysisIcon,
+  "/dashboard/reports": ReportsIcon,
+  "/dashboard/alerts": AlertsIcon,
+  "/dashboard/integrations": IntegrationsIcon,
+  "/dashboard/connectors": IntegrationsIcon,
+  "/dashboard/discovery": AnalysisIcon,
+  "/dashboard/advisors": AdvisorsIcon,
+  "/dashboard/audit": ReportsIcon,
+  "/dashboard/settings": SettingsIcon,
+};
+
+const NAV = DASHBOARD_NAV.map((item) => ({
+  ...item,
+  icon: ICONS[item.href] ?? DashboardIcon,
+}));
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -44,6 +59,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [stored] = useStored(() => ({ profile: loadProfile() }));
   const profile = stored?.profile ?? null;
   const sessionUser = useSession();
+  const locale = useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+  const changeLocale = (next: Locale) => {
+    persistLocale(next);
+  };
 
   const [localSignalState, refreshLocalSignals] = useStored(() => ({
     count: listEntities<HandledSignal>("handled-signals").filter((s) => s.status === "open").length,
@@ -148,7 +167,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               >
                 <span className="flex items-center gap-2.5">
                   <Icon className="w-4 h-4" />
-                  {item.label}
+                  {t(locale, item.labelKey)}
                 </span>
                 {item.href === "/dashboard/alerts" && openSignalCount > 0 && (
                   <span className="text-[10px] font-semibold bg-abys-critical text-white rounded-full w-4 h-4 flex items-center justify-center">
@@ -164,7 +183,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {sessionUser && (
             <div className="px-3 py-1.5 text-[11px] text-abys-healthy flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-abys-healthy" />
-              Kurumsal oturum: {sessionUser.displayName}
+              {t(locale, "shell.session")}: {sessionUser.displayName}
             </div>
           )}
           <Link
@@ -172,7 +191,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             className="flex flex-col rounded-lg px-3 py-2 hover:bg-abys-ink/5 transition-colors"
           >
             <span className="text-sm font-medium text-abys-navy">
-              {role?.label ?? "Kullanıcı"}
+              {role?.label ?? t(locale, "shell.user")}
             </span>
             <span className="text-xs text-abys-muted">
               {sessionUser?.orgName ?? sector?.label ?? ""}
@@ -189,8 +208,27 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             }}
             className="w-full text-left text-xs text-abys-muted hover:text-abys-ink px-3 py-1.5"
           >
-            Çıkış yap
+            {t(locale, "shell.logout")}
           </button>
+          <div className="flex items-center gap-1 px-3 pt-1" role="group" aria-label={t(locale, "shell.language")}>
+            <span className="text-[10px] uppercase tracking-wide text-abys-muted mr-1">
+              {t(locale, "shell.language")}
+            </span>
+            {LOCALES.map((value) => (
+              <button
+                key={value}
+                onClick={() => changeLocale(value)}
+                aria-pressed={locale === value}
+                className={`text-[10px] font-semibold rounded px-1.5 py-0.5 ${
+                  locale === value
+                    ? "bg-abys-navy text-white"
+                    : "text-abys-muted hover:bg-abys-ink/5 hover:text-abys-ink"
+                }`}
+              >
+                {value.toUpperCase()}
+              </button>
+            ))}
+          </div>
         </div>
       </aside>
 

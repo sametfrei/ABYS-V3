@@ -88,7 +88,7 @@ Durum ölçeği:
 | Denetim hash zinciri | E2E (test) | Mevcut çözüm korunuyor; seq yaması uygulanmadı |
 | Kontrollü migration yürütme | E2E (test) | Onay gerektiren migration 18 uygulanmadan bekletilir; sonraki migration'lar bağımsız uygulanır; `GET /api/health` bekleyen onayı raporlar |
 | Çoklu şirket/şube hiyerarşisi + konsolidasyon | E2E (test) | `/api/organizations*` |
-| TR/EN i18n | Planlı | Arayüz şu an Türkçe |
+| TR/EN i18n | Kısmi | Uygulama kabuğu (gezinme, oturum, çıkış, dil seçici) TR/EN; seçim çerez + localStorage ile kalıcı (`abys_lang`); `src/lib/i18n.ts`, `src/lib/navigation.ts`, `tests/i18n.test.ts`. İçerik ekranları henüz Türkçe — kalan çeviri ayrı iş |
 | Production build | E2E (test) | `npm run build` başarılı: TypeScript, 94 route/sayfa derlemesi ve statik üretim tamamlandı |
 | Tarayıcı E2E | Tarayıcı bekliyor | Otomatik browser doğrulaması bu oturumda yapılmadı |
 
@@ -99,7 +99,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024) aralık kapsama ölçeklemesi (TB-025) ve Infor/IFS/Sage konnektörlerinin adaptöre bağlanması (TB-026).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024) aralık kapsama ölçeklemesi (TB-025) ve Infor/IFS/Sage konnektörlerinin adaptöre bağlanması (TB-026) ve kabuk i18n temeli (TB-028).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
 2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.
