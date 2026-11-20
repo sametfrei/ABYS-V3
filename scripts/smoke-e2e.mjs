@@ -149,6 +149,14 @@ async function main() {
     bad("vaka listesi kalibrasyonu", "calibration eksik");
   }
 
+  const capture = await req("/api/forecast/snapshots/capture", { method: "POST", cookie });
+  expectStatus("zamanlanmış tahmin yakalama", capture.status, 200);
+  if (capture.json && typeof capture.json.captured === "number" && Array.isArray(capture.json.results)) {
+    ok("yakalama özeti", `${capture.json.captured} yakalandı · ${capture.json.skipped} atlandı`);
+  } else {
+    bad("yakalama özeti", "captured/results eksik");
+  }
+
   const snapshots = await req("/api/forecast/snapshots", { cookie });
   expectStatus("tahmin anlık görüntüleri", snapshots.status, 200);
   const snapshotsJson = snapshots.json;
