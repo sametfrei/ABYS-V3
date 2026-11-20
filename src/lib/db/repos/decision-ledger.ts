@@ -252,6 +252,39 @@ export async function getLedgerEntries(
   });
 }
 
+/**
+ * Yalnızca güven kalibrasyonu için hafif sorgu: karar kayıtları ve son
+ * sonuç. Ekonomik etki kolonları okunmaz; kovalar güven + sonuçtan türer.
+ */
+export async function getConfidenceCalibration(orgId: string): Promise<DecisionCalibration> {
+  await migrate();
+  const r = await getDb().query<{ confidence: number; result: string | null }>(
+    `SELECT c.confidence, o.result
+       FROM decision_records r
+       JOIN decision_cases c ON c.id = r.case_id AND c.org_id = r.org_id
+       LEFT JOIN LATERAL (
+         SELECT result FROM outcomes
+          WHERE outcomes.org_id = r.org_id AND outcomes.decision_id = r.id
+          ORDER BY created_at DESC LIMIT 1
+       ) o ON true
+      WHERE r.org_id = $1`,
+    [orgId]
+  );
+  const learning = summarizeDecisionLearning(
+    r.rows.map((row) => ({
+      confidence: Number(row.confidence),
+      choice: "",
+      result:
+        row.result === "improved" || row.result === "worsened" || row.result === "unchanged"
+          ? row.result
+          : null,
+      expectedImpact: null,
+      actualImpact: null,
+    }))
+  );
+  return buildDecisionCalibration(learning.confidenceBuckets);
+}
+
 export async function getLedgerSummary(orgId: string): Promise<LedgerSummary> {
   await migrate();
   const r = await getDb().query<

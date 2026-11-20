@@ -75,7 +75,7 @@ Durum ölçeği:
 | Decision Value Ledger | E2E (test) | `/api/decision-ledger`, `/dashboard/decision-ledger` |
 | Beklenen/gerçekleşen ekonomik etki (sayısal) | E2E (test) | migration 25; karar beklenen değer/aralık/para birimi/varsayım, sonuç gerçekleşen değer/ölçüm aralığı/kanıt; aynı para biriminde fark ve %; `/api/decision-ledger` para birimi bazlı özet |
 | Kapalı döngü öğrenme | E2E (test) | Aralık isabeti, güven kovaları, kabul oranı ve gerçekleşen sonuç oranı `/api/decision-ledger` ve `/dashboard/decision-ledger` üzerinde; `tests/decision-economics.test.ts`, `tests/decision-ledger.test.ts`. Tahmin modeli otomatik yeniden eğitilmiyor; bu açıkça sınır olarak kalır |
-| Karar güveni kalibrasyonu · gerçekleşen sonuç geri beslemesi | E2E (test) | `src/lib/decision-calibration.ts`; güven kovalarında gözlenen iyileşme oranı ilan edilen güvenle karşılaştırılır, kova başına en az 5 sonuç yoksa düzeltme üretilmez, sönümlemeli (n·gözlem + 5·ilan)/(n+5) düzeltilmiş güven sunulur; `/api/decision-ledger` `summary.calibration` ve `/dashboard/decision-ledger` paneli; `tests/decision-calibration.test.ts`, `tests/decision-ledger.test.ts` |
+| Karar güveni kalibrasyonu · gerçekleşen sonuç geri beslemesi | E2E (test) | `src/lib/decision-calibration.ts`; güven kovalarında gözlenen iyileşme oranı ilan edilen güvenle karşılaştırılır, kova başına en az 5 sonuç yoksa düzeltme üretilmez, sönümlemeli (n·gözlem + 5·ilan)/(n+5) düzeltilmiş güven sunulur; `/api/decision-ledger` `summary.calibration`, `/dashboard/decision-ledger` paneli ve `/api/decision-cases` üzerinden vaka güven panelinde geçmiş kalibrasyon notu; `tests/decision-calibration.test.ts`, `tests/decision-ledger.test.ts` |
 
 ## Platform
 

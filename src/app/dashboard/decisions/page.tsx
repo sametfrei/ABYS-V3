@@ -27,6 +27,31 @@ import { getScenarios } from "@/lib/scenarios";
 import type { AiDecisionCase } from "@/lib/ai/provider";
 import { postJsonStreamed } from "@/lib/ndjson-client";
 
+interface CalibrationSummary {
+  status: "measured" | "partial" | "insufficient_evidence";
+  totalWithOutcome: number;
+  threshold: number;
+  buckets: Array<{
+    key: string;
+    label: string;
+    min: number;
+    max: number;
+    statedConfidence: number;
+    withOutcome: number;
+    improvedRate: number | null;
+    status: "measured" | "insufficient_evidence";
+    direction: "overconfident" | "aligned" | "underconfident" | null;
+    adjustedConfidence: number | null;
+    samplesNeeded: number;
+  }>;
+}
+
+const CALIBRATION_DIRECTION_TEXT: Record<string, string> = {
+  overconfident: "geçmişte bu güven düzeyi fazla iyimser çıktı",
+  aligned: "geçmişte bu güven düzeyi tutarlı çıktı",
+  underconfident: "geçmişte bu güven düzeyi temkinli kaldı",
+};
+
 export default function DecisionsPage() {
   const [stored, refresh] = useStored(() => {
     const p = loadProfile();
@@ -45,6 +70,20 @@ export default function DecisionsPage() {
   const profile = session ? null : localProfile;
   const sector = session ? null : stored?.sector ?? null;
   const [serverCases, setServerCases] = useState<DecisionCase[] | null>(null);
+  const [calibration, setCalibration] = useState<CalibrationSummary | null>(null);
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    fetch("/api/decision-cases")
+      .then(async (r) => (r.ok ? ((await r.json()) as { calibration?: CalibrationSummary }) : null))
+      .then((data) => {
+        if (!cancelled && data?.calibration) setCalibration(data.calibration);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
   const [serverReloadKey, setServerReloadKey] = useState(0);
   useEffect(() => {
     if (!session || !sector) return;
@@ -117,7 +156,12 @@ export default function DecisionsPage() {
             <p className="text-sm text-abys-muted">Henüz kayıtlı karar vakası yok.</p>
           )}
           {taisCases?.map((c) => (
-            <TaisDecisionCard key={c.id} c={c} onChanged={() => setServerReloadKey((k) => k + 1)} />
+            <TaisDecisionCard
+              key={c.id}
+              c={c}
+              onChanged={() => setServerReloadKey((k) => k + 1)}
+              calibration={calibration}
+            />
           ))}
         </div>
       </div>
@@ -186,6 +230,7 @@ export default function DecisionsPage() {
               }}
               decidedBy={role?.label ?? "Kullanıcı"}
               serverMode={!!session}
+              calibration={calibration}
             />
           ))}
         </div>
@@ -418,7 +463,15 @@ function toDecisionCase(sectorId: string, ai: AiDecisionCase): DecisionCase {
  * (bkz. seedTaisDecisions), OptionsPanel'in kabul/reddet akışı yerine
  * alternatifler düz liste olarak gösterilir; yeniden karar kaydı oluşturulmaz.
  */
-function TaisDecisionCard({ c, onChanged }: { c: DecisionCase; onChanged: () => void }) {
+function TaisDecisionCard({
+  c,
+  onChanged,
+  calibration,
+}: {
+  c: DecisionCase;
+  onChanged: () => void;
+  calibration: CalibrationSummary | null;
+}) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -474,7 +527,7 @@ function TaisDecisionCard({ c, onChanged }: { c: DecisionCase; onChanged: () => 
 
       {open && (
         <div className="border-t border-abys-ink/10 px-5 py-5 space-y-6">
-          <ConfidencePanel c={c} />
+          <ConfidencePanel c={c} calibration={calibration} />
           <EvidencePanel c={c} defaultOpen={false} />
           <CounterfactualPanel c={c} />
            <div>
@@ -516,6 +569,7 @@ function CaseCard({
   onDecided,
   decidedBy,
   serverMode,
+  calibration,
 }: {
   c: DecisionCase;
   expanded: boolean;
@@ -524,6 +578,7 @@ function CaseCard({
   onDecided: () => void;
   decidedBy: string;
   serverMode: boolean;
+  calibration: CalibrationSummary | null;
 }) {
   const meta = SEVERITY_META[c.severity];
   const recommended = c.options.find((o) => o.id === c.recommendedOptionId);
@@ -566,7 +621,7 @@ function CaseCard({
               <TraceButton caseId={c.id} />
             </div>
           )}
-          <ConfidencePanel c={c} />
+          <ConfidencePanel c={c} calibration={calibration} />
           <EvidencePanel c={c} defaultOpen={detailByDefault} />
           <CounterfactualPanel c={c} />
           {serverMode && <DecisionIntelligencePanel caseId={c.id} />}
@@ -593,7 +648,16 @@ function ConfidenceBadge({ value }: { value: number }) {
   );
 }
 
-function ConfidencePanel({ c }: { c: DecisionCase }) {
+function ConfidencePanel({
+  c,
+  calibration,
+}: {
+  c: DecisionCase;
+  calibration: CalibrationSummary | null;
+}) {
+  const bucket = calibration?.buckets.find(
+    (item) => c.confidence >= item.min && c.confidence <= item.max
+  );
   return (
     <div>
       <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">GÜVEN SKORU</p>
@@ -601,6 +665,25 @@ function ConfidencePanel({ c }: { c: DecisionCase }) {
         <ConfidenceBadge value={c.confidence} />
       </div>
       <p className="text-sm text-abys-ink">{c.confidenceRationale}</p>
+      {calibration && (
+        <p className="mt-2 text-xs text-abys-muted" data-testid="calibration-hint">
+          {bucket && bucket.status === "measured" && bucket.direction && bucket.improvedRate !== null ? (
+            <>
+              Geçmişte bu güven düzeyinde ({bucket.withOutcome} sonuç) iyileşme{" "}
+              <span className="text-abys-ink font-medium">
+                %{(bucket.improvedRate * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}
+              </span>{" "}
+              · {CALIBRATION_DIRECTION_TEXT[bucket.direction]}
+              {bucket.adjustedConfidence !== null && <> · düzeltilmiş güven %{bucket.adjustedConfidence}</>}
+            </>
+          ) : (
+            <>
+              Kalibrasyon için kanıt yetersiz
+              {bucket ? ` · bu kovada ${bucket.withOutcome}/${calibration.threshold} sonuç` : ""}
+            </>
+          )}
+        </p>
+      )}
     </div>
   );
 }

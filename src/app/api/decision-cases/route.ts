@@ -12,6 +12,7 @@ import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { insertCases, listCasesForOrg, buildServerMemory } from "@/lib/db/repos/decisions";
+import { getConfidenceCalibration } from "@/lib/db/repos/decision-ledger";
 import { logModelRun } from "@/lib/db/repos/model-runs";
 import { getDb } from "@/lib/db/client";
 import { parseBody } from "@/lib/validation";
@@ -22,7 +23,10 @@ export async function GET(req: NextRequest) {
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
   const sectorId = req.nextUrl.searchParams.get("sectorId") ?? undefined;
-  const cases = await listCasesForOrg(session.orgId, sectorId);
+  const [cases, calibration] = await Promise.all([
+    listCasesForOrg(session.orgId, sectorId),
+    getConfidenceCalibration(session.orgId),
+  ]);
   const db = getDb();
   const enriched = await Promise.all(
     cases.map(async (storedCase) => {
@@ -33,7 +37,7 @@ export async function GET(req: NextRequest) {
       return { ...storedCase, decisionId: record.rows[0]?.id };
     })
   );
-  return NextResponse.json({ cases: enriched });
+  return NextResponse.json({ cases: enriched, calibration });
 }
 
 export const maxDuration = 600;
