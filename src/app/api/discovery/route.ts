@@ -1,17 +1,31 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { z } from "zod";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
+import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
-import { getDb, migrate } from "@/lib/db/client";
-import { discoverBusiness } from "@/lib/industry/classifier";
-import { INDUSTRY_PACKS } from "@/lib/industry/packs";
+import {
+  buildDiscovery,
+  BusinessProfileError,
+  confirmBusinessProfile,
+  getConfirmedBusinessProfile,
+  listIndustryPackCatalog,
+} from "@/lib/db/repos/business-context";
+import { getSemanticGraph } from "@/lib/db/repos/semantic-graph";
+import { recordAuditEvent } from "@/lib/db/repos/audit";
+
+const confirmSchema = z.object({
+  packId: z.string().trim().min(1).max(100),
+  subsectorId: z.string().trim().min(1).max(100).nullable().optional(),
+  acknowledgeConfidence: z.boolean().optional(),
+});
 
 /**
  * GET /api/discovery — işletme keşif analizi.
  * Girdiler org'un gerçek verisinden türetilir: bağlı konnektör kayıtlarının
  * varlık dağılımı ve eşlenmiş kanonik alanları, KPI etiketleri, kayıtlı
- * sektör alanı. Sonuç hiçbir şeyi kalıcı olarak değiştirmez (öneri niteliğinde).
+ * sektör alanı. Sonuç öneridir; POST ile açıkça onaylanmadıkça profil değişmez.
  */
 export async function GET() {
   const store = await cookies();
@@ -21,66 +35,104 @@ export async function GET() {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
-  await migrate();
-  const db = getDb();
-
-  const [orgResult, entityResult, fieldResult, labelResult, definitionResult] = await Promise.all([
-    db.query<{ sector_id: string | null }>("SELECT sector_id FROM organizations WHERE id = $1", [
-      session.orgId,
-    ]),
-    db.query<{ entity: string; count: number }>(
-      `SELECT entity, count(*)::int AS count FROM connector_records
-        WHERE org_id = $1 GROUP BY entity`,
-      [session.orgId]
-    ),
-    db.query<{ field: string }>(
-      `SELECT DISTINCT jsonb_object_keys(data->'fields') AS field
-         FROM connector_records WHERE org_id = $1`,
-      [session.orgId]
-    ),
-    db.query<{ label: string }>(
-      `SELECT DISTINCT label FROM kpi_values WHERE org_id = $1`,
-      [session.orgId]
-    ),
-    db.query<{ name: string }>(
-      `SELECT name FROM kpi_definitions WHERE org_id = $1`,
-      [session.orgId]
-    ),
+  const [build, confirmedProfile, graph] = await Promise.all([
+    buildDiscovery(session.orgId),
+    getConfirmedBusinessProfile(session.orgId),
+    getSemanticGraph(session.orgId, 500),
   ]);
 
-  const entityCounts: Record<string, number> = {};
-  for (const row of entityResult.rows) entityCounts[row.entity] = Number(row.count);
-
-  const fieldNames = [...new Set(fieldResult.rows.map((r) => r.field))];
-  const kpiLabels = [
-    ...new Set([...labelResult.rows.map((r) => r.label), ...definitionResult.rows.map((r) => r.name)]),
-  ];
-
-  const result = discoverBusiness({
-    sectorId: orgResult.rows[0]?.sector_id ?? null,
-    entityCounts,
-    fieldNames,
-    kpiLabels,
-  });
-
   return NextResponse.json({
-    ...result,
+    ...build.result,
     inputs: {
-      entities: entityCounts,
-      fieldCount: fieldNames.length,
-      kpiLabelCount: kpiLabels.length,
-      sectorId: orgResult.rows[0]?.sector_id ?? null,
+      entities: build.inputs.entityCounts,
+      fieldCount: build.inputs.fieldNames.length,
+      kpiLabelCount: build.inputs.kpiLabels.length,
+      sectorId: build.inputs.sectorId,
     },
-    catalog: INDUSTRY_PACKS.map((p) => ({
-      id: p.id,
-      label: p.label,
-      version: p.version,
-      subsectors: p.subsectors.length,
-      kpis: p.kpis.length,
-    })),
+    fingerprint: build.fingerprint,
+    observedSchema: build.schema,
+    confirmedProfile: confirmedProfile
+      ? {
+          id: confirmedProfile.id,
+          version: confirmedProfile.version,
+          industryPackId: confirmedProfile.industryPackId,
+          industryPackVersion: confirmedProfile.industryPackVersion,
+          subsectorId: confirmedProfile.subsectorId,
+          confidence: confirmedProfile.confidence,
+          createdAt: confirmedProfile.createdAt,
+          sourceFingerprint: confirmedProfile.sourceFingerprint,
+        }
+      : null,
+    profileIsStale:
+      confirmedProfile !== null && confirmedProfile.sourceFingerprint !== build.fingerprint,
+    graphSummary: {
+      coverage: graph.coverage,
+      resolution: graph.resolution,
+      entities: graph.entities,
+      provenance: graph.provenance,
+    },
+    catalog: listIndustryPackCatalog(),
     provenance: {
       engine: "industry/classifier.ts (çok sinyalli deterministik skorlama)",
-      note: "Sınıflandırma öneridir; düşük güvende yönetici onayı gerekir. Hiçbir KPI veri yokken hesaplanmış sayılmaz.",
+      note:
+        "Sınıflandırma öneridir; düşük güvende yönetici onayı gerekir. Hiçbir KPI veri yokken hesaplanmış sayılmaz.",
     },
   });
+}
+
+/** POST /api/discovery — seçilen paketi sürümlü iş profili olarak onaylar. */
+export async function POST(req: NextRequest) {
+  const store = await cookies();
+  const session = await getSession(store.get(SESSION_COOKIE)?.value);
+  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!hasPermission(session.role, "confirm_business_profile")) {
+    return NextResponse.json({ error: permissionError("confirm_business_profile") }, { status: 403 });
+  }
+
+  const parsed = await parseBody(req, confirmSchema);
+  if (!parsed.ok) return parsed.response;
+
+  try {
+    const confirmed = await confirmBusinessProfile({
+      orgId: session.orgId,
+      packId: parsed.data.packId,
+      subsectorId: parsed.data.subsectorId ?? null,
+      acknowledgeConfidence: parsed.data.acknowledgeConfidence,
+      actor: session.displayName,
+    });
+
+    if (!confirmed.idempotent) {
+      await recordAuditEvent({
+        orgId: session.orgId,
+        actor: session.displayName,
+        type: "business_profile_confirmed",
+        summary:
+          `İş profili onaylandı: ${confirmed.profile.industryPackId} v${confirmed.profile.industryPackVersion}` +
+          ` (profil v${confirmed.profile.version})`,
+        detail: JSON.stringify({
+          profileId: confirmed.profile.id,
+          version: confirmed.profile.version,
+          sourceFingerprint: confirmed.profile.sourceFingerprint,
+          activatedKpis: confirmed.activation.createdCount,
+          preservedKpis: confirmed.activation.preservedCount,
+        }),
+      });
+    }
+
+    return NextResponse.json(
+      {
+        profile: confirmed.profile,
+        activation: confirmed.activation,
+        idempotent: confirmed.idempotent,
+      },
+      { status: confirmed.idempotent ? 200 : 201 }
+    );
+  } catch (err) {
+    if (err instanceof BusinessProfileError) {
+      const status =
+        err.code === "INVALID_SUBSECTOR" || err.code === "PACK_NOT_DETECTED" ? 400 : 409;
+      return NextResponse.json({ error: err.message, code: err.code }, { status });
+    }
+    throw err;
+  }
 }

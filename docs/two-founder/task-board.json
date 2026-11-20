@@ -162,6 +162,17 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Decision, action, audit, execution intent/attempt and outcome state transitions are tenant-scoped and transactional; external execution is approval-gated, allowlisted, single-attempt and measured without fabricated impact.",
       "evidence": "Eight lifecycle/execution/economics suites passed: 42 tests; targeted eslint and tsc passed."
+    },
+    {
+      "id": "TB-015",
+      "title": "Enterprise state, semantic graph, optimization and business context",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": ["knowledge-graph-engineer", "digital-twin-engineer", "decision-science-optimization-engineer", "enterprise-ontology-engineer"],
+      "files": ["src/app/api/digital-twin", "src/app/api/optimization", "src/app/api/semantic-graph", "src/app/api/discovery/route.ts", "src/lib/db/repos/enterprise-state.ts", "src/lib/db/repos/semantic-graph.ts", "src/lib/digital-twin-comparison.ts", "src/lib/optimization.ts", "src/lib/semantic-traversal.ts"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Current/historical enterprise state, semantic neighborhoods, scenario deltas, deterministic optimization and human-confirmed business context are tenant-scoped, reproducible and expose provenance/uncertainty honestly.",
+      "evidence": "Seven state/semantic/optimization/discovery suites passed: 41 tests; targeted eslint and tsc passed."
     }
   ]
 }
