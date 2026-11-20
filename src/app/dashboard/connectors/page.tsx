@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { connectorHealthNote, summarizeConnectorRuns } from "@/lib/connector-run-health";
 
 interface Definition {
   id: string;
@@ -808,6 +809,26 @@ export default function ConnectorsPage() {
                     </div>
                     {detail && (
                       <div className="mt-2 text-[11px] text-abys-muted space-y-1">
+                        {(() => {
+                          const health = summarizeConnectorRuns(detail.runs);
+                          const note = connectorHealthNote(health);
+                          if (!note) return null;
+                          return (
+                            <div
+                              role="alert"
+                              className="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-red-700"
+                            >
+                              <span>Senkron sorunu · {note}</span>
+                              <button
+                                onClick={() => void sync(c.id)}
+                                disabled={busy}
+                                className="rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-medium text-white hover:opacity-90 disabled:opacity-40"
+                              >
+                                Yeniden dene
+                              </button>
+                            </div>
+                          );
+                        })()}
                         <p>
                           Kayıtlar:{" "}
                           {detail.records.length === 0
