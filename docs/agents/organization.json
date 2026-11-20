@@ -14,6 +14,15 @@
     "specialistsMaySpawn": false,
     "oneActiveWriterPerFile": true,
     "initialConcurrency": 8,
+    "deliveryDeadline": "2026-11-23T23:59:00+03:00",
+    "providerConstraints": {
+      "provider": "EVREN",
+      "model": "deepseek-v4.1-flash",
+      "observedModelConcurrency": 2,
+      "observedAccountConcurrency": 8,
+      "source": "EVREN /v1/quota snapshot reported 2026-11-20; provider logs were not accessible",
+      "rule": "Never exceed two simultaneous model requests; queue model work and continue independent local tasks while waiting."
+    },
     "deliveryPolicy": {
       "rootMayCommitVerifiedSlices": true,
       "rootMayPushVerifiedSlices": true,

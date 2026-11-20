@@ -6,6 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # ABYS execution policy
 
+- Delivery target: 23 November 2026, 23:59 Europe/Istanbul. Prioritize verified product increments.
 - Root Codex owns integration, tests, Conventional Commit creation and non-force pushes of verified slices.
 - Subagents never run Git write commands. Their uncommitted work must be reviewed and tested by root Codex first.
 - Commit only completed files owned by one workstream; never include in-progress agent files, unverified changes or unrelated user work.

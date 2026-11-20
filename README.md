@@ -1,7 +1,8 @@
-# ABYS — Awareness & Business Yield System
+# ABYS — Enterprise Decision Intelligence & Orchestration Platform
 
-AI destekli kurumsal farkındalık ve karar-destek platformu.
-İlke: **Awareness Before Action** — organizasyonunu 30 saniyede anla.
+Kurumsal karar zekâsı ve iş yürütme katmanı.
+İlke: **30 Seconds to Clarity** — yöneticinin önündeki 3–5 kritik gelişmeyi
+kanıtı, nedeni, olası sonucu ve karar seçenekleriyle 30 saniyede anlaması.
 
 Karar motoru; kanıt zinciri, güven skoru, karşı senaryo ve kısıt-farkındalıklı
 seçenekler üretir. Sayısal iddialar deterministik olarak doğrulanır
@@ -19,9 +20,10 @@ ollama pull nomic-embed-text   # hibrit belge erişimi için
 npm run dev            # http://localhost:3000
 ```
 
-İlk çalıştırmada veritabanı otomatik migrate edilir ve deterministik TAIS
-organizasyonu + tek demo hesabı tohumlanır (`src/lib/db/seed.ts`). `/login`
-sayfasından aşağıdaki hesapla giriş yapılabilir:
+İlk çalıştırmada normal migration'lar uygulanır; açık onay gerektiren
+migration'lar bekletilir. Giriş veya OIDC akışı demo veri oluşturmaz. TAIS
+demo kurumu yalnızca açık `demo:tais:bootstrap` komutu ve üretim dışı ortam
+koşuluyla kurulur. Yerel demo hesabı:
 
 | E-posta | Rol |
 |---|---|
@@ -29,6 +31,9 @@ sayfasından aşağıdaki hesapla giriş yapılabilir:
 
 Demo parolası `.env.example` ve `KURULUM-VE-GIRIS-BILGILERI.txt` içinde
 `abys-demo-2026` olarak belgelenmiştir; gerçek üretim hesabı değildir.
+
+Migration 18 yalnızca yetkili bir operatör `ABYS_MIGRATION_18_APPROVED=true`
+ayarladığında uygulanır.
 
 ### Windows masaüstü paketi
 
@@ -100,8 +105,10 @@ tablosuyla aynıdır.
 
 - Önizleme, üretim verisinden ayrı bir PGlite dizini (`.data/dev-preview`) ve
   deterministik demo AI politikası kullanır; mevcut `.data`/kullanıcı verisine dokunmaz.
-- Command Center, Claude Code alt-agent transkriptlerini okur; yalnızca GET kabul
-  eder, localhost dışı Host başlığını reddeder, hiçbir dosya yazmaz ve sır göstermez.
+- Command Center, Claude Code alt-agent transkriptlerini ve `~/.codex/sessions/**/*.jsonl`
+  Codex rollout kayıtlarını salt okunur izler; yalnızca GET kabul eder, localhost dışı
+  Host başlığını reddeder, hiçbir dosya yazmaz ve sır göstermez. Codex köprüsünde
+  sahte agent aktivitesi üretilmez; görünmeyen görevler "kayıt yok" olarak gösterilir.
 
 ## Komutlar
 
@@ -110,6 +117,7 @@ npm run dev      # geliştirme sunucusu
 npm run build    # üretim derlemesi (internet gerektirmez)
 npm run lint     # 0 hata / 0 uyarı beklenir
 npx tsc --noEmit # tip kontrolü
+npm run connectors:scheduler # ABYS_SCHEDULER_TOKEN ile çalışan sunucunun due konnektörlerini tetikler
 npm run smoke:e2e # çalışan sunucuya uçtan uca duman testi (BASE_URL ile adres)
 npm run eval     # AI değerlendirme süiti (CPU'da senaryo başına ~5-6 dk)
 ```
@@ -131,7 +139,7 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 | `/dashboard/process` | Süreç Zekâsı — entegrasyon olay günlüğünden gözlenen akış, süreler ve darboğazlar |
 | `/dashboard/options` | Karar Seçenekleri — çok kriterli puanlama, ağırlıklı sıralama ve Pareto sınırı |
 | `/dashboard/kpi` | KPI Verisi — metrik tanımı, tek/toplu zaman serisi girişi ve düzeltme (`edit_kpi`) |
-| `/dashboard/connectors` | Sistem Bağlantıları — REST/OData konnektör tanımı, senkron ve geçmiş (`ingest_data`) |
+| `/dashboard/connectors` | Sistem Bağlantıları — REST/OData konnektör tanımı, senkron, zamanlama ve geçmiş (`ingest_data`) |
 | `/dashboard/discovery` | İş Keşfi — bağlı veriden sektör/alt sektör çıkarımı, kanıtlar ve önerilen KPI çerçevesi |
 | `/dashboard/ask` | Ask ABYS |
 | `/dashboard/decisions` | Karar Merkezi |
@@ -158,7 +166,10 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 | `POST /api/briefing` | AI brifing — oturum gerekli (aynı istisna) |
 | `POST /api/ingest` | Veri içe alma — oturum gerekli (aynı istisna) |
 | `POST /api/ask` | Ask ABYS sohbet ucu |
-| `GET/POST /api/actions` | Aksiyon listesi/oluşturma |
+| `GET/PATCH /api/actions` | Karar kökenli aksiyonları listeler (`?eventsFor=<id>` ile değişmez geçiş geçmişi); PATCH yalnızca `open → in_progress → done` veya `cancelled` geçişlerine izin verir, karar onayını ve tenant sınırını denetler |
+| `GET/POST/PATCH /api/actions/execution-intents` | Dış sistemde yan etki üretmeden idempotent yürütme hazırlığı oluşturur ve insan onayına sunar; aynı anahtar farklı içerikle gelirse 409 döner |
+| `POST /api/decisions` | İnsan kararı; isteğe bağlı sayısal `expectedImpact` kaydeder. Kabul/değiştir kararında karar, aksiyon ve audit tek transaction'dadır |
+| `GET/POST /api/outcomes` | Sonuç dersleri; isteğe bağlı sayısal `actualImpact` (değer/para birimi/ölçüm aralığı/kanıt) kaydeder |
 | `POST /api/assess-risk` | Risk değerlendirme |
 | `GET /api/audit` | Denetim günlüğü |
 | `GET /api/organizations` | Oturum org'unun hiyerarşik alt ağacı (holding/şirket/şube) |
@@ -171,10 +182,19 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 | `POST /api/decision-options/evaluate` | Çok kriterli seçenek değerlendirmesi: min-max normalizasyon, ağırlıklı skor, Pareto sınırı — `run_analysis` |
 | `GET/POST/DELETE /api/kpi-values` | KPI zaman serisi: noktaları listele, toplu kaydet (≤500), düzelt/sil — yazma `edit_kpi`, okuma `view_decisions` |
 | `GET/POST /api/connectors` | Konnektör kataloğu (SAP, Oracle, Dynamics, Salesforce, ...) + org konfigürasyonları; POST `ingest_data` |
-| `POST /api/connectors/[id]/sync` | Konnektörü çalıştırır (REST/OData, sayfalama, checkpoint, retry); kanonik kayıtlar idempotent yazılır |
-| `GET /api/connectors/[id]/runs` | Senkron geçmişi + kanonik kayıt sayıları |
+| `PATCH /api/connectors/[id]` | Konnektör zamanlamasını 5–525600 dakika aralıkla ayarlar veya kapatır (`ingest_data`) |
+| `POST /api/connectors/[id]/sync` | Konnektörü çalıştırır (REST/OData, sayfalama, checkpoint, retry); kanonik sözleşme ihlalleri karantinaya yazılır, geçerli kayıtlar idempotent aktarılır |
+| `GET /api/connectors/[id]/runs` | Senkron geçmişi, reddedilen kayıt sayısı, gözlenen kaynak şema ve eşleme önerileri |
+| `GET/POST /api/connectors/[id]/mapping` | Son şema önerilerini inceler; insan onayıyla yeni, append-only eşleme sürümü oluşturur (iyimser sürüm kilidi, `ingest_data`) |
+| `GET /api/digital-twin` | Kanonik kayıtlardan mevcut veya `asOf` zamanlı kurumsal durum projeksiyonu |
+| `POST /api/digital-twin/compare` | Mevcut/as-of dijital ikizi açık senaryo deltalarıyla karşılaştırır; para birimlerini toplamaz (`run_analysis`) |
+| `POST /api/optimization` | Çok kaynaklı, minimum taahhütlü tam sayılı kaynak tahsisi için deterministik çözücü (`run_analysis`) |
+| `POST /api/connectors/scheduler/run` | Zamanı gelen senkronları atomik sahiplenip çalıştırır; cron için Bearer `ABYS_SCHEDULER_TOKEN`, kullanıcı oturumunda org kapsamı |
+| `GET /api/canonical-contracts` | Sürümlü kanonik varlık/alan/tip/referans sözleşmeleri — `view_decisions` |
+| `GET /api/semantic-graph` | Kanonik kayıtlardan org-kapsamlı düğüm/ilişki projeksiyonu; e-posta/SKU kimlik bağlantıları, limit ve truncation bilgisi — `view_decisions` |
+| `GET /api/semantic-graph/neighborhood` | `root`/`entity`, `depth` (0–8), `direction` ve `maxNodes` ile çok-hop grafik komşuluğu — `view_decisions` |
 | `GET /api/decision-cases/[id]/intelligence` | Çok kaynaklı karar brifingi: kanıt, tahmin, anomali, nedensel bağ, geçmiş sonuç + güven gerekçesi — `view_decisions` |
-| `GET /api/discovery` | İşletme keşfi: sektör/alt sektör sınıflandırması, kanıtlar, güven düzeyi ve KPI kullanılabilirlik durumu — `view_decisions` |
+| `GET/POST /api/discovery` | İşletme keşfi ve onaylı iş profili: sektör/alt sektör, kanıt, güven, KPI kullanılabilirliği, gözlenen şema, kimlik çözümleme ve grafik özeti (`GET`); sürümlü profil/KPI aktivasyonu (`POST`) — sırasıyla `view_decisions` / `confirm_business_profile` |
 | `GET/POST /api/decision-cases` | Karar vakaları |
 | `GET/POST /api/decisions` | Karar kayıtları |
 | `GET/POST /api/documents` | Kurumsal hafıza belgeleri |
@@ -198,7 +218,7 @@ Tam süit gece koşusu: `evals/run-overnight.ps1`.
 - `src/lib/decisions.ts` — karar modeli + kurumsal hafıza
 - `src/lib/constraints.ts` — canlı operasyonel kısıtlar
 - `src/lib/auth/` — scrypt parola hash, sunucu oturumu, rol × izin matrisi
-- `src/lib/db/` — PGlite bağlantısı, migration'lar, repository'ler, seed
+- `src/lib/db/` — PGlite bağlantısı, migration'lar ve org-kapsamlı repository'ler
 - `evals/` — 13 kriterlik değerlendirme süiti
 - `docs/` — mimari haritası, veri modeli ve agent takımı sözleşmesi
 
@@ -224,8 +244,8 @@ Görev dağıtımı, dosya sahipliği ve teslim yaklaşımı Lead Architect tara
   (IP'den bağımsız, XFF değiştirerek atlatılamaz); `ABYS_TRUST_PROXY=1` iken
   ek olarak güvenilen son hop IP başına 20; aşımda `429` + `Retry-After`
   (`src/lib/rate-limit.ts`, `src/app/api/auth/login/route.ts`).
-- Demo seed'i yıkıcı değildir: mevcut kullanıcının parolası, rolü ve durumu
-  her girişte yeniden yazılmaz (`src/lib/demo/tais/seed.ts`).
+- Giriş ve OIDC akışları demo veri oluşturmaz; TAIS demo verisi yalnızca açık
+  `demo:tais:bootstrap` komutuyla, ayrı ve üretim dışı bir ortamda kurulur.
 - SSO var (OIDC Authorization Code + PKCE). id_token imzası JWKS ile RS256
   üzerinden doğrulanır (`src/lib/auth/oidc.ts:verifyIdToken`; `alg: none`/HS*
   reddedilir), `nonce` ve çoklu `aud` için `azp`, `email_verified=true`
@@ -237,7 +257,7 @@ Görev dağıtımı, dosya sahipliği ve teslim yaklaşımı Lead Architect tara
   baştan üretebilir — dış saldırgana değil, kazara satır değişikliğine
   karşı bir kanıt.
 - Ürün yol haritası ve yetenek durum matrisi: `docs/ROADMAP.md`.
-- Otomatik test süiti VAR: 50 dosya (`npm test`, vitest) + `evals/` süiti
+- Otomatik test süiti VAR: 76 dosya geçti, 1 governance dosyası atlandı; 708 test geçti, 9 test atlandı (`npm test`, vitest) + `evals/` süiti
   (sahiplik ve doğrulama: `docs/agents/README.md`).
 - Kullanıcı yönetimi mevcut: `sys_admin` Ayarlar ekranından kullanıcı listeler,
   oluşturur, rol/durum günceller ve geçici parola sıfırlar

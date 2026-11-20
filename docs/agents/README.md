@@ -9,22 +9,23 @@ ABYS is an Executive Decision Intelligence platform: **DATA → UNDERSTANDING �
 Principle: **30 Seconds to Clarity** — surface the 3–5 things an executive must act on, each with evidence. ABYS is an
 intelligence layer on top of existing ERP/CRM/accounting systems; it does not replace them.
 
-## Architecture (verified at commit 87c3a88; re-check before relying on it)
+## Architecture (last code integration commit: 9877024; re-check before relying on it)
 - Next.js 16 + React 19 + TypeScript (strict), App Router. **Read `node_modules/next/dist/docs/` before writing Next.js code** (see `AGENTS.md`).
 - Embedded Postgres (PGlite) via `src/lib/db/client.ts`; hand-written SQL repositories in `src/lib/db/repos/`; ordered append-only migrations in `src/lib/db/migrations.ts`. Every business table carries `org_id`.
 - Auth: `src/lib/auth/*` (scrypt, server-side sessions, OIDC), RBAC in `src/lib/auth/permissions.ts`, hash-chained audit log in `src/lib/db/repos/audit.ts` (single write path).
 - AI: `src/lib/ai/*` (provider policy `AI_POLICY`, number verifier `verify-cases.ts`). Models explain; code computes every number.
 - Deterministic intelligence: `src/lib/demo/tais/*`, `src/lib/scenario-engine.ts`, `src/lib/scenario-simulation.ts` (tohumlanmış Monte Carlo), `src/lib/forecasting.ts` (geriye dönük testli tahmin), `src/lib/anomaly.ts` (median/MAD erken uyarı), `src/lib/process-mining.ts` (olay günlüğünden süreç akışı), `src/lib/scenarios.ts`, `src/lib/calculators.ts`, `src/lib/kpi.ts`.
 - Integrations: generic REST/OData connector, canonical contracts, deterministic cross-source entity links, webhooks, and API keys.
-- Tests: Vitest in `tests/` (verified 2026-11-19 baseline: 67 files passed + 1 skipped; 656 tests passed, 9 skipped). Evals in `evals/`.
+- Tests: Vitest in `tests/` (verified 2026-11-20 baseline: 76 files passed + 1 skipped; 708 tests passed, 9 skipped). Evals in `evals/`.
 - Mimari haritası: `docs/ARCHITECTURE.md`; veri modeli: `docs/DATA_MODEL.md`; ürün yol haritası ve kanıt durumu: `docs/ROADMAP.md`.
 - Denetim zinciri kararlı: `recordAuditEvent` yazımları sıralanır ve `created_at` kesin artar;
   tam süit geçer. Kilit yalnızca süreç içidir (çok örnekli dağıtımda DB kilidi gerekir).
 
 ## Delivery approach
 
-There is no arbitrary calendar deadline. Deliver as quickly as practical without
-compromising correctness, security, data integrity, or maintainability.
+The delivery target is **23 November 2026, 23:59 Europe/Istanbul**. Use the remaining
+time for the highest-value verified increments without compromising correctness,
+security, data integrity, or maintainability.
 
 The Lead Architect defines and tracks completion through working product
 capabilities and verifiable acceptance criteria. Prioritize the smallest
@@ -52,7 +53,7 @@ limitations before release.
 - **Level 3:** five specialists per department (25 total). Exact keys, aliases and responsibilities are in `docs/agents/organization.json`.
 - Only instantiate agents when there is real bounded work. Reuse an existing thread before creating another.
 - The Security, Quality & Reliability Director has independent review authority and escalates Critical findings directly to Codex.
-- Start with a **global** cap of 8 concurrent subagent threads, excluding the root. Expand through 12 → 16 → 20 → 24 → 30 only after measured successful completions and stable latency. A 429 burst reduces concurrency immediately; it never triggers a retry loop.
+- Keep the configured future cap at 8 subagent threads, but honor the observed EVREN model limit of **2 simultaneous `deepseek-v4.1-flash` requests**. A 429 burst stops new model work immediately; queued work keeps its state and no retry loop is allowed.
 - Departments maintain prioritized queues in `docs/agents/OPERATING-STATE.md`. Each assignment records objective, owned files, dependencies, acceptance criteria and required tests.
 
 ## File ownership (one writer per file)
@@ -107,9 +108,10 @@ tests; it only recommends them.
 
 ## Parallel work protocol
 
-- **Initial concurrency cap: 8 active specialist threads globally**, excluding Codex. Do not start eight agents merely
-  because capacity exists; start independent work that materially advances verified delivery. Never exceed the global cap
-  by interpreting it as per-department capacity.
+- **Configured future concurrency cap: 8 specialist threads globally**, excluding Codex. The observed EVREN
+  `deepseek-v4.1-flash` model limit is **2 simultaneous model requests**; do not start more model work than that.
+  A four-process target is acceptable only when each process also performs independent local work; it is not permission
+  to exceed the model-request semaphore. Do not start agents merely because configured capacity exists.
 - Do not retry repeated HTTP 429 responses. Reduce concurrency or take the work over in the Lead session.
 - Agents never gate each other: the Lead integrates each completed slice immediately and does not wait for background work.
 - Tasks are small, single-output, with explicit file ownership and acceptance criteria. No broad research briefs.
