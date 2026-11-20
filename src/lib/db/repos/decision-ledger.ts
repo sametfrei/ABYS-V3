@@ -9,6 +9,7 @@ import {
   type ExpectedEconomicImpact,
   type RealizedEconomicImpact,
 } from "@/lib/decision-economics";
+import { buildDecisionCalibration, type DecisionCalibration } from "@/lib/decision-calibration";
 
 /**
  * Decision Value Ledger — alınan kararlar, kaydedilmiş sonuçları ve
@@ -56,6 +57,7 @@ export interface LedgerSummary {
   worsened: number;
   economics: DecisionEconomicsSummary;
   learning: DecisionLearningSummary;
+  calibration: DecisionCalibration;
   execution: {
     totalActions: number;
     open: number;
@@ -285,6 +287,18 @@ export async function getLedgerSummary(orgId: string): Promise<LedgerSummary> {
   const counts = new Map(
     actionRows.rows.map((row) => [row.status, Number(row.count)])
   );
+  const learning = summarizeDecisionLearning(
+    rows.map((row) => ({
+      confidence: Number(row.confidence),
+      choice: row.choice,
+      result:
+        row.result === "improved" || row.result === "worsened" || row.result === "unchanged"
+          ? row.result
+          : null,
+      expectedImpact: expectedImpact(row),
+      actualImpact: actualImpact(row),
+    }))
+  );
   return {
     totalDecisions: rows.length,
     withOutcome: rows.filter((row) => row.result !== null).length,
@@ -297,18 +311,8 @@ export async function getLedgerSummary(orgId: string): Promise<LedgerSummary> {
         actualImpact: actualImpact(row),
       }))
     ),
-    learning: summarizeDecisionLearning(
-      rows.map((row) => ({
-        confidence: Number(row.confidence),
-        choice: row.choice,
-        result:
-          row.result === "improved" || row.result === "worsened" || row.result === "unchanged"
-            ? row.result
-            : null,
-        expectedImpact: expectedImpact(row),
-        actualImpact: actualImpact(row),
-      }))
-    ),
+    learning,
+    calibration: buildDecisionCalibration(learning.confidenceBuckets),
     execution: {
       totalActions: actionRows.rows.reduce((sum, row) => sum + Number(row.count), 0),
       open: counts.get("open") ?? 0,

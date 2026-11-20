@@ -97,6 +97,25 @@ interface Summary {
       acceptanceRate: number | null;
     };
   };
+  calibration: {
+    status: "measured" | "partial" | "insufficient_evidence";
+    totalWithOutcome: number;
+    threshold: number;
+    note: string;
+    buckets: Array<{
+      key: string;
+      label: string;
+      statedConfidence: number;
+      withOutcome: number;
+      improvedRate: number | null;
+      rangeHitRate: number | null;
+      status: "measured" | "insufficient_evidence";
+      gap: number | null;
+      direction: "overconfident" | "aligned" | "underconfident" | null;
+      adjustedConfidence: number | null;
+      samplesNeeded: number;
+    }>;
+  };
   execution: {
     totalActions: number;
     open: number;
@@ -116,6 +135,18 @@ const RESULT_STYLE: Record<LedgerOutcome["result"], string> = {
   improved: "bg-abys-healthy-soft text-abys-healthy",
   unchanged: "bg-abys-cream text-abys-muted",
   worsened: "bg-abys-critical-soft text-abys-critical",
+};
+
+const CALIBRATION_DIRECTION_LABEL: Record<string, string> = {
+  overconfident: "Aşırı güvenli",
+  aligned: "Tutarlı",
+  underconfident: "Temkinli",
+};
+
+const CALIBRATION_DIRECTION_STYLE: Record<string, string> = {
+  overconfident: "text-abys-critical",
+  aligned: "text-abys-healthy",
+  underconfident: "text-abys-warning",
 };
 
 const CHOICE_LABEL: Record<string, string> = {
@@ -380,6 +411,63 @@ export default function DecisionLedgerPage() {
                       </tbody>
                     </table>
                   </div>
+                </div>
+
+                <div className="mb-6 rounded-xl border border-abys-cream-border bg-abys-cream p-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="text-[11px] tracking-widest text-abys-muted font-semibold">
+                      GÜVEN KALİBRASYONU
+                    </p>
+                    <p className="text-[11px] text-abys-muted">
+                      {summary.calibration.status === "insufficient_evidence"
+                        ? `Kanıt yetersiz · kova başına en az ${summary.calibration.threshold} sonuç gerekir`
+                        : `${summary.calibration.totalWithOutcome} sonuçlanan karardan türetildi`}
+                    </p>
+                  </div>
+                  <div className="mt-3 overflow-x-auto">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="text-abys-muted">
+                        <tr>
+                          <th className="py-1 pr-3 font-medium">Güven</th>
+                          <th className="py-1 pr-3 font-medium">Örnek</th>
+                          <th className="py-1 pr-3 font-medium">Gözlenen iyileşme</th>
+                          <th className="py-1 pr-3 font-medium">Değerlendirme</th>
+                          <th className="py-1 pr-3 font-medium">Düzeltilmiş güven</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {summary.calibration.buckets.map((bucket) => (
+                          <tr key={bucket.key} className="border-t border-abys-cream-border">
+                            <td className="py-1 pr-3 text-abys-ink">
+                              %{bucket.statedConfidence} <span className="text-abys-muted">({bucket.label})</span>
+                            </td>
+                            <td className="py-1 pr-3">{bucket.withOutcome}</td>
+                            <td className="py-1 pr-3">{formatRate(bucket.improvedRate)}</td>
+                            <td className="py-1 pr-3">
+                              {bucket.status === "measured" && bucket.direction ? (
+                                <span className={CALIBRATION_DIRECTION_STYLE[bucket.direction]}>
+                                  {CALIBRATION_DIRECTION_LABEL[bucket.direction]}
+                                  {bucket.gap !== null && (
+                                    <span className="text-abys-muted">
+                                      {" "}(fark {(bucket.gap * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} puan)
+                                    </span>
+                                  )}
+                                </span>
+                              ) : (
+                                <span className="text-abys-muted">
+                                  Kanıt yetersiz · {bucket.samplesNeeded} sonuç daha gerekli
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-1 pr-3 text-abys-ink">
+                              {bucket.adjustedConfidence === null ? "—" : `%${bucket.adjustedConfidence}`}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-3 text-[11px] text-abys-muted">{summary.calibration.note}</p>
                 </div>
               </>
             )}

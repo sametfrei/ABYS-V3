@@ -266,6 +266,24 @@ describe("Decision Value Ledger API'si", () => {
           acceptanceRate: 1 / 3,
         },
       },
+      calibration: {
+        status: "insufficient_evidence",
+        totalWithOutcome: 2,
+        threshold: 5,
+        buckets: [
+          expect.objectContaining({ key: "0-49", status: "insufficient_evidence" }),
+          expect.objectContaining({ key: "50-69", status: "insufficient_evidence" }),
+          expect.objectContaining({
+            key: "70-84",
+            withOutcome: 2,
+            improvedRate: 0.5,
+            status: "insufficient_evidence",
+            samplesNeeded: 3,
+            adjustedConfidence: null,
+          }),
+          expect.objectContaining({ key: "85-100", status: "insufficient_evidence" }),
+        ],
+      },
       execution: {
         totalActions: 1,
         open: 1,
