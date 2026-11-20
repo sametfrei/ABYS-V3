@@ -170,4 +170,51 @@ describe("Tahmin anlık görüntüsü kalibrasyonu", () => {
     const other = (await (await GET(getRequest())).json()) as { snapshots: unknown[] };
     expect(other.snapshots).toHaveLength(0);
   });
+  it("ilk çağrıda yakalar, tekrar çağrıda atlar ve yetersiz veriyi raporlar", async () => {
+    const { POST: capture } = await import("../src/app/api/forecast/snapshots/capture/route");
+    const { migrate: mig, getDb: gdb } = await import("../src/lib/db/client");
+    const { createSession: cs, hashPassword: hp } = await import("../src/lib/auth/core");
+    await mig();
+    const db = gdb();
+    const org = "org-capture";
+    await db.query("INSERT INTO organizations (id, name, sector_id) VALUES ($1, $2, $3)", [org, "Capture", "aviation"]);
+    await db.query(
+      "INSERT INTO users (id, org_id, email, display_name, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
+      ["user-capture", org, "capture@test.local", "Capture CEO", "ceo", hp("mevcut-parola-123")]
+    );
+    await db.query(
+      "INSERT INTO datasets (id, org_id, sector_id, source_label, raw_content, ingested_by) VALUES ('ds-cap', $1, 'aviation', 't', 'r', 't')",
+      [org]
+    );
+    for (let i = 0; i < 8; i++) {
+      await db.query(
+        "INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at) VALUES ($1, $2, 'ds-cap', 'Ciro', $3, $4)",
+        [`cap-${i}`, org, String(200 + i * 5), `2026-03-${String(i + 1).padStart(2, "0")}T00:00:00Z`]
+      );
+    }
+    await db.query(
+      "INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at) VALUES ('cap-x', $1, 'ds-cap', 'Az veri', '1', '2026-03-01T00:00:00Z')",
+      [org]
+    );
+    nextHeaders.__setTestCookie(SESSION_COOKIE, await cs("user-capture", org));
+
+    const first = (await (await capture()).json()) as {
+      captured: number;
+      skipped: number;
+      results: Array<{ label: string; status: string }>;
+    };
+    expect(first.captured).toBe(1);
+    expect(first.skipped).toBe(0);
+    expect(first.results.find((r) => r.label === "Ciro")?.status).toBe("captured");
+    expect(first.results.find((r) => r.label === "Az veri")?.status).toBe("insufficient_data");
+
+    const second = (await (await capture()).json()) as {
+      captured: number;
+      skipped: number;
+      results: Array<{ label: string; status: string }>;
+    };
+    expect(second.captured).toBe(0);
+    expect(second.skipped).toBe(1);
+    expect(second.results.find((r) => r.label === "Ciro")?.status).toBe("skipped_recent");
+  });
 });

@@ -54,6 +54,7 @@ Durum ölçeği:
 | Tahmin (naive/SES/trend, geriye dönük test, P10–P90) | E2E (test) | `src/lib/forecasting.ts`, `tests/forecasting.test.ts` |
 | Tahmin kalibrasyonu · kaydedilen tahmin vs gerçekleşen | E2E (test) | migration 35 `forecast_snapshots`; `POST/GET /api/forecast/snapshots`; üretilen ilk adım (P10/P50/P90) saklanır, sonraki sayısal KPI gözlemiyle karşılaştırılır; aralık isabeti, ıska ve ortalama mutlak hata kayıtlı değerlerden türetilir; `src/lib/forecast-calibration.ts`, `/dashboard/forecast` paneli; `tests/forecast-snapshots.test.ts` |
 | Tahmin aralığı kalibrasyonu · kapsamaya göre ölçekleme | E2E (test) | `computeIntervalAdjustment`: en az 5 ölçülmüş tahminde gözlenen P10–P90 kapsaması %80 hedefe göre 0,5–3× aralığında ölçeklenir; ham çıktı `forecast.points` korunur, kalibre aralıklar `adjustedPoints` olarak döner ve ekranda gerekçesi gösterilir; `tests/forecasting.test.ts` |
+| Zamanlanmış tahmin yakalama | E2E (test) | `POST /api/forecast/snapshots/capture`; tahmin edilebilir tüm KPI etiketleri için anlık görüntü alır, etiket başına 20 saatte bir tekrar kayıt oluşturmaz; yetersiz veri ve tahmin edilemeyen etiketler ayrı raporlanır; cron/zamanlayıcıdan güvenle çağrılabilir; `tests/forecast-snapshots.test.ts` |
 | Erken uyarı (median/MAD) | E2E (test) | `src/lib/anomaly.ts`, `tests/anomaly.test.ts` |
 | Monte Carlo (tohumlu, üçgensel, P10/P50/P90) | E2E (test) | `src/lib/scenario-simulation.ts`, `tests/scenario-simulation.test.ts` |
 | Çok kriterli seçenek değerlendirme + Pareto | E2E (test) | `src/lib/decision-options.ts`, `/dashboard/options` |
@@ -99,7 +100,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024) aralık kapsama ölçeklemesi (TB-025) ve Infor/IFS/Sage konnektörlerinin adaptöre bağlanması (TB-026) ve kabuk i18n temeli (TB-028).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024) aralık kapsama ölçeklemesi (TB-025) ve Infor/IFS/Sage konnektörlerinin adaptöre bağlanması (TB-026) kabuk i18n temeli (TB-028), giriş ekranı yerelleştirmesi (TB-029) ve zamanlanmış tahmin yakalama (TB-030).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
 2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.

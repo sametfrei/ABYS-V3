@@ -28,6 +28,22 @@ export interface ForecastSnapshotRecord {
   evaluation: ForecastSnapshotEvaluation;
 }
 
+/** Aynı etiket için verilen zamandan sonra anlık görüntü var mı? */
+export async function hasSnapshotSince(
+  orgId: string,
+  label: string,
+  sinceIso: string
+): Promise<boolean> {
+  await migrate();
+  const r = await getDb().query(
+    `SELECT 1 FROM forecast_snapshots
+      WHERE org_id = $1 AND label = $2 AND created_at > $3
+      LIMIT 1`,
+    [orgId, label, sinceIso]
+  );
+  return r.rows.length > 0;
+}
+
 export async function insertForecastSnapshot(params: {
   orgId: string;
   label: string;
