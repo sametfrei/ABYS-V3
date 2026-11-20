@@ -150,6 +150,17 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Generic read-only connectors validate canonical contracts, quarantine invalid rows, persist idempotently, promote KPI/process events, expose mapping/scheduler health, resolve strong identities and preserve tenant isolation.",
       "evidence": "Nine connector/canonical/security suites passed: 64 tests; targeted eslint and tsc passed."
+    },
+    {
+      "id": "TB-014",
+      "title": "Closed-loop decision, action and governed execution lifecycle",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": ["backend-architecture-engineer", "application-security-engineer", "decision-science-optimization-engineer"],
+      "files": ["src/app/api/actions", "src/app/api/decisions", "src/app/api/outcomes", "src/app/api/decision-cases", "src/lib/db/repos/actions.ts", "src/lib/db/repos/decisions.ts", "src/lib/db/repos/decision-ledger.ts", "src/lib/db/repos/decision-lifecycle.ts", "src/lib/db/repos/execution-intents.ts", "src/lib/db/repos/decision-signals.ts", "src/lib/execution", "src/lib/decision-economics.ts"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Decision, action, audit, execution intent/attempt and outcome state transitions are tenant-scoped and transactional; external execution is approval-gated, allowlisted, single-attempt and measured without fabricated impact.",
+      "evidence": "Eight lifecycle/execution/economics suites passed: 42 tests; targeted eslint and tsc passed."
     }
   ]
 }

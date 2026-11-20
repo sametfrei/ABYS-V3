@@ -1,11 +1,45 @@
 import { randomBytes } from "crypto";
+import type { Transaction } from "@electric-sql/pglite";
 import { getDb, migrate } from "../client";
+import { recordAuditEventInTransaction } from "./audit";
+import type { RealizedEconomicImpact } from "@/lib/decision-economics";
 
 /**
- * Yürütme repository'si: aksiyonlar (karar kökenli) ve sonuçlar (ders).
- * Tüm sorgular org-farkındalıklı. Aksiyon her zaman bir karara ve vakaya
- * bağlıdır — köken zinciri korunur.
+ * Yürütme repository'si: aksiyonlar (karar kökenli), değişmez yürütme
+ * olayları ve sonuçlar (ders). Tüm sorgular org-farkındalıklıdır. Aksiyon
+ * her zaman bir karara ve vakaya bağlıdır; serbest durum ataması yapılmaz.
  */
+
+export const ACTION_STATUSES = ["open", "in_progress", "done", "cancelled"] as const;
+export type ActionStatus = (typeof ACTION_STATUSES)[number];
+
+const ALLOWED_TRANSITIONS: Record<ActionStatus, readonly ActionStatus[]> = {
+  open: ["in_progress", "cancelled"],
+  in_progress: ["done", "cancelled"],
+  done: [],
+  cancelled: [],
+};
+
+const STATUS_LABEL: Record<ActionStatus, string> = {
+  open: "açık",
+  in_progress: "yürütülüyor",
+  done: "tamamlandı",
+  cancelled: "iptal",
+};
+
+export class ActionTransitionError extends Error {
+  readonly code = "ACTION_TRANSITION_REJECTED";
+
+  constructor(
+    message: string,
+    public readonly reason: "not_found" | "invalid_transition" | "decision_not_approved",
+    public readonly currentStatus?: string,
+    public readonly decisionState?: string
+  ) {
+    super(message);
+    this.name = "ActionTransitionError";
+  }
+}
 
 export interface ActionRow {
   id: string;
@@ -14,15 +48,84 @@ export interface ActionRow {
   title: string;
   owner: string;
   due_at: string | null;
-  status: string;
+  status: ActionStatus;
   progress_note: string | null;
   /** Bu aksiyonun dayandigi risk kaydinin kimligi (varsa) — bkz. migration 17. */
   related_risk_id: string | null;
+  decision_state: string;
+  event_count: number;
+  last_event_at: string | null;
+  last_event_by: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export async function createAction(params: {
+export interface ActionEventRow {
+  id: string;
+  action_id: string;
+  decision_id: string;
+  from_status: string | null;
+  to_status: string;
+  progress_note: string | null;
+  actor_id: string;
+  actor_name: string;
+  created_at: string;
+}
+
+interface ActionDbRow extends Omit<ActionRow, "event_count"> {
+  event_count: number | string;
+}
+
+type AuditWriter = (
+  tx: Transaction,
+  params: {
+    orgId: string;
+    actor: string;
+    type: string;
+    summary: string;
+    detail?: string | null;
+  }
+) => Promise<string>;
+
+function asStatus(value: string): ActionStatus | null {
+  return ACTION_STATUSES.includes(value as ActionStatus) ? (value as ActionStatus) : null;
+}
+
+async function insertActionEvent(
+  tx: Transaction,
+  params: {
+    orgId: string;
+    actionId: string;
+    decisionId: string;
+    fromStatus: string | null;
+    toStatus: string;
+    progressNote: string | null;
+    actorId: string;
+    actorName: string;
+  }
+): Promise<string> {
+  const id = randomBytes(8).toString("hex");
+  await tx.query(
+    `INSERT INTO action_events
+       (id, org_id, action_id, decision_id, from_status, to_status,
+        progress_note, actor_id, actor_name)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [
+      id,
+      params.orgId,
+      params.actionId,
+      params.decisionId,
+      params.fromStatus,
+      params.toStatus,
+      params.progressNote,
+      params.actorId,
+      params.actorName,
+    ]
+  );
+  return id;
+}
+
+export interface CreateActionParams {
   orgId: string;
   decisionId: string;
   caseId: string;
@@ -31,10 +134,27 @@ export async function createAction(params: {
   dueAt?: string | null;
   /** İzlenebilirlik: aksiyonun dayandığı risk kaydının kimliği (örn. TaisRisk.id). */
   relatedRiskId?: string | null;
-}): Promise<string> {
-  await migrate();
+  /** Oturumdan gelen değişmez kullanıcı kimliği; görünen ad snapshot'ı ayrı tutulur. */
+  actorId?: string;
+  actorName?: string;
+}
+
+export async function createActionInTransaction(
+  tx: Transaction,
+  params: CreateActionParams
+): Promise<string> {
   const id = randomBytes(8).toString("hex");
-  await getDb().query(
+  const parent = await tx.query<{ state: string }>(
+    "SELECT state FROM decision_records WHERE id = $1 AND org_id = $2",
+    [params.decisionId, params.orgId]
+  );
+  if (!parent.rows[0]) {
+    throw new ActionTransitionError(
+      "Aksiyonun bağlanacağı karar kaydı bulunamadı.",
+      "not_found"
+    );
+  }
+  await tx.query(
     `INSERT INTO actions (id, org_id, decision_id, case_id, title, owner, due_at, related_risk_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
     [
@@ -48,37 +168,249 @@ export async function createAction(params: {
       params.relatedRiskId ?? null,
     ]
   );
+  await insertActionEvent(tx, {
+    orgId: params.orgId,
+    actionId: id,
+    decisionId: params.decisionId,
+    fromStatus: null,
+    toStatus: "open",
+    progressNote: null,
+    actorId: params.actorId ?? params.owner,
+    actorName: params.actorName ?? params.owner,
+  });
   return id;
+}
+
+export async function createAction(params: CreateActionParams): Promise<string> {
+  await migrate();
+  return getDb().transaction((tx) => createActionInTransaction(tx, params));
 }
 
 export async function listActions(orgId: string, status?: string): Promise<ActionRow[]> {
   await migrate();
-  const r = await getDb().query<ActionRow>(
-    `SELECT id, decision_id, case_id, title, owner, due_at, status, progress_note, related_risk_id, created_at, updated_at
-     FROM actions WHERE org_id = $1 ${status ? "AND status = $2" : ""}
-     ORDER BY created_at DESC`,
+  const r = await getDb().query<ActionDbRow>(
+    `SELECT a.id, a.decision_id, a.case_id, a.title, a.owner, a.due_at,
+            a.status, a.progress_note, a.related_risk_id, a.created_at, a.updated_at,
+            d.state AS decision_state,
+            COALESCE(ec.event_count, 0)::int AS event_count,
+            le.created_at AS last_event_at, le.actor_name AS last_event_by
+       FROM actions a
+       JOIN decision_records d ON d.id = a.decision_id AND d.org_id = a.org_id
+       LEFT JOIN LATERAL (
+         SELECT count(*)::int AS event_count
+           FROM action_events e
+          WHERE e.org_id = a.org_id AND e.action_id = a.id
+       ) ec ON true
+       LEFT JOIN LATERAL (
+         SELECT e.created_at, e.actor_name
+           FROM action_events e
+          WHERE e.org_id = a.org_id AND e.action_id = a.id
+          ORDER BY e.created_at DESC, e.id DESC
+          LIMIT 1
+       ) le ON true
+      WHERE a.org_id = $1 ${status ? "AND a.status = $2" : ""}
+      ORDER BY a.created_at DESC`,
     status ? [orgId, status] : [orgId]
+  );
+  return r.rows.map((row) => ({
+    ...row,
+    status: asStatus(row.status) ?? "open",
+    event_count: Number(row.event_count),
+    decision_state: row.decision_state,
+  }));
+}
+
+export async function listActionEvents(
+  orgId: string,
+  actionId: string,
+  limit = 100
+): Promise<ActionEventRow[]> {
+  await migrate();
+  const r = await getDb().query<ActionEventRow>(
+    `SELECT id, action_id, decision_id, from_status, to_status,
+            progress_note, actor_id, actor_name, created_at
+       FROM action_events
+      WHERE org_id = $1 AND action_id = $2
+      ORDER BY created_at DESC, id DESC
+      LIMIT $3`,
+    [orgId, actionId, limit]
   );
   return r.rows;
 }
 
-/** İlerleme/durum günceller; org sahipliği garanti (başka kurumun aksiyonu 0 satır). */
+/**
+ * Aksiyon geçişini doğrular, günceller, değişmez olayı ve denetim kaydını
+ * aynı transaction'da yazar. İstenen durum aynıysa yalnızca not olayı eklenir.
+ */
+export async function transitionAction(params: {
+  orgId: string;
+  actionId: string;
+  status?: ActionStatus;
+  progressNote?: string;
+  actorId: string;
+  actorName: string;
+  auditWriter?: AuditWriter;
+}): Promise<{ changed: boolean; status: ActionStatus; eventId: string | null }> {
+  await migrate();
+  const note = params.progressNote?.trim() || null;
+  if (params.status && !ACTION_STATUSES.includes(params.status)) {
+    throw new ActionTransitionError("Geçersiz aksiyon durumu.", "invalid_transition");
+  }
+  if (!params.status && note === null) {
+    throw new ActionTransitionError("Güncellenecek durum veya ilerleme notu gerekli.", "invalid_transition");
+  }
+
+  const writeAudit = params.auditWriter ?? recordAuditEventInTransaction;
+  return getDb().transaction(async (tx) => {
+    const found = await tx.query<{
+      id: string;
+      decision_id: string;
+      status: string;
+      decision_state: string;
+    }>(
+      `SELECT a.id, a.decision_id, a.status, d.state AS decision_state
+         FROM actions a
+         JOIN decision_records d ON d.id = a.decision_id AND d.org_id = a.org_id
+        WHERE a.id = $1 AND a.org_id = $2
+        FOR UPDATE OF a`,
+      [params.actionId, params.orgId]
+    );
+    const current = found.rows[0];
+    if (!current) {
+      throw new ActionTransitionError("Aksiyon bulunamadı.", "not_found");
+    }
+    const fromStatus = asStatus(current.status);
+    if (!fromStatus) {
+      throw new ActionTransitionError(
+        "Aksiyonun mevcut durumu geçersiz; otomatik düzeltme yapılmadı.",
+        "invalid_transition",
+        current.status,
+        current.decision_state
+      );
+    }
+
+    const toStatus = params.status ?? fromStatus;
+    if (toStatus !== fromStatus && !ALLOWED_TRANSITIONS[fromStatus].includes(toStatus)) {
+      throw new ActionTransitionError(
+        `Aksiyon '${STATUS_LABEL[fromStatus]}' durumundan '${STATUS_LABEL[toStatus]}' durumuna geçemez.`,
+        "invalid_transition",
+        fromStatus,
+        current.decision_state
+      );
+    }
+
+    if (
+      toStatus === "in_progress" &&
+      fromStatus === "open" &&
+      current.decision_state !== "approved" &&
+      current.decision_state !== "in_execution"
+    ) {
+      throw new ActionTransitionError(
+        `Karar '${current.decision_state}' durumunda; yürütme için insan onayı gerekli.`,
+        "decision_not_approved",
+        fromStatus,
+        current.decision_state
+      );
+    }
+
+    if (toStatus === fromStatus && note === null) {
+      return { changed: false, status: toStatus, eventId: null };
+    }
+
+    if (toStatus !== fromStatus || note !== null) {
+      await tx.query(
+        `UPDATE actions
+            SET status = $3,
+                progress_note = COALESCE($4, progress_note),
+                updated_at = now()
+          WHERE id = $1 AND org_id = $2`,
+        [params.actionId, params.orgId, toStatus, note]
+      );
+    }
+
+    let decisionUpdated = false;
+    if (toStatus !== fromStatus && toStatus === "in_progress") {
+      const d = await tx.query(
+        `UPDATE decision_records
+            SET state = 'in_execution'
+          WHERE id = $1 AND org_id = $2 AND state IN ('approved', 'in_execution')`,
+        [current.decision_id, params.orgId]
+      );
+      decisionUpdated = (d.affectedRows ?? 0) > 0;
+      if (!decisionUpdated) {
+        throw new ActionTransitionError(
+          "Karar durumu yürütme başlatmaya uygun değil.",
+          "decision_not_approved",
+          fromStatus,
+          current.decision_state
+        );
+      }
+    } else if (toStatus !== fromStatus && toStatus === "done") {
+      const d = await tx.query(
+        `UPDATE decision_records
+            SET state = 'outcome_review'
+          WHERE id = $1 AND org_id = $2`,
+        [current.decision_id, params.orgId]
+      );
+      decisionUpdated = (d.affectedRows ?? 0) > 0;
+    }
+
+    const eventId = await insertActionEvent(tx, {
+      orgId: params.orgId,
+      actionId: params.actionId,
+      decisionId: current.decision_id,
+      fromStatus,
+      toStatus,
+      progressNote: note,
+      actorId: params.actorId,
+      actorName: params.actorName,
+    });
+    await writeAudit(tx, {
+      orgId: params.orgId,
+      actor: params.actorName,
+      type: "action_transition",
+      summary:
+        toStatus === fromStatus
+          ? "Aksiyon ilerleme notu güncellendi"
+          : `Aksiyon durumu: ${STATUS_LABEL[fromStatus]} → ${STATUS_LABEL[toStatus]}`,
+      detail: JSON.stringify({
+        actionId: params.actionId,
+        decisionId: current.decision_id,
+        fromStatus,
+        toStatus,
+        eventId,
+        decisionUpdated,
+        actorId: params.actorId,
+      }),
+    });
+
+    return { changed: true, status: toStatus, eventId };
+  });
+}
+
+/** Geriye uyumlu yardımcı: ayrıntılı geçiş sonucunu boolean'a indirger. */
 export async function updateAction(params: {
   orgId: string;
   actionId: string;
-  status?: string;
+  status?: ActionStatus;
   progressNote?: string;
+  actorId?: string;
+  actorName?: string;
 }): Promise<boolean> {
-  await migrate();
-  const r = await getDb().query(
-    `UPDATE actions SET
-       status = COALESCE($3, status),
-       progress_note = COALESCE($4, progress_note),
-       updated_at = now()
-     WHERE id = $1 AND org_id = $2`,
-    [params.actionId, params.orgId, params.status ?? null, params.progressNote ?? null]
-  );
-  return (r.affectedRows ?? 0) > 0;
+  try {
+    await transitionAction({
+      orgId: params.orgId,
+      actionId: params.actionId,
+      status: params.status,
+      progressNote: params.progressNote,
+      actorId: params.actorId ?? "system",
+      actorName: params.actorName ?? "Sistem",
+    });
+    return true;
+  } catch (err) {
+    if (err instanceof ActionTransitionError) return false;
+    throw err;
+  }
 }
 
 export async function recordOutcome(params: {
@@ -88,18 +420,43 @@ export async function recordOutcome(params: {
   note: string;
   lesson?: string;
   recordedBy: string;
+  actualImpact?: RealizedEconomicImpact | null;
 }): Promise<string> {
   await migrate();
   const id = randomBytes(8).toString("hex");
+  const actual = params.actualImpact ?? null;
   await getDb().query(
-    `INSERT INTO outcomes (id, org_id, decision_id, result, note, lesson, recorded_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [id, params.orgId, params.decisionId, params.result, params.note, params.lesson ?? null, params.recordedBy]
+    `INSERT INTO outcomes
+       (id, org_id, decision_id, result, note, lesson, recorded_by,
+        actual_value, value_currency, measurement_start, measurement_end, evidence)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+    [
+      id,
+      params.orgId,
+      params.decisionId,
+      params.result,
+      params.note,
+      params.lesson ?? null,
+      params.recordedBy,
+      actual?.value ?? null,
+      actual?.currency ?? null,
+      actual?.measurementStart ?? null,
+      actual?.measurementEnd ?? null,
+      actual?.evidence ?? null,
+    ]
   );
-  // Karar kaydının outcome özetini de günceller (hafıza beslemesi için).
   await getDb().query(
     `UPDATE decision_records SET outcome = $3 WHERE id = $1 AND org_id = $2`,
-    [params.decisionId, params.orgId, JSON.stringify({ result: params.result, note: params.note, lesson: params.lesson ?? "" })]
+    [
+      params.decisionId,
+      params.orgId,
+      JSON.stringify({
+        result: params.result,
+        note: params.note,
+        lesson: params.lesson ?? "",
+        actualImpact: actual,
+      }),
+    ]
   );
   return id;
 }

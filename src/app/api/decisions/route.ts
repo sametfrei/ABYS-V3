@@ -1,14 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
-import { getDb } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
-import { recordDecision, updateDecisionState, DECISION_STATES } from "@/lib/db/repos/decisions";
-import { createAction } from "@/lib/db/repos/actions";
+import { updateDecisionState, DECISION_STATES } from "@/lib/db/repos/decisions";
+import {
+  DecisionLifecycleError,
+  recordHumanDecision,
+} from "@/lib/db/repos/decision-lifecycle";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import type { ExpectedEconomicImpact } from "@/lib/decision-economics";
+
+const expectedImpactSchema = z
+  .object({
+    value: z.number().finite().min(-1_000_000_000_000_000).max(1_000_000_000_000_000),
+    low: z.number().finite().min(-1_000_000_000_000_000).max(1_000_000_000_000_000).optional(),
+    high: z.number().finite().min(-1_000_000_000_000_000).max(1_000_000_000_000_000).optional(),
+    currency: z.string().trim().regex(/^[A-Z]{3}$/, "Para birimi üç büyük harfli ISO kodu olmalı."),
+    basis: z.string().trim().max(500).optional(),
+    assumptions: z.array(z.string().trim().min(1).max(500)).max(20).optional(),
+  })
+  .superRefine((impact, ctx) => {
+    if (impact.low !== undefined && impact.low > impact.value) {
+      ctx.addIssue({ code: "custom", path: ["low"], message: "Alt sınır beklenen değerden büyük olamaz." });
+    }
+    if (impact.high !== undefined && impact.high < impact.value) {
+      ctx.addIssue({ code: "custom", path: ["high"], message: "Üst sınır beklenen değerden küçük olamaz." });
+    }
+  });
 
 const postSchema = z.object({
   caseId: z.string().min(1).max(300),
@@ -16,6 +37,7 @@ const postSchema = z.object({
   choice: z.enum(["accepted", "rejected", "modified"]),
   reason: z.string().max(20000).optional(),
   chosenAction: z.string().max(300).optional(),
+  expectedImpact: expectedImpactSchema.optional(),
 });
 
 const patchSchema = z.object({
@@ -38,56 +60,35 @@ export async function POST(req: NextRequest) {
   const parsed = await parseBody(req, postSchema);
   if (!parsed.ok) return parsed.response;
   const body = parsed.data;
+  const expectedImpact: ExpectedEconomicImpact | null = body.expectedImpact
+    ? {
+        value: body.expectedImpact.value,
+        low: body.expectedImpact.low ?? null,
+        high: body.expectedImpact.high ?? null,
+        currency: body.expectedImpact.currency,
+        basis: body.expectedImpact.basis ?? null,
+        assumptions: body.expectedImpact.assumptions ?? [],
+      }
+    : null;
 
-  // Vaka bu kuruma mı ait? (org daima oturumdan — başka kurumun vakası 404)
-  const db = getDb();
-  const owns = await db.query<{ sector_id: string }>(
-    "SELECT sector_id FROM decision_cases WHERE id = $1 AND org_id = $2",
-    [body.caseId, session.orgId]
-  );
-  if (owns.rows.length === 0) {
-    return NextResponse.json({ error: "Vaka bulunamadı." }, { status: 404 });
-  }
-
-  const recordId = await recordDecision({
-    orgId: session.orgId,
-    caseId: body.caseId,
-    sectorId: owns.rows[0].sector_id,
-    choice: body.choice,
-    decidedBy: session.displayName,
-    payload: { reason: body.reason ?? "", chosenAction: body.chosenAction ?? "" },
-  });
-
-  await recordAuditEvent({
-    orgId: session.orgId,
-    actor: session.displayName,
-    type: "decision_made",
-    summary: `Karar verildi: ${body.choice}`,
-    detail: body.caseId,
-  });
-
-  // Kabul/değiştir kararı hesap verebilir bir aksiyon doğurur (döngü:
-  // Karar -> Aksiyon). Reddedilen kararlar aksiyon üretmez.
-  let actionId: string | null = null;
-  if (body.choice === "accepted" || body.choice === "modified") {
-    const title = body.chosenAction?.trim() || "Onaylanan kararın uygulanması";
-    actionId = await createAction({
+  try {
+    const result = await recordHumanDecision({
       orgId: session.orgId,
-      decisionId: recordId,
       caseId: body.caseId,
-      title,
-      owner: session.displayName,
+      choice: body.choice,
+      reason: body.reason,
+      chosenAction: body.chosenAction,
+      expectedImpact,
+      actorId: session.userId,
+      actorName: session.displayName,
     });
-    await recordAuditEvent({
-      orgId: session.orgId,
-      actor: session.displayName,
-      type: "action_created",
-      summary: `Aksiyon oluşturuldu: ${title}`,
-      detail: actionId,
-    });
+    return NextResponse.json(result);
+  } catch (err) {
+    if (err instanceof DecisionLifecycleError) {
+      return NextResponse.json({ error: err.message }, { status: 404 });
+    }
+    throw err;
   }
-
-  return NextResponse.json({ recordId, actionId });
 }
 
 /** Karar kaydının yaşam döngüsü durumunu günceller (draft → ... → closed). */

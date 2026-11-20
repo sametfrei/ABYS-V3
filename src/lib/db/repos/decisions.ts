@@ -1,6 +1,8 @@
 import { randomBytes } from "crypto";
+import type { Transaction } from "@electric-sql/pglite";
 import { getDb, migrate } from "../client";
 import type { AiDecisionCase } from "@/lib/ai/provider";
+import type { ExpectedEconomicImpact } from "@/lib/decision-economics";
 
 /**
  * Karar repository'si — tüm sorgular org-farkındalıklı (orgId parametresi
@@ -118,27 +120,54 @@ export async function buildServerMemory(orgId: string, sectorId: string, limit =
   return lines.join("\n") + stat;
 }
 
-export async function recordDecision(params: {
+export interface RecordDecisionParams {
   orgId: string;
   caseId: string;
   sectorId: string;
   choice: "accepted" | "rejected" | "modified";
   decidedBy: string;
   payload: unknown;
-}): Promise<string> {
-  await migrate();
-  const db = getDb();
+  expectedImpact?: ExpectedEconomicImpact | null;
+}
+
+export async function recordDecisionInTransaction(
+  db: Transaction,
+  params: RecordDecisionParams
+): Promise<string> {
   const id = randomBytes(8).toString("hex");
+  const expected = params.expectedImpact ?? null;
   await db.query(
-    `INSERT INTO decision_records (id, org_id, case_id, sector_id, choice, decided_by, payload)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [id, params.orgId, params.caseId, params.sectorId, params.choice, params.decidedBy, JSON.stringify(params.payload)]
+    `INSERT INTO decision_records
+       (id, org_id, case_id, sector_id, choice, decided_by, payload,
+        expected_value, expected_value_low, expected_value_high,
+        value_currency, value_basis, value_assumptions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+    [
+      id,
+      params.orgId,
+      params.caseId,
+      params.sectorId,
+      params.choice,
+      params.decidedBy,
+      JSON.stringify(params.payload),
+      expected?.value ?? null,
+      expected?.low ?? null,
+      expected?.high ?? null,
+      expected?.currency ?? null,
+      expected?.basis ?? null,
+      expected ? JSON.stringify(expected.assumptions) : null,
+    ]
   );
   await db.query(
     "UPDATE decision_cases SET status = 'decided' WHERE id = $1 AND org_id = $2",
     [params.caseId, params.orgId]
   );
   return id;
+}
+
+export async function recordDecision(params: RecordDecisionParams): Promise<string> {
+  await migrate();
+  return getDb().transaction((tx) => recordDecisionInTransaction(tx, params));
 }
 
 /**

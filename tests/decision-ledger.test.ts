@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import os from "node:os";
 import path from "node:path";
+import { NextRequest } from "next/server";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 process.env.ABYS_DB_DIR = path.join(
@@ -33,6 +34,8 @@ const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
 const { GET: ledger } = await import("../src/app/api/decision-ledger/route");
+const { POST: recordDecisionRoute } = await import("../src/app/api/decisions/route");
+const { POST: recordOutcomeRoute } = await import("../src/app/api/outcomes/route");
 
 const ORG_A = "org-ledger-a";
 const ORG_B = "org-ledger-b";
@@ -94,13 +97,49 @@ describe("Decision Value Ledger API'si", () => {
     }
 
     await db.query(
-      `INSERT INTO outcomes (id, org_id, decision_id, result, note, lesson, recorded_by)
-       VALUES ('out-1', $1, 'rec-1', 'improved', 'Satış toparlandı', 'Hızlı aksiyon işe yaradı', 'ceo')`,
+      `UPDATE decision_records
+          SET expected_value = $1, expected_value_low = $2, expected_value_high = $3,
+              value_currency = $4, value_basis = $5, value_assumptions = $6::jsonb
+        WHERE id = $7`,
+      [100_000, 80_000, 130_000, "USD", "yıllık brüt kazanç", JSON.stringify(["2 hafta içinde devreye alınır"]), "rec-1"]
+    );
+    await db.query(
+      `UPDATE decision_records
+          SET expected_value = $1, value_currency = $2, value_basis = $3
+        WHERE id = $4`,
+      [50_000, "EUR", "yıllık nakit tasarrufu", "rec-2"]
+    );
+    await db.query(
+      `UPDATE decision_records
+          SET expected_value = $1, value_currency = $2, value_basis = $3
+        WHERE id = $4`,
+      [80_000, "USD", "yıllık ciro koruması", "rec-3"]
+    );
+
+    await db.query(
+      `INSERT INTO outcomes
+         (id, org_id, decision_id, result, note, lesson, recorded_by,
+          actual_value, value_currency, measurement_start, measurement_end, evidence)
+       VALUES ('out-1', $1, 'rec-1', 'improved', 'Satış toparlandı', 'Hızlı aksiyon işe yaradı', 'ceo',
+               120000, 'USD', '2026-01-01T00:00:00Z', '2026-03-31T00:00:00Z', 'muhasebe mutabakatı')`,
       [ORG_A]
     );
     await db.query(
-      `INSERT INTO outcomes (id, org_id, decision_id, result, note, recorded_by)
-       VALUES ('out-2', $1, 'rec-2', 'worsened', 'Nakit sıkıştı', 'ceo')`,
+      `INSERT INTO outcomes
+         (id, org_id, decision_id, result, note, recorded_by, actual_value, value_currency)
+       VALUES ('out-2', $1, 'rec-2', 'worsened', 'Nakit sıkıştı', 'ceo', 60000, 'USD')`,
+      [ORG_A]
+    );
+
+    await db.query(
+      `INSERT INTO actions (id, org_id, decision_id, case_id, title, owner, status)
+       VALUES ('action-rec-1', $1, 'rec-1', 'case-1', 'Satış planını uygula', 'CEO A', 'open')`,
+      [ORG_A]
+    );
+    await db.query(
+      `INSERT INTO action_events
+         (id, org_id, action_id, decision_id, from_status, to_status, actor_id, actor_name)
+       VALUES ('event-rec-1', $1, 'action-rec-1', 'rec-1', NULL, 'open', 'led-ceo-a', 'CEO A')`,
       [ORG_A]
     );
 
@@ -125,14 +164,115 @@ describe("Decision Value Ledger API'si", () => {
   it("özet: toplam karar ve sonuç dağılımı doğru", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
     const body = (await (await ledger()).json()) as {
-      summary: { totalDecisions: number; withOutcome: number; improved: number; worsened: number; unchanged: number };
+      summary: {
+        totalDecisions: number;
+        withOutcome: number;
+        improved: number;
+        worsened: number;
+        unchanged: number;
+        economics: {
+          expectedValueCount: number;
+          actualValueCount: number;
+          reconciledCount: number;
+          byCurrency: unknown[];
+        };
+        learning: {
+          rangeAccuracy: {
+            evaluableCount: number;
+            hitCount: number;
+            missCount: number;
+            missingRangeCount: number;
+            currencyMismatchCount: number;
+            hitRate: number | null;
+          };
+          confidenceBuckets: Array<{
+            key: string;
+            total: number;
+            withOutcome: number;
+            improvedRate: number | null;
+            rangeEvaluable: number;
+            rangeHitRate: number | null;
+          }>;
+          choices: {
+            total: number;
+            accepted: number;
+            rejected: number;
+            modified: number;
+            other: number;
+            acceptanceRate: number | null;
+          };
+        };
+        execution: {
+          totalActions: number;
+          open: number;
+          inProgress: number;
+          done: number;
+          cancelled: number;
+        };
+      };
     };
-    expect(body.summary).toEqual({
+    expect(body.summary).toMatchObject({
       totalDecisions: 3,
       withOutcome: 2,
       improved: 1,
       worsened: 1,
       unchanged: 0,
+      economics: {
+        expectedValueCount: 3,
+        actualValueCount: 2,
+        reconciledCount: 1,
+        byCurrency: [
+          {
+            currency: "EUR",
+            expectedTotal: 50_000,
+            actualTotal: 0,
+            varianceTotal: 0,
+            expectedCount: 1,
+            actualCount: 0,
+            reconciledCount: 0,
+          },
+          {
+            currency: "USD",
+            expectedTotal: 180_000,
+            actualTotal: 180_000,
+            varianceTotal: 20_000,
+            expectedCount: 2,
+            actualCount: 2,
+            reconciledCount: 1,
+          },
+        ],
+      },
+      learning: {
+        rangeAccuracy: {
+          evaluableCount: 1,
+          hitCount: 1,
+          missCount: 0,
+          missingRangeCount: 0,
+          currencyMismatchCount: 1,
+          hitRate: 1,
+        },
+        confidenceBuckets: [
+          expect.objectContaining({ key: "0-49", total: 0 }),
+          expect.objectContaining({ key: "50-69", total: 0 }),
+          expect.objectContaining({ key: "70-84", total: 3, withOutcome: 2, improvedRate: 0.5 }),
+          expect.objectContaining({ key: "85-100", total: 0 }),
+        ],
+        choices: {
+          total: 3,
+          accepted: 1,
+          rejected: 1,
+          modified: 1,
+          other: 0,
+          acceptanceRate: 1 / 3,
+        },
+      },
+      execution: {
+        totalActions: 1,
+        open: 1,
+        inProgress: 0,
+        done: 0,
+        cancelled: 0,
+      },
     });
   });
 
@@ -143,6 +283,16 @@ describe("Decision Value Ledger API'si", () => {
         decisionId: string;
         title: string;
         businessImpact: string;
+        expectedImpact: { value: number; currency: string; assumptions: string[] } | null;
+        actualImpact: { value: number; currency: string; evidence: string | null } | null;
+        economicVariance: { amount: number; percent: number | null; currency: string } | null;
+        decisionState: string;
+        execution: {
+          actionId: string;
+          title: string;
+          status: string;
+          eventCount: number;
+        } | null;
         outcome: { result: string; lesson: string | null } | null;
       }>;
     };
@@ -150,12 +300,110 @@ describe("Decision Value Ledger API'si", () => {
     expect(body.entries[0].outcome).toBeNull();
     const rec1 = body.entries.find((e) => e.decisionId === "rec-1")!;
     expect(rec1.businessImpact).toContain("Satış düşüşü");
+    expect(rec1.expectedImpact).toMatchObject({
+      value: 100_000,
+      currency: "USD",
+      assumptions: ["2 hafta içinde devreye alınır"],
+    });
+    expect(rec1.actualImpact).toMatchObject({
+      value: 120_000,
+      currency: "USD",
+      evidence: "muhasebe mutabakatı",
+    });
+    expect(rec1.economicVariance).toEqual({ amount: 20_000, percent: 20, currency: "USD" });
     expect(rec1.outcome).toMatchObject({
       result: "improved",
       lesson: "Hızlı aksiyon işe yaradı",
     });
+    expect(rec1.decisionState).toBe("approved");
+    expect(rec1.execution).toMatchObject({
+      actionId: "action-rec-1",
+      title: "Satış planını uygula",
+      status: "open",
+      eventCount: 1,
+    });
     const rec2 = body.entries.find((e) => e.decisionId === "rec-2")!;
     expect(rec2.outcome?.result).toBe("worsened");
+    expect(rec2.economicVariance).toBeNull();
+  });
+
+  it("sayısal beklenen/gerçekleşen etkiyi doğrulayarak kaydeder ve defterde mutabık kılar", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const db = getDb();
+    await db.query(
+      `INSERT INTO decision_cases (id, org_id, sector_id, category_id, severity, status, title, confidence, payload)
+       VALUES ('case-economics', $1, 'aviation', 'risk', 'high', 'open', 'Ekonomik karar', 90, '{}'::jsonb)`,
+      [ORG_A]
+    );
+
+    const invalidRange = await recordDecisionRoute(
+      new NextRequest("http://localhost/api/decisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: "case-economics",
+          sectorId: "aviation",
+          choice: "accepted",
+          expectedImpact: { value: 10, low: 20, currency: "USD" },
+        }),
+      })
+    );
+    expect(invalidRange.status).toBe(400);
+
+    const decision = await recordDecisionRoute(
+      new NextRequest("http://localhost/api/decisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: "case-economics",
+          sectorId: "aviation",
+          choice: "accepted",
+          expectedImpact: {
+            value: 200_000,
+            low: 150_000,
+            high: 240_000,
+            currency: "TRY",
+            basis: "yıllık maliyet tasarrufu",
+            assumptions: ["kur sabit"],
+          },
+        }),
+      })
+    );
+    expect(decision.status).toBe(200);
+    const decisionId = ((await decision.json()) as { recordId: string }).recordId;
+
+    const outcome = await recordOutcomeRoute(
+      new NextRequest("http://localhost/api/outcomes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          decisionId,
+          result: "improved",
+          note: "Tasarruf gerçekleşti",
+          actualImpact: {
+            value: 230_000,
+            currency: "TRY",
+            measurementStart: "2026-01-01T00:00:00Z",
+            measurementEnd: "2026-06-30T00:00:00Z",
+            evidence: "finans raporu",
+          },
+        }),
+      })
+    );
+    expect(outcome.status).toBe(200);
+
+    const body = (await (await ledger()).json()) as {
+      entries: Array<{
+        decisionId: string;
+        expectedImpact: { value: number; currency: string } | null;
+        actualImpact: { value: number; currency: string } | null;
+        economicVariance: { amount: number; percent: number; currency: string } | null;
+      }>;
+    };
+    const entry = body.entries.find((item) => item.decisionId === decisionId);
+    expect(entry?.expectedImpact).toMatchObject({ value: 200_000, currency: "TRY" });
+    expect(entry?.actualImpact).toMatchObject({ value: 230_000, currency: "TRY" });
+    expect(entry?.economicVariance).toEqual({ amount: 30_000, percent: 15, currency: "TRY" });
   });
 
   it("başka kurumun kararları görünmez", async () => {

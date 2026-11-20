@@ -8,6 +8,7 @@ import { getKpiSeries } from "@/lib/db/repos/forecast";
 import { forecastSeries } from "@/lib/forecasting";
 import { detectAnomalies } from "@/lib/anomaly";
 import { buildDecisionBrief, type BriefCase } from "@/lib/decision-brief";
+import { listCaseSignals } from "@/lib/db/repos/decision-signals";
 import type { AiDecisionCase } from "@/lib/ai/provider";
 
 interface CaseRow {
@@ -20,9 +21,11 @@ interface CaseRow {
 
 /**
  * GET /api/decision-cases/[id]/intelligence — vaka için çok kaynaklı,
- * izlenebilir karar brifingi. Girdiler org kapsamlı okunur; sayılar mevcut
- * deterministik motorlardan gelir. Tahmin yalnızca vaka payload'ında açıkça
- * `metricLabel` varsa üretilir (yanlış metrik eşlemesi yapılmaz).
+ * izlenebilir karar brifingi. Sonuçlar ve nedensel bağlar bu vakaya bağlanır;
+ * açık sinyaller vaka ile ilişkilendirilmediği için yalnızca kurum bağlamı
+ * olarak raporlanır. Sayılar mevcut deterministik motorlardan gelir. Tahmin
+ * yalnızca vaka payload'ında açıkça `metricLabel` varsa üretilir (yanlış
+ * metrik eşlemesi yapılmaz).
  */
 export async function GET(
   _req: Request,
@@ -50,10 +53,17 @@ export async function GET(
   const payload = row.payload;
   const metricLabel = typeof payload.metricLabel === "string" ? payload.metricLabel : null;
 
-  const [signalsResult, causalResult, outcomesResult] = await Promise.all([
+  const [caseSignals, contextSignalsResult, causalResult, outcomesResult] = await Promise.all([
+    listCaseSignals(session.orgId, id),
     db.query<{ severity: string; title: string }>(
-      `SELECT severity, title FROM signals WHERE org_id = $1 AND status = 'open'
-        ORDER BY created_at DESC LIMIT 10`,
+      `SELECT s.severity, s.title
+         FROM signals s
+        WHERE s.org_id = $1 AND s.status = 'open'
+          AND NOT EXISTS (
+            SELECT 1 FROM decision_case_signals l
+             WHERE l.org_id = s.org_id AND l.signal_id = s.id
+          )
+        ORDER BY s.created_at DESC LIMIT 10`,
       [session.orgId]
     ),
     db.query<{ from_label: string; to_label: string; relation_status: string; confidence: number }>(
@@ -62,9 +72,12 @@ export async function GET(
       [session.orgId, id]
     ),
     db.query<{ result: string; lesson: string | null }>(
-      `SELECT result, lesson FROM outcomes WHERE org_id = $1
-        ORDER BY created_at DESC LIMIT 5`,
-      [session.orgId]
+      `SELECT o.result, o.lesson
+         FROM outcomes o
+         JOIN decision_records r ON r.id = o.decision_id AND r.org_id = o.org_id
+        WHERE o.org_id = $1 AND r.case_id = $2
+        ORDER BY o.created_at DESC LIMIT 5`,
+      [session.orgId, id]
     ),
   ]);
 
@@ -119,7 +132,8 @@ export async function GET(
 
   const brief = buildDecisionBrief({
     case: briefCase,
-    signals: signalsResult.rows,
+    caseSignals: caseSignals.map((signal) => ({ severity: signal.severity, title: signal.title })),
+    contextSignals: contextSignalsResult.rows,
     forecast,
     anomalies,
     causal: causalResult.rows.map((l) => ({
@@ -140,7 +154,11 @@ export async function GET(
       anomalyCount: anomalies.length,
       causalCount: causalResult.rows.length,
       outcomeCount: outcomesResult.rows.length,
-      openSignalCount: signalsResult.rows.length,
+      caseSignalCount: caseSignals.length,
+      openSignalCount: contextSignalsResult.rows.length,
+      openSignalScope: "organization" as const,
+      caseSignalScope: "case" as const,
+      outcomeScope: "case" as const,
     },
     provenance: {
       engine: "decision-brief.ts (deterministik kanıt birleşimi)",
