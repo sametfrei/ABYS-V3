@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { hasPermission } from "@/lib/auth/permissions";
+import { useSession } from "@/lib/use-session";
 
 interface Evidence {
   source: string;
@@ -16,6 +18,7 @@ interface Brief {
   confidence: number;
   confidenceRationale: string[];
   evidence: Evidence[];
+  context: Evidence[];
   caveats: string[];
 }
 
@@ -27,8 +30,18 @@ interface Payload {
     anomalyCount: number;
     causalCount: number;
     outcomeCount: number;
+    caseSignalCount: number;
     openSignalCount: number;
+    openSignalScope?: "organization";
+    caseSignalScope?: "case";
+    outcomeScope?: "case";
   };
+}
+
+interface SignalOption {
+  id: string;
+  title: string;
+  severity: string;
 }
 
 const RELIABILITY_LABEL: Record<string, string> = {
@@ -39,7 +52,8 @@ const RELIABILITY_LABEL: Record<string, string> = {
 
 const SOURCE_LABEL: Record<string, string> = {
   vaka: "Vaka kanıtı",
-  sinyal: "Sinyaller",
+  sinyal: "Vaka sinyali",
+  bağlam: "Kurum bağlamı",
   tahmin: "Tahmin",
   anomali: "Anomali",
   nedensel: "Nedensel bağ",
@@ -51,19 +65,33 @@ const SOURCE_LABEL: Record<string, string> = {
  * gösterir. Veri yoksa panel boş durum metni gösterir; sahte içerik üretmez.
  */
 export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
+  const session = useSession();
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [signals, setSignals] = useState<SignalOption[]>([]);
+  const [selectedSignal, setSelectedSignal] = useState("");
+  const [reason, setReason] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/decision-cases/${caseId}/intelligence`, { cache: "no-store" });
+        const [res, signalRes] = await Promise.all([
+          fetch(`/api/decision-cases/${caseId}/intelligence`, { cache: "no-store" }),
+          fetch("/api/signals", { cache: "no-store" }),
+        ]);
         const body = await res.json();
         if (!res.ok) throw new Error(body.error ?? `Karar zekâsı yüklenemedi (HTTP ${res.status}).`);
         if (!cancelled) {
           setData(body as Payload);
           setError(null);
+          if (signalRes.ok) {
+            const signalBody = (await signalRes.json()) as { signals?: SignalOption[] };
+            setSignals(Array.isArray(signalBody.signals) ? signalBody.signals : []);
+          }
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : "Karar zekâsı yüklenemedi.");
@@ -72,7 +100,32 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [caseId]);
+  }, [caseId, reloadKey]);
+
+  async function linkSignal() {
+    if (!selectedSignal || reason.trim().length < 3) {
+      setLinkError("Bir sinyal seçin ve en az 3 karakterlik gerekçe yazın.");
+      return;
+    }
+    setLinking(true);
+    setLinkError(null);
+    try {
+      const res = await fetch(`/api/decision-cases/${caseId}/signals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signalId: selectedSignal, reason: reason.trim() }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? "Sinyal bağlanamadı.");
+      setSelectedSignal("");
+      setReason("");
+      setReloadKey((key) => key + 1);
+    } catch (err) {
+      setLinkError(err instanceof Error ? err.message : "Sinyal bağlanamadı.");
+    } finally {
+      setLinking(false);
+    }
+  }
 
   if (error) {
     return (
@@ -86,6 +139,7 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
   }
 
   const { brief, sources } = data;
+  const canLinkSignal = session ? hasPermission(session.role, "record_decision") : false;
   const confidenceColor =
     brief.confidence >= 75
       ? "var(--abys-healthy)"
@@ -137,6 +191,60 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
         )}
       </ul>
 
+      {brief.context.length > 0 && (
+        <>
+          <p className="text-[11px] tracking-widest text-abys-muted font-semibold mt-4 mb-1">KURUM BAĞLAMI</p>
+          <ul className="space-y-1 list-none p-0 m-0">
+            {brief.context.map((e, i) => (
+              <li key={i} className="text-xs text-abys-muted flex flex-wrap gap-1.5">
+                <span>[{SOURCE_LABEL[e.source] ?? e.source}]</span>
+                <span className="flex-1">{e.summary}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {canLinkSignal && signals.length > 0 && (
+        <div className="mt-4 rounded-lg border border-abys-cream-border bg-abys-cream/70 px-3 py-2">
+          <p className="text-[11px] tracking-widest text-abys-muted font-semibold">KANIT SİNYALİ BAĞLA</p>
+          <div className="mt-2 grid gap-2">
+            <select
+              value={selectedSignal}
+              onChange={(event) => setSelectedSignal(event.target.value)}
+              className="text-xs rounded-md border border-abys-cream-border bg-white px-2 py-1.5 text-abys-ink"
+            >
+              <option value="">Sinyal seçin…</option>
+              {signals.map((signal) => (
+                <option key={signal.id} value={signal.id}>
+                  {signal.title} · {signal.severity}
+                </option>
+              ))}
+            </select>
+            <input
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              maxLength={500}
+              placeholder="Bu sinyal neden bu vakaya ait?"
+              className="text-xs rounded-md border border-abys-cream-border bg-white px-2 py-1.5 text-abys-ink"
+            />
+            {linkError && (
+              <p role="alert" className="text-[11px]" style={{ color: "var(--abys-critical)" }}>
+                {linkError}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={linkSignal}
+              disabled={linking}
+              className="justify-self-start text-[11px] rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft disabled:opacity-50"
+            >
+              {linking ? "Bağlanıyor…" : "Kanıt olarak bağla"}
+            </button>
+          </div>
+        </div>
+      )}
+
       <p className="text-[11px] tracking-widest text-abys-muted font-semibold mt-4 mb-1">GÜVEN GEREKÇESİ</p>
       <ul className="space-y-0.5 list-none p-0 m-0">
         {brief.confidenceRationale.map((r, i) => (
@@ -156,8 +264,9 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
       </ul>
 
       <p className="text-[11px] text-abys-muted mt-3">
-        Kaynaklar: {sources.openSignalCount} sinyal · {sources.forecastUsed ? "tahmin var" : "tahmin yok"} ·{" "}
-        {sources.anomalyCount} anomali · {sources.causalCount} nedensel bağ · {sources.outcomeCount} sonuç
+        Kaynaklar: {sources.caseSignalCount} vakaya bağlı sinyal · {sources.openSignalCount} kurum bağlamı sinyali ·{" "}
+        {sources.forecastUsed ? "tahmin var" : "tahmin yok"} · {sources.anomalyCount} anomali ·{" "}
+        {sources.causalCount} nedensel bağ · {sources.outcomeCount} vakaya bağlı sonuç
       </p>
     </div>
   );

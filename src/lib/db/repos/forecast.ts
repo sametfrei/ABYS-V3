@@ -100,10 +100,14 @@ export async function getKpiSeries(
   await migrate();
   const r = await getDb().query<{ value: string; created_at: string | Date }>(
     `SELECT value, created_at
-       FROM kpi_values
-      WHERE org_id = $1 AND label = $2
-      ORDER BY created_at ASC
-      LIMIT $3`,
+       FROM (
+         SELECT id, value, created_at
+           FROM kpi_values
+          WHERE org_id = $1 AND label = $2
+          ORDER BY created_at DESC, id DESC
+          LIMIT $3
+       ) recent
+      ORDER BY created_at ASC, id ASC`,
     [orgId, label, limit]
   );
   const values: number[] = [];

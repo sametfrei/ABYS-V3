@@ -34,6 +34,7 @@ const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
 const { GET } = await import("../src/app/api/forecast/route");
 const { forecastSeries, MIN_FORECAST_POINTS } = await import("../src/lib/forecasting");
+const { getKpiSeries } = await import("../src/lib/db/repos/forecast");
 
 describe("Tahmin motoru", () => {
   it("yetersiz veride tahmin üretmez", () => {
@@ -182,5 +183,32 @@ describe("GET /api/forecast", () => {
     // Farklı org'un aynı etiketi kendi serimizle karışmamalı.
     expect(body.labels).toHaveLength(1);
     expect(body.labels[0].numericPoints).toBe(6);
+  });
+
+  it("KPI serisi limitte en güncel gözlemleri kronolojik döndürür", async () => {
+    const db = getDb();
+    const label = "Uzun geçmiş";
+    await db.query(
+      `INSERT INTO datasets (id, org_id, sector_id, source_label, raw_content, ingested_by)
+       VALUES ('ds-long', $1, 'aviation', 'test', 'raw', 'tester')`,
+      [ORG_A]
+    );
+    const base = Date.parse("2026-02-01T00:00:00Z");
+    for (let i = 0; i < 125; i++) {
+      await db.query(
+        `INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at)
+         VALUES ($1, $2, 'ds-long', $3, $4, $5)`,
+        [`kv-long-${i}`, ORG_A, label, String(i), new Date(base + i * 60_000).toISOString()]
+      );
+    }
+
+    const series = await getKpiSeries(ORG_A, label, 120);
+    expect(series.values).toHaveLength(120);
+    expect(series.values[0]).toBe(5);
+    expect(series.values[series.values.length - 1]).toBe(124);
+    expect(series.timestamps[0]).toBe(new Date(base + 5 * 60_000).toISOString());
+    expect(series.timestamps[series.timestamps.length - 1]).toBe(
+      new Date(base + 124 * 60_000).toISOString()
+    );
   });
 });

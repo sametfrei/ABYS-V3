@@ -20,6 +20,8 @@ export interface KpiDefinition {
   warnThreshold: number | null;
   criticalThreshold: number | null;
   updateFrequency: string | null;
+  source: string;
+  sourceRef: string | null;
   createdAt: string;
 }
 
@@ -41,6 +43,8 @@ function mapRow(row: {
   warn_threshold: string | number | null;
   critical_threshold: string | number | null;
   update_frequency: string | null;
+  source: string;
+  source_ref: string | null;
   created_at: string;
 }, orgId: string): KpiDefinition {
   return {
@@ -56,6 +60,8 @@ function mapRow(row: {
     warnThreshold: toNumberOrNull(row.warn_threshold),
     criticalThreshold: toNumberOrNull(row.critical_threshold),
     updateFrequency: row.update_frequency,
+    source: row.source,
+    sourceRef: row.source_ref,
     createdAt: row.created_at,
   };
 }
@@ -89,7 +95,9 @@ export async function upsertDefinition(params: {
        target = EXCLUDED.target,
        warn_threshold = EXCLUDED.warn_threshold,
        critical_threshold = EXCLUDED.critical_threshold,
-       update_frequency = EXCLUDED.update_frequency
+       update_frequency = EXCLUDED.update_frequency,
+       source = 'manual',
+       source_ref = NULL
      RETURNING id`,
     [
       id,
@@ -123,9 +131,11 @@ export async function listDefinitions(orgId: string): Promise<KpiDefinition[]> {
     warn_threshold: string | number | null;
     critical_threshold: string | number | null;
     update_frequency: string | null;
+    source: string;
+    source_ref: string | null;
     created_at: string;
   }>(
-    `SELECT id, name, description, unit, formula_text, owner, department, target, warn_threshold, critical_threshold, update_frequency, created_at
+    `SELECT id, name, description, unit, formula_text, owner, department, target, warn_threshold, critical_threshold, update_frequency, source, source_ref, created_at
      FROM kpi_definitions WHERE org_id = $1 ORDER BY name`,
     [orgId]
   );

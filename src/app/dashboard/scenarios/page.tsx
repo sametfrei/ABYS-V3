@@ -50,6 +50,39 @@ interface RunResult {
   scenarioId: string | null;
 }
 
+interface TwinComparison {
+  label: string;
+  baseline: {
+    financials: { byCurrency: { currency: string; accountBalance: number }[] };
+    operations: { orderCount: number; inventoryQuantity: number };
+  };
+  projected: {
+    financials: { byCurrency: { currency: string; accountBalance: number }[] };
+    operations: { orderCount: number; inventoryQuantity: number };
+  };
+  deltas: {
+    category: string;
+    key: string;
+    currency: string | null;
+    unit: string;
+    baseline: number;
+    projected: number;
+    delta: number;
+  }[];
+  summary: { currencies: string[]; newCurrencies: string[]; addedRisks: number };
+  assumptions: string[];
+  provenance: { method: string; note: string };
+}
+
+function currencyFromUnit(unit: string): string | null {
+  const normalized = unit.trim().toUpperCase();
+  if (normalized === "TL" || normalized === "TRY" || normalized === "₺") return "TRY";
+  if (normalized === "EUR" || normalized === "€") return "EUR";
+  if (normalized === "USD" || normalized === "$") return "USD";
+  if (normalized === "GBP" || normalized === "£") return "GBP";
+  return null;
+}
+
 export default function ScenariosPage() {
   const session = useSession();
   const [stored] = useStored(() => ({ profile: loadProfile() }));
@@ -62,6 +95,8 @@ export default function ScenariosPage() {
   const [result, setResult] = useState<RunResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
+  const [twinComparison, setTwinComparison] = useState<TwinComparison | null>(null);
+  const [twinBusy, setTwinBusy] = useState(false);
 
   useEffect(() => {
     if (!sectorId) return;
@@ -100,6 +135,7 @@ export default function ScenariosPage() {
     setSelected(t);
     setInputs(Object.fromEntries(t.variables.map((v) => [v.id, v.value])));
     setResult(null);
+    setTwinComparison(null);
     setName(t.label);
   }
 
@@ -119,8 +155,54 @@ export default function ScenariosPage() {
       }
       setError(null);
       setResult(j);
+      setTwinComparison(null);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function compareTwin() {
+    if (!result) return;
+    const total = result.runs[0]?.results.at(-1);
+    const currency = total ? currencyFromUnit(total.unit) : null;
+    if (!total || !currency) {
+      setError("Dijital ikiz karşılaştırması için senaryo toplamı TRY, EUR, USD veya GBP cinsinden olmalı.");
+      return;
+    }
+    setTwinBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/digital-twin/compare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          label: name || selected?.label || "Senaryo",
+          adjustments: {
+            currencyAdjustments: [
+              {
+                currency,
+                accountBalance: -Math.abs(total.value),
+              },
+            ],
+            risks: [
+              {
+                code: "SCENARIO_IMPACT",
+                severity: "warning",
+                title: `${name || selected?.label || "Senaryo"} etkisi`,
+                evidence: `Senaryo toplamı ${total.value.toLocaleString("tr-TR")} ${total.unit}; nakit etkisi senaryo varsayımı olarak uygulandı.`,
+              },
+            ],
+          },
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? `Karşılaştırma başarısız (HTTP ${res.status}).`);
+      setTwinComparison(body as TwinComparison);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Dijital ikiz karşılaştırması başarısız.");
+      setTwinComparison(null);
+    } finally {
+      setTwinBusy(false);
     }
   }
 
@@ -227,6 +309,57 @@ export default function ScenariosPage() {
             </div>
 
             {result.simulation && <SimulationPanel sim={result.simulation} />}
+
+            <div className="rounded-xl border border-abys-accent/25 bg-white/70 p-5">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs tracking-widest text-abys-muted font-semibold">SENARYO → DİJİTAL İKİZ</p>
+                  <p className="text-[11px] text-abys-muted mt-1">
+                    Senaryo toplamı, açık bir nakit etkisi varsayımı olarak mevcut kurumsal durumla karşılaştırılır. Para birimleri toplanmaz.
+                  </p>
+                </div>
+                <button
+                  onClick={() => void compareTwin()}
+                  disabled={twinBusy}
+                  className="text-xs rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft disabled:opacity-40"
+                >
+                  {twinBusy ? "Karşılaştırılıyor…" : "Dijital ikizle karşılaştır"}
+                </button>
+              </div>
+              {twinComparison && (
+                <div className="mt-3 space-y-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {twinComparison.summary.currencies.map((currency) => {
+                      const before = twinComparison.baseline.financials.byCurrency.find((item) => item.currency === currency)?.accountBalance ?? 0;
+                      const after = twinComparison.projected.financials.byCurrency.find((item) => item.currency === currency)?.accountBalance ?? 0;
+                      return (
+                        <div key={currency} className="rounded-lg bg-abys-cream/70 px-3 py-2">
+                          <p className="text-[10px] text-abys-muted">{currency} nakit dengesi</p>
+                          <p className="font-mono text-sm text-abys-navy">
+                            {before.toLocaleString("tr-TR")} → {after.toLocaleString("tr-TR")}
+                          </p>
+                          <p className={`text-[10px] ${after < before ? "text-abys-warning" : "text-abys-healthy"}`}>
+                            Fark: {(after - before).toLocaleString("tr-TR")} {currency}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-abys-muted">
+                    {twinComparison.deltas.length} açık delta · {twinComparison.summary.addedRisks} senaryo riski ·{" "}
+                    {twinComparison.summary.newCurrencies.length > 0
+                      ? `Yeni para birimi: ${twinComparison.summary.newCurrencies.join(", ")}`
+                      : "Mevcut para birimleri"}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {twinComparison.assumptions.map((assumption) => (
+                      <li key={assumption} className="text-[10px] text-abys-muted">• {assumption}</li>
+                    ))}
+                  </ul>
+                  <p className="text-[10px] text-abys-muted">{twinComparison.provenance.note}</p>
+                </div>
+              )}
+            </div>
 
             <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
               <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">DUYARLILIK</p>

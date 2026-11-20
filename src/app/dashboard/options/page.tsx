@@ -30,6 +30,36 @@ interface Evaluated {
   worstCriterion: { label: string; value: number } | null;
 }
 
+interface OptimizationResourceRow {
+  id: string;
+  label: string;
+  capacity: number;
+  unit: string;
+}
+
+interface OptimizationOptionRow {
+  id: string;
+  label: string;
+  minUnits: number;
+  maxUnits: number;
+  valuePerUnit: number;
+  resourcesPerUnit: Record<string, number>;
+}
+
+interface OptimizationResult {
+  status: "optimal" | "feasible" | "infeasible";
+  complete: boolean;
+  allocations: { optionId: string; label: string; units: number; value: number; resources: Record<string, number> }[];
+  objectiveValue: number;
+  objective: { label: string; unit: string };
+  resourceUsage: Record<string, number>;
+  remaining: Record<string, number>;
+  infeasibility: { resourceId: string; required: number; capacity: number }[];
+  nodesExplored: number;
+  method: string;
+  note: string;
+}
+
 let seq = 0;
 function newId(prefix: string): string {
   seq += 1;
@@ -49,6 +79,30 @@ export default function OptionsPage() {
   const [result, setResult] = useState<{ options: Evaluated[]; frontier: string[]; note: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [optResources, setOptResources] = useState<OptimizationResourceRow[]>([
+    { id: "budget", label: "Bütçe", capacity: 1_000_000, unit: "TRY" },
+    { id: "hours", label: "Uzman saati", capacity: 500, unit: "saat" },
+  ]);
+  const [optOptions, setOptOptions] = useState<OptimizationOptionRow[]>([
+    {
+      id: "efficiency",
+      label: "Verimlilik projesi",
+      minUnits: 0,
+      maxUnits: 20,
+      valuePerUnit: 90_000,
+      resourcesPerUnit: { budget: 40_000, hours: 18 },
+    },
+    {
+      id: "growth",
+      label: "Büyüme atağı",
+      minUnits: 0,
+      maxUnits: 12,
+      valuePerUnit: 150_000,
+      resourcesPerUnit: { budget: 95_000, hours: 30 },
+    },
+  ]);
+  const [optimization, setOptimization] = useState<OptimizationResult | null>(null);
+  const [optBusy, setOptBusy] = useState(false);
 
   function updateCriterion(id: string, patch: Partial<Criterion>) {
     setCriteria((list) => list.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -113,6 +167,51 @@ export default function OptionsPage() {
       setResult(null);
     } finally {
       setBusy(false);
+    }
+  }
+
+  function updateOptimizationOption(id: string, patch: Partial<OptimizationOptionRow>) {
+    setOptOptions((list) => list.map((option) => (option.id === id ? { ...option, ...patch } : option)));
+  }
+
+  function addOptimizationOption() {
+    const resourcesPerUnit: Record<string, number> = {};
+    for (const resource of optResources) resourcesPerUnit[resource.id] = 0;
+    setOptOptions((list) => [
+      ...list,
+      {
+        id: newId("alloc"),
+        label: `Tahsis ${list.length + 1}`,
+        minUnits: 0,
+        maxUnits: 10,
+        valuePerUnit: 10_000,
+        resourcesPerUnit,
+      },
+    ]);
+  }
+
+  async function optimize() {
+    setOptBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/optimization", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resources: optResources,
+          options: optOptions,
+          objectiveLabel: "Beklenen katkı",
+          valueUnit: "TRY",
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? `Optimizasyon başarısız (HTTP ${res.status}).`);
+      setOptimization(body as OptimizationResult);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Optimizasyon başarısız.");
+      setOptimization(null);
+    } finally {
+      setOptBusy(false);
     }
   }
 
@@ -290,6 +389,178 @@ export default function OptionsPage() {
             <p className="text-[11px] text-abys-muted mt-3">{result.note}</p>
           </div>
         )}
+
+        <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+            <div>
+              <p className="text-xs tracking-widest text-abys-muted font-semibold">KAYNAK TAHSİSİ · OPTİMİZASYON</p>
+              <p className="text-[11px] text-abys-muted mt-1">
+                Kapasiteleri ve birim tüketimleri tanımlayın. Çözücü yalnızca verilen sayısal model altında en yüksek toplam katkıyı arar.
+              </p>
+            </div>
+            <button
+              onClick={addOptimizationOption}
+              className="text-xs rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft"
+            >
+              + Tahsis
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+            {optResources.map((resource) => (
+              <label key={resource.id} className="text-[11px] text-abys-muted">
+                {resource.label} ({resource.unit})
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={resource.capacity}
+                  onChange={(event) =>
+                    setOptResources((list) =>
+                      list.map((item) =>
+                        item.id === resource.id ? { ...item, capacity: Number(event.target.value) } : item
+                      )
+                    )
+                  }
+                  className="mt-1 w-full rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-sm text-abys-ink"
+                />
+              </label>
+            ))}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-abys-muted">
+                  <th className="py-1 pr-2 font-medium">Tahsis</th>
+                  <th className="py-1 px-2 font-medium">Min</th>
+                  <th className="py-1 px-2 font-medium">Maks</th>
+                  <th className="py-1 px-2 font-medium">Birim değer</th>
+                  {optResources.map((resource) => (
+                    <th key={resource.id} className="py-1 px-2 font-medium">
+                      {resource.unit}/birim
+                    </th>
+                  ))}
+                  <th className="py-1 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {optOptions.map((option) => (
+                  <tr key={option.id}>
+                    <td className="py-1 pr-2">
+                      <input
+                        value={option.label}
+                        onChange={(event) => updateOptimizationOption(option.id, { label: event.target.value })}
+                        className="w-40 rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-sm"
+                        aria-label="Tahsis adı"
+                      />
+                    </td>
+                    <td className="py-1 px-2">
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={option.minUnits}
+                        onChange={(event) => updateOptimizationOption(option.id, { minUnits: Number(event.target.value) })}
+                        className="w-16 rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-sm"
+                      />
+                    </td>
+                    <td className="py-1 px-2">
+                      <input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={option.maxUnits}
+                        onChange={(event) => updateOptimizationOption(option.id, { maxUnits: Number(event.target.value) })}
+                        className="w-16 rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-sm"
+                      />
+                    </td>
+                    <td className="py-1 px-2">
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={option.valuePerUnit}
+                        onChange={(event) => updateOptimizationOption(option.id, { valuePerUnit: Number(event.target.value) })}
+                        className="w-28 rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-sm"
+                      />
+                    </td>
+                    {optResources.map((resource) => (
+                      <td key={resource.id} className="py-1 px-2">
+                        <input
+                          type="number"
+                          min={0}
+                          step="any"
+                          value={option.resourcesPerUnit[resource.id] ?? 0}
+                          onChange={(event) =>
+                            updateOptimizationOption(option.id, {
+                              resourcesPerUnit: {
+                                ...option.resourcesPerUnit,
+                                [resource.id]: Number(event.target.value),
+                              },
+                            })
+                          }
+                          className="w-24 rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-sm"
+                        />
+                      </td>
+                    ))}
+                    <td className="py-1">
+                      <button
+                        onClick={() => setOptOptions((list) => list.filter((item) => item.id !== option.id))}
+                        disabled={optOptions.length <= 1}
+                        className="text-xs text-abys-muted hover:text-abys-critical disabled:opacity-30"
+                      >
+                        Kaldır
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <button
+            onClick={() => void optimize()}
+            disabled={optBusy || optOptions.length === 0}
+            className="mt-4 text-sm rounded-full bg-abys-navy text-white px-5 py-2 hover:opacity-90 disabled:opacity-40"
+          >
+            {optBusy ? "Optimize ediliyor…" : "Optimal tahsisi hesapla"}
+          </button>
+          {optimization && (
+            <div className="mt-4 rounded-xl border border-abys-accent/25 bg-white/70 p-4 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm text-abys-ink">
+                  {optimization.status === "optimal"
+                    ? "Optimal tahsis"
+                    : optimization.status === "feasible"
+                      ? "Uygulanabilir tahsis (arama sınırı)"
+                      : "Uygulanabilir tahsis yok"}
+                </p>
+                <span className="rounded-full bg-abys-accent-soft px-2 py-0.5 text-[10px] text-abys-accent">
+                  {optimization.objective.label}: {optimization.objectiveValue.toLocaleString("tr-TR")} {optimization.objective.unit}
+                </span>
+              </div>
+              {optimization.status === "infeasible" ? (
+                <div className="text-[11px] text-abys-warning">
+                  {optimization.infeasibility.map((item) => (
+                    <p key={item.resourceId}>
+                      {item.resourceId}: gereken {item.required.toLocaleString("tr-TR")} / kapasite {item.capacity.toLocaleString("tr-TR")}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {optimization.allocations.map((allocation) => (
+                    <p key={allocation.optionId} className="text-[11px] text-abys-muted">
+                      {allocation.label}: {allocation.units} birim · {allocation.value.toLocaleString("tr-TR")} {optimization.objective.unit}
+                    </p>
+                  ))}
+                </div>
+              )}
+              <p className="text-[10px] text-abys-muted">{optimization.note}</p>
+              <p className="text-[10px] text-abys-muted">
+                {optimization.method} · {optimization.nodesExplored.toLocaleString("tr-TR")} düğüm
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

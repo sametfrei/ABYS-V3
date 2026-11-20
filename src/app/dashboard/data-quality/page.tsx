@@ -8,6 +8,7 @@ interface QualityIssue {
   source: string;
   entity: string;
   sourceRef: string | null;
+  code: string | null;
   reason: string;
   status: "pending" | "resolved" | "discarded";
   createdAt: string;
@@ -68,7 +69,11 @@ export default function DataQualityPage() {
     };
   }, [scope, reloadKey]);
 
-  async function resolve(id: string, resolution: "resolved" | "discarded") {
+  async function resolve(
+    id: string,
+    resolution: "resolved" | "discarded",
+    action?: "accept_proposed" | "keep_existing"
+  ) {
     setBusyId(id);
     setError("");
     setNotice("");
@@ -76,13 +81,21 @@ export default function DataQualityPage() {
       const res = await fetch("/api/data-quality", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, resolution }),
+        body: JSON.stringify({ id, resolution, action }),
       });
       if (!res.ok) {
         setError(await readError(res));
         return;
       }
-      setNotice(resolution === "resolved" ? "Kayıt çözüldü." : "Kayıt atıldı.");
+      setNotice(
+        action === "accept_proposed"
+          ? "Önerilen güçlü kimlik bağlantısı uygulandı."
+          : action === "keep_existing"
+            ? "Mevcut kimlik bağlantısı korunarak çakışma kapatıldı."
+            : resolution === "resolved"
+              ? "Kayıt çözüldü."
+              : "Kayıt atıldı."
+      );
       setLoading(true);
       setReloadKey((k) => k + 1);
     } catch {
@@ -148,6 +161,9 @@ export default function DataQualityPage() {
                       {issue.source} / {issue.entity}
                       {issue.sourceRef ? ` · ${issue.sourceRef}` : ""}
                     </p>
+                    {issue.code && (
+                      <p className="mt-0.5 text-[10px] font-mono text-abys-muted">{issue.code}</p>
+                    )}
                     <p className="text-xs text-abys-critical mt-0.5">{issue.reason}</p>
                     <p className="text-[11px] text-abys-muted mt-1">
                       {formatDate(issue.createdAt)}
@@ -156,22 +172,45 @@ export default function DataQualityPage() {
                   </div>
                   {issue.status === "pending" && (
                     <div className="flex gap-2">
-                      <button
-                        type="button"
-                        disabled={busyId === issue.id}
-                        onClick={() => resolve(issue.id, "resolved")}
-                        className="rounded-full border border-abys-healthy/40 px-3 py-1.5 text-xs text-abys-healthy hover:bg-abys-healthy-soft disabled:opacity-50"
-                      >
-                        Çözüldü
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyId === issue.id}
-                        onClick={() => resolve(issue.id, "discarded")}
-                        className="rounded-full border border-abys-critical/40 px-3 py-1.5 text-xs text-abys-critical hover:bg-abys-critical-soft disabled:opacity-50"
-                      >
-                        At
-                      </button>
+                      {issue.code === "IDENTITY_LINK_CONFLICT" ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === issue.id}
+                            onClick={() => resolve(issue.id, "resolved", "accept_proposed")}
+                            className="rounded-full border border-abys-accent/40 px-3 py-1.5 text-xs text-abys-accent hover:bg-abys-accent/10 disabled:opacity-50"
+                          >
+                            Öneriyi uygula
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === issue.id}
+                            onClick={() => resolve(issue.id, "resolved", "keep_existing")}
+                            className="rounded-full border border-abys-cream-border px-3 py-1.5 text-xs text-abys-muted hover:bg-white/60 disabled:opacity-50"
+                          >
+                            Mevcudu koru
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === issue.id}
+                            onClick={() => resolve(issue.id, "resolved")}
+                            className="rounded-full border border-abys-healthy/40 px-3 py-1.5 text-xs text-abys-healthy hover:bg-abys-healthy-soft disabled:opacity-50"
+                          >
+                            Çözüldü
+                          </button>
+                          <button
+                            type="button"
+                            disabled={busyId === issue.id}
+                            onClick={() => resolve(issue.id, "discarded")}
+                            className="rounded-full border border-abys-critical/40 px-3 py-1.5 text-xs text-abys-critical hover:bg-abys-critical-soft disabled:opacity-50"
+                          >
+                            At
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
