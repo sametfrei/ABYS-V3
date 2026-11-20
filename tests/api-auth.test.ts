@@ -59,6 +59,8 @@ const { GET: traceGET } = await import("../src/app/api/trace/route");
 const { GET: documentsGET, POST: documentsPOST } = await import("../src/app/api/documents/route");
 const { GET: actionsGET } = await import("../src/app/api/actions/route");
 const { GET: outcomesGET } = await import("../src/app/api/outcomes/route");
+const { GET: contractsGET } = await import("../src/app/api/canonical-contracts/route");
+const { GET: semanticGraphGET } = await import("../src/app/api/semantic-graph/route");
 
 function jsonRequest(url: string, method: string, body?: unknown, cookie?: string) {
   const headers: Record<string, string> = { "content-type": "application/json" };
@@ -111,6 +113,7 @@ describe("API oturum + izin + org kontrolü", () => {
   let dataAdminSession: string;
   let analystSession: string;
   let auditorSession: string;
+  let guestSession: string;
   let caseIdA: string;
 
   beforeAll(async () => {
@@ -132,6 +135,7 @@ describe("API oturum + izin + org kontrolü", () => {
       ["dataAdminUser", orgA, "veri@org-a.test", "data_admin"],
       ["analystUser", orgA, "analist@org-a.test", "analyst"],
       ["auditorUser", orgA, "denetci@org-a.test", "auditor"],
+      ["guestUser", orgA, "misafir@org-a.test", "guest"],
     ];
     for (const [id, orgId, email, role] of users) {
       await db.query(
@@ -144,6 +148,7 @@ describe("API oturum + izin + org kontrolü", () => {
     dataAdminSession = await createSession("dataAdminUser", orgA);
     analystSession = await createSession("analystUser", orgA);
     auditorSession = await createSession("auditorUser", orgA);
+    guestSession = await createSession("guestUser", orgA);
 
     const [stored] = await insertCases(orgA, "aviation", [makeCase("Org A vakası")]);
     caseIdA = stored.id;
@@ -195,6 +200,17 @@ describe("API oturum + izin + org kontrolü", () => {
       const res = await outcomesGET();
       expect(res.status).toBe(401);
     });
+
+    it("GET /api/canonical-contracts", async () => {
+      nextHeaders.__setTestCookie(SESSION_COOKIE, undefined);
+      expect((await contractsGET()).status).toBe(401);
+    });
+
+    it("GET /api/semantic-graph", async () => {
+      nextHeaders.__setTestCookie(SESSION_COOKIE, undefined);
+      const res = await semanticGraphGET(getRequest("/api/semantic-graph"));
+      expect(res.status).toBe(401);
+    });
   });
 
   describe("oturum var ama rol yetkisiz iken 403", () => {
@@ -218,6 +234,39 @@ describe("API oturum + izin + org kontrolü", () => {
       );
       expect(res.status).toBe(403);
     });
+
+    it("GET /api/canonical-contracts ve semantic-graph — bilinmeyen rolde 403", async () => {
+      nextHeaders.__setTestCookie(SESSION_COOKIE, guestSession);
+      expect((await contractsGET()).status).toBe(403);
+      const graph = await semanticGraphGET(getRequest("/api/semantic-graph"));
+      expect(graph.status).toBe(403);
+    });
+  });
+
+  it("kanonik sözleşme kataloğu ve org-kapsamlı semantik grafik okunabilir", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoSession);
+    const contracts = await contractsGET();
+    const contractBody = (await contracts.json()) as {
+      version: string;
+      contracts: { entity: string; fields: Record<string, unknown> }[];
+    };
+    expect(contracts.status).toBe(200);
+    expect(contractBody.version).toBe("1.0");
+    expect(contractBody.contracts).toHaveLength(11);
+    expect(JSON.stringify(contractBody)).not.toContain("secret");
+
+    const graph = await semanticGraphGET(
+      new NextRequest("http://localhost/api/semantic-graph?limit=25")
+    );
+    const graphBody = (await graph.json()) as {
+      coverage: { recordsRead: number; truncated: boolean };
+      nodes: unknown[];
+      edges: unknown[];
+    };
+    expect(graph.status).toBe(200);
+    expect(graphBody.coverage).toMatchObject({ recordsRead: 0, truncated: false });
+    expect(graphBody.nodes).toEqual([]);
+    expect(graphBody.edges).toEqual([]);
   });
 
   describe("org_id daima oturumdan gelir, istek gövdesinden ASLA", () => {

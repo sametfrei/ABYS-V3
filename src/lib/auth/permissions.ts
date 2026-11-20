@@ -27,19 +27,20 @@ export type Permission =
   | "record_decision"  // kabul/ret/değiştir kararı verme
   | "ingest_data"      // veri içe alma ve prototip göçü
   | "edit_kpi"         // KPI metrik serisi kaydetme/düzeltme (ham veri göçü değil)
+  | "confirm_business_profile" // org'un sektör/iş bağlamı sınıflandırmasını onaylama
   | "view_audit"       // denetim günlüğünü görme
   | "manage_users";    // kullanıcı/rol yönetimi
 
 const MATRIX: Record<Role, Permission[]> = {
   board:        ["view_decisions", "view_audit"],
-  ceo:          ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi"],
-  clevel:       ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi"],
+  ceo:          ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "confirm_business_profile"],
+  clevel:       ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "confirm_business_profile"],
   dept_manager: ["view_decisions", "run_analysis", "record_decision", "edit_kpi"],
-  risk_manager: ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi"],
+  risk_manager: ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "confirm_business_profile"],
   analyst:      ["view_decisions", "run_analysis", "edit_kpi"],
   auditor:      ["view_decisions", "view_audit"],
   data_admin:   ["view_decisions", "ingest_data", "edit_kpi"],
-  sys_admin:    ["view_decisions", "view_audit", "manage_users", "edit_kpi"],
+  sys_admin:    ["view_decisions", "view_audit", "manage_users", "edit_kpi", "confirm_business_profile"],
 };
 
 export function hasPermission(role: string, permission: Permission): boolean {
@@ -54,6 +55,7 @@ export function permissionError(permission: Permission): string {
     record_decision: "karar kaydetme",
     ingest_data: "veri içe alma",
     edit_kpi: "KPI serisi kaydetme",
+    confirm_business_profile: "iş bağlamını onaylama",
     view_audit: "denetim günlüğü görüntüleme",
     manage_users: "kullanıcı yönetimi",
   };

@@ -62,7 +62,8 @@ export interface RestConnectorConfig {
   kind: "rest";
   baseUrl: string;
   path: string;
-  method?: "GET" | "POST";
+  /** Kaynak sistemler salt-okunur; kontrollü write-back ayrı action gateway gerektirir. */
+  method?: "GET";
   headers?: Record<string, string>;
   /** Sır değeri değil, ortam değişkeni adı. */
   secretEnvVar?: string;
@@ -75,6 +76,21 @@ export interface RestConnectorConfig {
   idField: string;
   updatedAtField?: string;
   fieldMap: FieldMapping;
+  /** Kanonik sayısal alan → KPI etiketi. Yalnızca açıkça eşlenen alanlar KPI olur. */
+  kpiFieldMap?: Record<string, string>;
+  /**
+   * Kanonik alanlardan deterministik formülle hesaplanan KPI'lar.
+   * Anahtar `kpiId` veya `packId:kpiId`; değer org içindeki KPI etiketidir.
+   */
+  computedKpiMap?: Record<string, string>;
+  /** KPI gözlem zamanını taşıyan kanonik alan; yoksa sourceUpdatedAt kullanılır. */
+  kpiObservedAtField?: string;
+  /** Kanonik alan değerini süreç olayı türüne dönüştürmek için alan adı. */
+  eventTypeField?: string;
+  /** Süreç örneğini (subject) taşıyan kanonik alan; yoksa externalId kullanılır. */
+  eventSubjectField?: string;
+  /** Olay zamanını taşıyan kanonik alan; yoksa sourceUpdatedAt kullanılır. */
+  eventTimeField?: string;
   pagination:
     | { type: "none" }
     | { type: "page"; pageParam: string; limitParam?: string; pageSize: number; startPage?: number }
@@ -106,6 +122,19 @@ export interface SyncPage {
   cursor: string | null;
 }
 
+export interface ObservedSourceField {
+  path: string;
+  types: Record<string, number>;
+  observations: number;
+}
+
+export interface ConnectorRecordRejection {
+  entity: CanonicalEntity;
+  sourceRef: string | null;
+  code: string;
+  reason: string;
+}
+
 export interface SyncOutcome {
   records: CanonicalRecord[];
   pages: number;
@@ -113,6 +142,10 @@ export interface SyncOutcome {
   skipped: number;
   warnings: string[];
   checkpoint: string | null;
+  /** Kaynak sistemin yalnızca alan adları ve tipleri; değer içermez. */
+  sourceSchema: ObservedSourceField[];
+  /** Kanonik sözleşmeye uymayan ve zekâ hattına alınmayan kayıtlar. */
+  rejected: ConnectorRecordRejection[];
 }
 
 export interface ConnectorAdapter {

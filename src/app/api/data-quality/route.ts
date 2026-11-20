@@ -6,8 +6,11 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { parseBody } from "@/lib/validation";
 import {
+  getIssue,
+  IdentityConflictResolutionError,
   listIssues,
   quarantineIssue,
+  resolveIdentityConflict,
   resolveIssue,
   type QualityStatus,
 } from "@/lib/db/repos/data-quality";
@@ -32,6 +35,7 @@ const createSchema = z.object({
 const resolveSchema = z.object({
   id: z.string().min(1).max(128),
   resolution: z.enum(["resolved", "discarded"]),
+  action: z.enum(["accept_proposed", "keep_existing"]).optional(),
 });
 
 async function requireIngest(): Promise<
@@ -107,6 +111,54 @@ export async function PATCH(req: NextRequest) {
 
   const parsed = await parseBody(req, resolveSchema);
   if (!parsed.ok) return parsed.response;
+
+  if (parsed.data.action) {
+    try {
+      const issue = await resolveIdentityConflict({
+        orgId: auth.session.orgId,
+        id: parsed.data.id,
+        action: parsed.data.action,
+        resolvedBy: auth.session.displayName,
+      });
+      await recordAuditEvent({
+        orgId: auth.session.orgId,
+        actor: auth.session.displayName,
+        type:
+          parsed.data.action === "accept_proposed"
+            ? "identity_link_accepted"
+            : "identity_link_kept",
+        summary:
+          parsed.data.action === "accept_proposed"
+            ? "Önerilen güçlü kimlik bağlantısı yönetici onayıyla uygulandı"
+            : "Mevcut güçlü kimlik bağlantısı korunarak çakışma kapatıldı",
+        detail: issue.id,
+      });
+      return NextResponse.json({ issue, action: parsed.data.action });
+    } catch (err) {
+      if (err instanceof IdentityConflictResolutionError) {
+        const status =
+          err.code === "NOT_FOUND"
+            ? 404
+            : err.code === "NOT_IDENTITY_CONFLICT" || err.code === "INVALID_PAYLOAD"
+              ? 400
+              : 409;
+        return NextResponse.json({ error: err.message, code: err.code }, { status });
+      }
+      throw err;
+    }
+  }
+
+  const existing = await getIssue(auth.session.orgId, parsed.data.id);
+  if (existing?.code === "IDENTITY_LINK_CONFLICT") {
+    return NextResponse.json(
+      {
+        error:
+          "Kimlik çakışması için accept_proposed veya keep_existing action'ı gerekli.",
+        code: "IDENTITY_ACTION_REQUIRED",
+      },
+      { status: 400 }
+    );
+  }
 
   const issue = await resolveIssue({
     orgId: auth.session.orgId,

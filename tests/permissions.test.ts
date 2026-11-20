@@ -10,6 +10,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: false,
     ingest_data: false,
     edit_kpi: false,
+    confirm_business_profile: false,
     view_audit: true,
     manage_users: false,
   },
@@ -19,6 +20,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: true,
     ingest_data: false,
     edit_kpi: true,
+    confirm_business_profile: true,
     view_audit: true,
     manage_users: false,
   },
@@ -28,6 +30,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: true,
     ingest_data: false,
     edit_kpi: true,
+    confirm_business_profile: true,
     view_audit: true,
     manage_users: false,
   },
@@ -37,6 +40,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: true,
     ingest_data: false,
     edit_kpi: true,
+    confirm_business_profile: false,
     view_audit: false,
     manage_users: false,
   },
@@ -46,6 +50,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: true,
     ingest_data: false,
     edit_kpi: true,
+    confirm_business_profile: true,
     view_audit: true,
     manage_users: false,
   },
@@ -55,6 +60,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: false,
     ingest_data: false,
     edit_kpi: true,
+    confirm_business_profile: false,
     view_audit: false,
     manage_users: false,
   },
@@ -64,6 +70,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: false,
     ingest_data: false,
     edit_kpi: false,
+    confirm_business_profile: false,
     view_audit: true,
     manage_users: false,
   },
@@ -73,6 +80,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: false,
     ingest_data: true,
     edit_kpi: true,
+    confirm_business_profile: false,
     view_audit: false,
     manage_users: false,
   },
@@ -82,6 +90,7 @@ const EXPECTED_MATRIX: Record<Role, Record<Permission, boolean>> = {
     record_decision: false,
     ingest_data: false,
     edit_kpi: true,
+    confirm_business_profile: true,
     view_audit: true,
     manage_users: true,
   },
@@ -94,11 +103,12 @@ const PERMISSIONS: Permission[] = [
   "record_decision",
   "ingest_data",
   "edit_kpi",
+  "confirm_business_profile",
   "view_audit",
   "manage_users",
 ];
 
-describe("hasPermission — 9 rol x 7 izin matrisi", () => {
+describe("hasPermission — 9 rol x 8 izin matrisi", () => {
   for (const role of ROLES) {
     describe(`rol: ${role}`, () => {
       for (const permission of PERMISSIONS) {

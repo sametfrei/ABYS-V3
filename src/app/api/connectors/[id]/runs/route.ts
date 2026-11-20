@@ -8,6 +8,7 @@ import {
   getConnectorConfig,
   listSyncRuns,
 } from "@/lib/db/repos/connectors";
+import { getConnectorPromotionCounts } from "@/lib/db/repos/connector-promotion";
 
 /** GET — konnektörün son senkron çalıştırmaları ve kanonik kayıt sayıları. */
 export async function GET(
@@ -25,10 +26,11 @@ export async function GET(
   const configRow = await getConnectorConfig(session.orgId, id);
   if (!configRow) return NextResponse.json({ error: "Konnektör bulunamadı." }, { status: 404 });
 
-  const [runs, records] = await Promise.all([
+  const [runs, records, promotion] = await Promise.all([
     listSyncRuns(session.orgId, configRow.id),
     countRecordsByEntity(session.orgId, configRow.id),
+    getConnectorPromotionCounts(session.orgId, configRow.id),
   ]);
 
-  return NextResponse.json({ runs, records });
+  return NextResponse.json({ runs, records, promotion });
 }

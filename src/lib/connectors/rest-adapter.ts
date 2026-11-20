@@ -8,6 +8,9 @@ import {
   type SyncContext,
 } from "./types";
 import { validateOutboundUrl } from "../net/ssrf";
+import { listKpiSpecCandidates, resolveKpiSpec } from "../industry/packs";
+import { canonicalFieldName, validateCanonicalRecord } from "./contracts";
+import { observeSourceSchema } from "./schema-discovery";
 
 /**
  * Genel REST adaptörü — SAP/Oracle/Dynamics/Salesforce/HubSpot/NetSuite gibi
@@ -56,7 +59,7 @@ function toPrimitive(value: unknown): string | number | boolean | null {
     return value;
   }
   if (value instanceof Date) return value.toISOString();
-  return JSON.stringify(value);
+  return null;
 }
 
 function toIso(value: unknown): string | null {
@@ -77,10 +80,80 @@ export function validateRestConfig(input: unknown): string[] {
   if (c.kind !== "rest") errors.push("kind 'rest' olmalı.");
   if (!c.baseUrl || typeof c.baseUrl !== "string") errors.push("baseUrl gerekli.");
   if (!c.path || typeof c.path !== "string") errors.push("path gerekli.");
+  if (c.baseUrl && typeof c.baseUrl === "string") {
+    try {
+      const base = new URL(c.baseUrl);
+      if (base.protocol !== "http:" && base.protocol !== "https:") errors.push("baseUrl http/https olmalı.");
+      if (base.username || base.password) errors.push("baseUrl içinde kimlik bilgisi olamaz.");
+    } catch {
+      errors.push("baseUrl geçerli bir URL olmalı.");
+    }
+  }
+  if (c.method && c.method !== "GET") errors.push("Kaynak konnektörleri yalnızca GET kullanabilir.");
+  for (const header of Object.keys(c.headers ?? {})) {
+    if (/^(authorization|proxy-authorization|cookie|set-cookie|host)$/i.test(header) || /(api[-_]?key|token|secret|password)/i.test(header)) {
+      errors.push(`'${header}' başlığında kimlik bilgisi saklanamaz; secretEnvVar kullanın.`);
+    }
+  }
   if (!c.entity || !ENTITIES.includes(c.entity)) errors.push("Geçerli bir kanonik varlık seçin.");
   if (!c.idField || typeof c.idField !== "string") errors.push("idField gerekli.");
   if (!c.fieldMap || typeof c.fieldMap !== "object" || Object.keys(c.fieldMap).length === 0) {
     errors.push("En az bir alan eşlemesi gerekli.");
+  }
+  for (const [field, label] of Object.entries(c.kpiFieldMap ?? {})) {
+    if (!c.fieldMap || !(field in c.fieldMap)) errors.push(`KPI alanı '${field}' fieldMap içinde olmalı.`);
+    if (!label.trim() || label.length > 100) errors.push(`KPI etiketi '${field}' için 1–100 karakter olmalı.`);
+  }
+  const availableFields = c.fieldMap
+    ? [...new Set(Object.keys(c.fieldMap).map((field) => canonicalFieldName(c.entity as CanonicalEntity, field)))]
+    : [];
+  const canonicalKeys = new Map<string, string>();
+  for (const field of Object.keys(c.fieldMap ?? {})) {
+    const canonical = canonicalFieldName(c.entity as CanonicalEntity, field);
+    const previous = canonicalKeys.get(canonical);
+    if (previous) {
+      errors.push(`'${previous}' ve '${field}' aynı kanonik alana ('${canonical}') eşleniyor.`);
+    } else {
+      canonicalKeys.set(canonical, field);
+    }
+  }
+  for (const [key, label] of Object.entries(c.computedKpiMap ?? {})) {
+    const located = resolveKpiSpec(key, availableFields);
+    if (!located) {
+      const [packId, id] = key.includes(":") ? key.split(":", 2) : [undefined, key];
+      const candidates = listKpiSpecCandidates(id).filter(
+        (candidate) => !packId || candidate.packId === packId
+      );
+      errors.push(
+        candidates.length > 1
+          ? `Hesaplanan KPI '${key}' belirsiz; ${candidates.map((candidate) => `${candidate.packId}:${id}`).join(", ")} biçimlerinden birini kullanın.`
+          : `Hesaplanan KPI '${key}' katalogda bulunamadı.`
+      );
+    }
+    if (!label.trim() || label.length > 100) {
+      errors.push(`Hesaplanan KPI '${key}' etiketi 1–100 karakter olmalı.`);
+    }
+    if (located) {
+      const missing = located.spec.requiredFields.filter((field) => !availableFields.includes(field));
+      if (missing.length > 0) {
+        errors.push(
+          `Hesaplanan KPI '${key}' için eksik kanonik alanlar: ${missing.join(", ")}.`
+        );
+      }
+    }
+  }
+  for (const [name, field] of [
+    ["kpiObservedAtField", c.kpiObservedAtField],
+    ["eventTypeField", c.eventTypeField],
+    ["eventSubjectField", c.eventSubjectField],
+    ["eventTimeField", c.eventTimeField],
+  ] as const) {
+    if (field && (!c.fieldMap || !(field in c.fieldMap))) {
+      errors.push(`${name} '${field}' fieldMap içinde olmalı.`);
+    }
+  }
+  if (c.entity === "event" && !c.eventTypeField) {
+    errors.push("event varlığı için eventTypeField gerekli.");
   }
   if (c.authType === "bearer_token" || c.authType === "api_key" || c.authType === "basic") {
     if (!c.secretEnvVar || typeof c.secretEnvVar !== "string") {
@@ -192,6 +265,8 @@ export const restAdapter: ConnectorAdapter = {
     let pagesFetched = 0;
     let cursor: string | null = null;
     const records: CanonicalRecord[] = [];
+    const rejected: SyncOutcome["rejected"] = [];
+    const observedItems: unknown[] = [];
     const warnings: string[] = [];
     let readCount = 0;
     let skipped = 0;
@@ -224,6 +299,10 @@ export const restAdapter: ConnectorAdapter = {
         throw new Error(`recordsPath "${config.recordsPath ?? "(kök)"}" bir dizi döndürmedi.`);
       }
       readCount += items.length;
+      for (const item of items) {
+        if (observedItems.length >= 200) break;
+        observedItems.push(item);
+      }
 
       for (const item of items) {
         const externalIdRaw = getPath(item, config.idField);
@@ -232,19 +311,66 @@ export const restAdapter: ConnectorAdapter = {
             ? String(externalIdRaw)
             : null;
         if (!externalId) {
+          rejected.push({
+            entity: config.entity,
+            sourceRef: null,
+            code: "MISSING_EXTERNAL_ID",
+            reason: `Kaynak kaydın '${config.idField}' dış kimliği boş.`,
+          });
           skipped++;
           continue;
         }
         const fields: CanonicalRecord["fields"] = {};
+        let invalidSourceField: string | null = null;
         for (const [canonical, sourcePath] of Object.entries(config.fieldMap)) {
-          fields[canonical] = toPrimitive(getPath(item, sourcePath));
+          const raw = getPath(item, sourcePath);
+          if (raw !== null && raw !== undefined && typeof raw === "object") {
+            invalidSourceField = canonical;
+            break;
+          }
+          fields[canonical] = toPrimitive(raw);
         }
-        records.push({
+        if (invalidSourceField) {
+          rejected.push({
+            entity: config.entity,
+            sourceRef: externalId,
+            code: "INVALID_FIELD_TYPE",
+            reason: `'${invalidSourceField}' kanonik alanı nesne/dizi yerine ilkel bir değer gerektiriyor.`,
+          });
+          skipped++;
+          continue;
+        }
+        const updatedAtRaw = config.updatedAtField ? getPath(item, config.updatedAtField) : null;
+        const sourceUpdatedAt = toIso(updatedAtRaw);
+        if (updatedAtRaw !== null && updatedAtRaw !== undefined && sourceUpdatedAt === null) {
+          rejected.push({
+            entity: config.entity,
+            sourceRef: externalId,
+            code: "INVALID_SOURCE_UPDATED_AT",
+            reason: `Kaynak güncelleme zamanı '${config.updatedAtField}' geçerli bir tarih değil.`,
+          });
+          skipped++;
+          continue;
+        }
+
+        const candidate: CanonicalRecord = {
           entity: config.entity,
           externalId,
-          sourceUpdatedAt: config.updatedAtField ? toIso(getPath(item, config.updatedAtField)) : null,
+          sourceUpdatedAt,
           fields,
-        });
+        };
+        const validation = validateCanonicalRecord(candidate);
+        if (!validation.record) {
+          rejected.push({
+            entity: config.entity,
+            sourceRef: externalId,
+            code: validation.violations[0]?.code ?? "CONTRACT_VALIDATION_FAILED",
+            reason: validation.violations.map((violation) => violation.message).join("; "),
+          });
+          skipped++;
+          continue;
+        }
+        records.push(validation.record);
       }
 
       if (pagination.type === "none") break;
@@ -272,6 +398,8 @@ export const restAdapter: ConnectorAdapter = {
       skipped,
       warnings,
       checkpoint,
+      sourceSchema: observeSourceSchema(observedItems),
+      rejected,
     };
   },
 };

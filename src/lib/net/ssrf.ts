@@ -53,6 +53,9 @@ export async function validateOutboundUrl(
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new SsrfError("Yalnızca http/https şemasına izin verilir.");
   }
+  if (url.username || url.password) {
+    throw new SsrfError("URL içinde kimlik bilgisi kabul edilmez.");
+  }
   if (url.hostname.toLowerCase() === "localhost") {
     throw new SsrfError();
   }

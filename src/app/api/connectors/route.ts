@@ -13,7 +13,7 @@ const restConfigSchema = z.object({
   kind: z.literal("rest"),
   baseUrl: z.string().trim().min(1).max(2000),
   path: z.string().trim().min(1).max(2000),
-  method: z.enum(["GET", "POST"]).optional(),
+  method: z.literal("GET").optional(),
   headers: z.record(z.string().max(300), z.string().max(2000)).optional(),
   secretEnvVar: z.string().trim().max(200).optional(),
   authType: z.enum(["none", "api_key", "bearer_token", "basic", "oauth2_client_credentials"]),
@@ -35,6 +35,12 @@ const restConfigSchema = z.object({
   idField: z.string().trim().min(1).max(300),
   updatedAtField: z.string().trim().max(300).optional(),
   fieldMap: z.record(z.string().max(100), z.string().max(300)),
+  kpiFieldMap: z.record(z.string().max(100), z.string().trim().min(1).max(100)).optional(),
+  computedKpiMap: z.record(z.string().max(120), z.string().trim().min(1).max(100)).optional(),
+  kpiObservedAtField: z.string().trim().max(100).optional(),
+  eventTypeField: z.string().trim().max(100).optional(),
+  eventSubjectField: z.string().trim().max(100).optional(),
+  eventTimeField: z.string().trim().max(100).optional(),
   pagination: z.discriminatedUnion("type", [
     z.object({ type: z.literal("none") }),
     z.object({
@@ -59,6 +65,7 @@ const postSchema = z.object({
   connectorId: z.string().trim().min(1).max(100),
   name: z.string().trim().min(1).max(200),
   config: restConfigSchema,
+  scheduleIntervalMinutes: z.number().int().min(5).max(525_600).nullable().optional(),
 });
 
 /** GET — kayıt defteri tanımları + org'un kayıtlı konfigürasyonları. */
@@ -76,7 +83,11 @@ export async function GET() {
       id: c.id,
       connectorId: c.connectorId,
       name: c.name,
+      configVersion: c.configVersion,
       enabled: c.enabled,
+      scheduleIntervalMinutes: c.scheduleIntervalMinutes,
+      nextRunAt: c.nextRunAt,
+      lastScheduledAt: c.lastScheduledAt,
       createdAt: c.createdAt,
       config: c.config,
     })),
@@ -117,6 +128,7 @@ export async function POST(req: NextRequest) {
     name: parsed.data.name,
     config: parsed.data.config,
     createdBy: session.displayName,
+    scheduleIntervalMinutes: parsed.data.scheduleIntervalMinutes,
   });
 
   await recordAuditEvent({

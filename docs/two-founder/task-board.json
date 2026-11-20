@@ -138,6 +138,17 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Login and OIDC do not auto-seed demo data; migration 18 remains approval-gated; health exposes pending approvals; hierarchy endpoints fail safely while migration 18 is pending; demo reset remains transactionally safe.",
       "evidence": "Targeted governance/auth/organization suites passed: 6 files, 32 tests; migration-18 dependent suite skipped as designed; tsc and eslint passed."
+    },
+    {
+      "id": "TB-013",
+      "title": "Enterprise connectivity and canonical data fabric",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": ["enterprise-protocol-engineer", "synchronization-event-engineer", "data-mapping-entity-resolution-engineer", "identity-tenant-security-engineer"],
+      "files": ["src/lib/connectors", "src/lib/db/repos/connectors.ts", "src/lib/db/repos/connector-promotion.ts", "src/lib/db/repos/connector-sync.ts", "src/app/api/connectors", "src/app/api/canonical-contracts", "src/app/api/canonical-entities", "src/app/api/survivorship-policies", "src/app/api/data-quality", "scripts/connector-scheduler.mjs"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Generic read-only connectors validate canonical contracts, quarantine invalid rows, persist idempotently, promote KPI/process events, expose mapping/scheduler health, resolve strong identities and preserve tenant isolation.",
+      "evidence": "Nine connector/canonical/security suites passed: 64 tests; targeted eslint and tsc passed."
     }
   ]
 }

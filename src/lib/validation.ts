@@ -9,11 +9,33 @@ import type { ZodType } from "zod";
  */
 export async function parseBody<T>(
   req: NextRequest,
-  schema: ZodType<T>
+  schema: ZodType<T>,
+  options: { maxBytes?: number } = {}
 ): Promise<{ ok: true; data: T } | { ok: false; response: NextResponse }> {
+  if (options.maxBytes !== undefined) {
+    const declared = Number(req.headers.get("content-length"));
+    if (Number.isFinite(declared) && declared > options.maxBytes) {
+      return {
+        ok: false,
+        response: NextResponse.json({ error: "İstek gövdesi çok büyük." }, { status: 413 }),
+      };
+    }
+  }
+
   let json: unknown;
   try {
-    json = await req.json();
+    if (options.maxBytes !== undefined) {
+      const text = await req.text();
+      if (Buffer.byteLength(text, "utf8") > options.maxBytes) {
+        return {
+          ok: false,
+          response: NextResponse.json({ error: "İstek gövdesi çok büyük." }, { status: 413 }),
+        };
+      }
+      json = JSON.parse(text);
+    } else {
+      json = await req.json();
+    }
   } catch {
     return { ok: false, response: NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 }) };
   }

@@ -1,4 +1,4 @@
-import type { IndustryPack } from "./types";
+import type { IndustryPack, KpiSpec } from "./types";
 
 /**
  * Sektör zekâ paketleri (v1). Her KPI'nın formülü ve gerekli kanonik alanları
@@ -9,7 +9,7 @@ import type { IndustryPack } from "./types";
 const MANUFACTURING: IndustryPack = {
   id: "manufacturing",
   label: "Üretim ve sanayi",
-  version: 1,
+  version: 2,
   note: "Kesikli/süreç üretimi, otomotiv tedarikçileri ve elektronik için ortak çekirdek.",
   subsectors: [
     { id: "discrete", label: "Kesikli üretim", keywords: ["work_order", "bom", "assembly"] },
@@ -40,9 +40,16 @@ const MANUFACTURING: IndustryPack = {
       name: "Ekipman etkinliği (OEE)",
       category: "operational",
       functionName: "oee",
-      formula: "kullanılabilirlik × performans × kalite",
+      formula:
+        "kullanılabilirlik × performans × kalite; performans = ideal çevrim süresi × üretilen birim / çalışma süresi",
       unit: "%",
-      requiredFields: ["planned_production_time", "downtime_minutes", "total_units", "good_units"],
+      requiredFields: [
+        "planned_production_time",
+        "downtime_minutes",
+        "ideal_cycle_time_minutes",
+        "total_units",
+        "good_units",
+      ],
       priority: "core",
     },
     {
@@ -418,4 +425,48 @@ export const INDUSTRY_PACKS: IndustryPack[] = [MANUFACTURING, RETAIL, BANKING, T
 
 export function getPack(id: string): IndustryPack | undefined {
   return INDUSTRY_PACKS.find((p) => p.id === id);
+}
+
+export interface LocatedKpiSpec {
+  packId: string;
+  packVersion: number;
+  spec: KpiSpec;
+}
+
+/** Aynı KPI kimliğinin bulunduğu tüm paketleri döndürür. */
+export function listKpiSpecCandidates(id: string): LocatedKpiSpec[] {
+  return INDUSTRY_PACKS.flatMap((pack) =>
+    pack.kpis
+      .filter((kpi) => kpi.id === id)
+      .map((spec) => ({ packId: pack.id, packVersion: pack.version, spec }))
+  );
+}
+
+/** Aynı KPI kimliği birden fazla pakette olabilir; öncelik verilen paket seçilir. */
+export function getKpiSpec(id: string, preferredPackId?: string): LocatedKpiSpec | undefined {
+  const candidates = listKpiSpecCandidates(id);
+  return preferredPackId
+    ? candidates.find((candidate) => candidate.packId === preferredPackId)
+    : candidates[0];
+}
+
+/**
+ * Konnektör yapılandırmasında `kpiId` veya `packId:kpiId` kabul edilir.
+ * Alan kümesi verildiğinde aynı kimliğin paketler arasındaki uygun sürümü
+ * gerekli kanonik alanlara göre seçilir; belirsizlik sessizce çözülmez.
+ */
+export function resolveKpiSpec(key: string, availableFields?: string[]): LocatedKpiSpec | undefined {
+  const [maybePack, maybeId] = key.includes(":") ? key.split(":", 2) : [undefined, key];
+  const candidates = maybePack
+    ? listKpiSpecCandidates(maybeId).filter((candidate) => candidate.packId === maybePack)
+    : listKpiSpecCandidates(maybeId);
+  if (candidates.length === 0) return undefined;
+  if (maybePack || !availableFields) return candidates.length === 1 ? candidates[0] : undefined;
+
+  const matches = candidates.filter((located) =>
+    located.spec.requiredFields.every((field) => availableFields.includes(field))
+  );
+  if (matches.length === 1) return matches[0];
+  if (matches.length > 1) return undefined;
+  return candidates.length === 1 ? candidates[0] : undefined;
 }
