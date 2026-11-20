@@ -14,7 +14,7 @@ import { listEntities, upsertEntity, newId } from "@/lib/entities";
 import type { HandledSignal, UrgentTask, SavedReport, ImportedDataset } from "@/lib/entities";
 import type { MarketPulse } from "@/lib/market-pulse";
 import { pickHeroKpis } from "@/lib/kpi";
-import { listCases } from "@/lib/decisions";
+import { listCases, RELIABILITY_META } from "@/lib/decisions";
 
 type WorkspaceTab = "tasks" | "market" | "reports";
 
@@ -129,6 +129,26 @@ export default function DashboardHome() {
 
   const role = getRole(profile.roleId);
 
+  const recommendedOption = topCase?.options?.find((option) => option.id === topCase.recommendedOptionId) ?? null;
+  const evidenceItems = topCase?.evidence ?? [];
+  const reliabilityCounts = {
+    verified: evidenceItems.filter((item) => item.reliability === "verified").length,
+    estimated: evidenceItems.filter((item) => item.reliability === "estimated").length,
+    unknown: evidenceItems.filter((item) => item.reliability === "unknown").length,
+  };
+  const evidenceHighlights = [
+    ...evidenceItems.filter((item) => item.reliability === "verified"),
+    ...evidenceItems.filter((item) => item.reliability === "estimated"),
+  ]
+    .filter((item) => item.fact?.trim())
+    .slice(0, 2);
+  const confidenceLabel = topCase && Number.isFinite(topCase.confidence) ? `%${topCase.confidence}` : "Belirtilmemiş";
+  const confidenceRationale = topCase?.confidenceRationale?.trim() || "Güven gerekçesi belirtilmemiş.";
+  const projectedImpact = topCase?.counterfactual?.projectedImpact?.trim() || "Belirtilmemiş.";
+  const timeHorizon = topCase?.counterfactual?.timeHorizon?.trim() || "Belirtilmemiş.";
+  const recommendedTitle = recommendedOption?.title?.trim() || "Seçenek başlığı belirtilmemiş.";
+  const expectedOutcome = recommendedOption?.expectedOutcome?.trim() || "Beklenen sonuç belirtilmemiş.";
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 px-10 py-10">
       <div>
@@ -169,16 +189,72 @@ export default function DashboardHome() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-abys-ink">{topCase.title}</p>
                   <p className="text-xs text-abys-muted mt-1">{topCase.businessImpact}</p>
-                  {(() => {
-                    const rec = topCase.options.find((o) => o.id === topCase.recommendedOptionId);
-                    return rec ? (
-                      <p className="text-xs mt-1.5">
-                        <span className="text-abys-muted">Önerilen: </span>
-                        <span className="text-abys-navy font-medium">{rec.title}</span>
-                        <span className="text-abys-muted"> · Güven %{topCase.confidence}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2.5">
+                  <p className="text-[10px] tracking-wide text-abys-muted font-semibold uppercase">Kanıt güvenilirliği</p>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {(["verified", "estimated", "unknown"] as const).map((reliability) => {
+                      const meta = RELIABILITY_META[reliability];
+                      return (
+                        <span key={reliability} className="text-[10px] font-semibold rounded-full border px-2 py-0.5" style={{ color: meta.color, borderColor: meta.color }}>
+                          {meta.label}: {reliabilityCounts[reliability]}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {evidenceHighlights.length > 0 ? (
+                    <ul className="space-y-1.5 mt-2">
+                      {evidenceHighlights.map((item, index) => {
+                        const meta = RELIABILITY_META[item.reliability] ?? RELIABILITY_META.unknown;
+                        return (
+                          <li key={index} className="flex items-start gap-1.5 text-xs">
+                            <span className="text-[10px] font-semibold rounded-full border px-2 py-0.5 shrink-0" style={{ color: meta.color, borderColor: meta.color }}>
+                              {meta.label}
+                            </span>
+                            <span className="min-w-0 text-abys-ink">
+                              {item.fact}
+                              {item.source && <span className="text-abys-muted"> · {item.source}</span>}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-abys-muted mt-2">Gösterilecek doğrulanmış veya tahmini kanıt metni yok.</p>
+                  )}
+                </div>
+
+                <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2.5">
+                  <p className="text-[10px] tracking-wide text-abys-muted font-semibold uppercase">Güven gerekçesi</p>
+                  <p className="text-sm font-medium text-abys-ink mt-1">Güven: {confidenceLabel}</p>
+                  <p className="text-xs text-abys-muted mt-0.5">{confidenceRationale}</p>
+                </div>
+
+                <div className="rounded-lg border border-abys-critical/20 bg-abys-critical-soft px-3 py-2.5">
+                  <p className="text-[10px] tracking-wide text-abys-critical font-semibold uppercase">Karşı senaryo</p>
+                  <p className="text-xs text-abys-ink mt-1">
+                    <span className="font-semibold">Tahmini etki:</span> {projectedImpact}
+                  </p>
+                  <p className="text-xs text-abys-ink mt-1">
+                    <span className="font-semibold">Zaman ufku:</span> {timeHorizon}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2.5">
+                  <p className="text-[10px] tracking-wide text-abys-muted font-semibold uppercase">Önerilen seçenek</p>
+                  {recommendedOption ? (
+                    <>
+                      <p className="text-sm font-medium text-abys-navy mt-1">{recommendedTitle}</p>
+                      <p className="text-xs text-abys-muted mt-0.5">
+                        <span className="font-semibold">Beklenen sonuç:</span> {expectedOutcome}
                       </p>
-                    ) : null;
-                  })()}
+                    </>
+                  ) : (
+                    <p className="text-xs text-abys-muted mt-1">Önerilen seçenek belirtilmemiş.</p>
+                  )}
                 </div>
               </div>
             </div>
