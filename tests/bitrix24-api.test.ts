@@ -124,7 +124,7 @@ describe("Bitrix24 entegrasyon uçları", () => {
       expect(res.status).toBe(200);
       const body = (await res.json()) as Record<string, unknown>;
       expect(Object.keys(body).sort()).toEqual(
-        ["configured", "connected", "demoRecordCounts", "importedRecordCounts", "lastError", "lastSyncAt", "mode"].sort()
+        ["configured", "connected", "demoRecordCounts", "importedRecordCounts", "lastError", "lastSyncAt", "mode", "persistedCount"].sort()
       );
       const serialized = JSON.stringify(body).toLowerCase();
       expect(serialized).not.toContain("token");
@@ -217,9 +217,14 @@ describe("Bitrix24 entegrasyon uçları", () => {
 
       nextHeaders.__setTestCookie(SESSION_COOKIE, dataAdminSession);
       const statusRes = await statusGET();
-      const statusBody = (await statusRes.json()) as { lastSyncAt: string | null; connected: boolean };
+      const statusBody = (await statusRes.json()) as {
+        lastSyncAt: string | null;
+        connected: boolean;
+        persistedCount: number | null;
+      };
       expect(statusBody.lastSyncAt).not.toBeNull();
-       expect(statusBody.connected).toBe(false);
+      expect(statusBody.connected).toBe(false);
+      expect(statusBody.persistedCount).toBe(body.persistedCount);
     });
   });
 

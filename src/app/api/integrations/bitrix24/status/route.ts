@@ -47,6 +47,7 @@ export async function GET() {
     lastSyncAt: lastRun?.finishedAt ?? null,
     lastError: lastRun?.errors[0]?.message ?? null,
     importedRecordCounts: lastRun?.importedCounts ?? null,
+    persistedCount: lastRun?.persistedCount ?? null,
     demoRecordCounts,
   });
 }
