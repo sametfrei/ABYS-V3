@@ -447,6 +447,28 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Closed loop: realized decision outcomes feed back into the confidence the system presents. Buckets with fewer than 5 outcomes produce no adjustment; measured buckets report observed improvement rate versus stated confidence, a deterministic shrinkage estimate and an overconfident/aligned/underconfident verdict. No LLM-generated numbers; ledger API and UI expose the same payload.",
       "evidence": "Full suite 77 files/719 tests passed (9 skipped); eslint clean; tsc --noEmit clean; production build succeeded. Calibration math covered by tests/decision-calibration.test.ts (sample gating, shrinkage, clamping, partial status, bucket boundaries, end-to-end summarizeDecisionLearning -> buildDecisionCalibration) and asserted through the /api/decision-ledger summary in tests/decision-ledger.test.ts."
+    },
+    {
+      "id": "TB-021",
+      "commit": "cc64c26",
+      "title": "Surface confidence calibration in decision case list",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "decision-intelligence-engineer",
+        "frontend-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/app/api/decision-cases/route.ts",
+        "src/app/dashboard/decisions/page.tsx",
+        "src/lib/db/repos/decision-ledger.ts",
+        "tests/decision-ledger.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "When an executive opens a decision case, the stated confidence is accompanied by the organization’s own observed outcome record for that confidence band (or an explicit insufficient-evidence note). Data stays org-scoped and derived from stored outcomes only.",
+      "evidence": "Full suite 77 files/720 tests passed (9 skipped); eslint and tsc clean; production build succeeded. API test asserts calibration payload, sample gating and cross-org isolation."
     }
   ]
 }
