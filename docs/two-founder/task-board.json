@@ -469,6 +469,30 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "When an executive opens a decision case, the stated confidence is accompanied by the organization’s own observed outcome record for that confidence band (or an explicit insufficient-evidence note). Data stays org-scoped and derived from stored outcomes only.",
       "evidence": "Full suite 77 files/720 tests passed (9 skipped); eslint and tsc clean; production build succeeded. API test asserts calibration payload, sample gating and cross-org isolation."
+    },
+    {
+      "id": "TB-022",
+      "commit": "3b39ce0",
+      "title": "Causal links carry evidence metadata for deterministic grading",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "decision-intelligence-engineer",
+        "data-scientist",
+        "security-engineer"
+      ],
+      "files": [
+        "src/lib/db/migrations.ts",
+        "src/lib/db/repos/causal.ts",
+        "src/app/api/causal/route.ts",
+        "src/app/api/decision-cases/[id]/intelligence/route.ts",
+        "src/app/dashboard/decisions/page.tsx",
+        "tests/causal-links-api.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Root-cause links can record method, sample size, data quality and uncertainty so causal-evidence grading is evidence-based rather than status-only; observed correlation can never be graded sufficient; metadata is optional and absence keeps grading conservative.",
+      "evidence": "Full suite 78 files/723 tests passed (9 skipped); eslint and tsc clean; production build succeeded. New API tests assert metadata round-trip, RCT+n=120+high quality grading to high evidence, 400s for invalid method/quality/confidence, and null metadata by default."
     }
   ]
 }
