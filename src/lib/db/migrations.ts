@@ -1043,4 +1043,22 @@ export const MIGRATIONS: Migration[] = [
         ON decision_case_signals(org_id, signal_id);
     `,
   },
+  {
+    id: 34,
+    name: "nedensel kanit ust verisi: yontem, orneklem, veri kalitesi, belirsizlik",
+    sql: `
+      -- Kanıt seviyesi yalnızca ilişki durumundan değil; çalışma yöntemi,
+      -- örneklem büyüklüğü, veri kalitesi ve belirsizlikten birlikte türetilir
+      -- (bkz. src/lib/causal-evidence.ts). Bağlantı oluşturulurken bu üst veri
+      -- isteğe bağlı kaydedilir; yoksa değerlendirme temkinli kalır.
+      ALTER TABLE causal_links
+        ADD COLUMN IF NOT EXISTS method TEXT,
+        ADD COLUMN IF NOT EXISTS sample_size INTEGER
+          CHECK (sample_size IS NULL OR (sample_size >= 0 AND sample_size <= 100000000)),
+        ADD COLUMN IF NOT EXISTS data_quality TEXT
+          CHECK (data_quality IS NULL OR data_quality IN ('high', 'medium', 'low')),
+        ADD COLUMN IF NOT EXISTS uncertainty TEXT
+          CHECK (uncertainty IS NULL OR uncertainty IN ('low', 'medium', 'high'));
+    `,
+  },
 ];

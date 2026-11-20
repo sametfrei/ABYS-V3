@@ -17,7 +17,14 @@ export const RELATION_STATUSES = [
 
 export type RelationStatus = (typeof RELATION_STATUSES)[number];
 
-export interface CausalLink {
+export interface CausalEvidenceMetadata {
+  method: string | null;
+  sampleSize: number | null;
+  dataQuality: "high" | "medium" | "low" | null;
+  uncertainty: "low" | "medium" | "high" | null;
+}
+
+export interface CausalLink extends CausalEvidenceMetadata {
   id: string;
   orgId: string;
   caseId: string;
@@ -39,12 +46,14 @@ export async function insertLink(params: {
   confidence: number;
   note?: string;
   createdBy: string;
-}): Promise<string> {
+} & Partial<CausalEvidenceMetadata>): Promise<string> {
   await migrate();
   const id = randomBytes(8).toString("hex");
   await getDb().query(
-    `INSERT INTO causal_links (id, org_id, case_id, from_label, to_label, relation_status, confidence, note, created_by)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    `INSERT INTO causal_links
+       (id, org_id, case_id, from_label, to_label, relation_status, confidence, note, created_by,
+        method, sample_size, data_quality, uncertainty)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
     [
       id,
       params.orgId,
@@ -55,6 +64,10 @@ export async function insertLink(params: {
       Math.round(params.confidence),
       params.note ?? null,
       params.createdBy,
+      params.method ?? null,
+      params.sampleSize ?? null,
+      params.dataQuality ?? null,
+      params.uncertainty ?? null,
     ]
   );
   return id;
@@ -72,8 +85,13 @@ export async function listLinks(orgId: string, caseId: string): Promise<CausalLi
     note: string | null;
     created_by: string;
     created_at: string;
+    method: string | null;
+    sample_size: number | string | null;
+    data_quality: string | null;
+    uncertainty: string | null;
   }>(
-    `SELECT id, case_id, from_label, to_label, relation_status, confidence, note, created_by, created_at
+    `SELECT id, case_id, from_label, to_label, relation_status, confidence, note, created_by, created_at,
+            method, sample_size, data_quality, uncertainty
      FROM causal_links WHERE org_id = $1 AND case_id = $2 ORDER BY created_at DESC`,
     [orgId, caseId]
   );
@@ -88,6 +106,16 @@ export async function listLinks(orgId: string, caseId: string): Promise<CausalLi
     note: row.note,
     createdBy: row.created_by,
     createdAt: row.created_at,
+    method: row.method,
+    sampleSize: row.sample_size === null ? null : Number(row.sample_size),
+    dataQuality:
+      row.data_quality === "high" || row.data_quality === "medium" || row.data_quality === "low"
+        ? row.data_quality
+        : null,
+    uncertainty:
+      row.uncertainty === "low" || row.uncertainty === "medium" || row.uncertainty === "high"
+        ? row.uncertainty
+        : null,
   }));
 }
 

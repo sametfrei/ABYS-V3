@@ -781,6 +781,16 @@ const RELATION_META: Record<RelationStatus, { label: string; color: string; soft
   disputed: { label: "Tartışmalı", color: "var(--abys-critical)", soft: "var(--abys-critical-soft)" },
 };
 
+const CAUSAL_METHOD_LABELS: Record<string, string> = {
+  randomized_controlled_trial: "Randomize kontrollü deney",
+  quasi_experimental: "Yarı deneysel",
+  difference_in_differences: "Farkların farkı",
+  instrumental_variable: "Araç değişken",
+  regression_adjustment: "Regresyon düzeltmesi",
+  observational: "Gözlemsel",
+  expert_judgment: "Uzman görüşü",
+};
+
 interface CausalLink {
   id: string;
   fromLabel: string;
@@ -788,6 +798,10 @@ interface CausalLink {
   relationStatus: RelationStatus;
   confidence: number;
   note: string | null;
+  method: string | null;
+  sampleSize: number | null;
+  dataQuality: "high" | "medium" | "low" | null;
+  uncertainty: "low" | "medium" | "high" | null;
 }
 
 // Sunucu oturumu yoksa gizlenir — kök neden zinciri org izolasyonlu sunucu verisidir.
@@ -800,6 +814,10 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
   const [status, setStatus] = useState<RelationStatus>("observed_correlation");
   const [confidence, setConfidence] = useState(60);
   const [note, setNote] = useState("");
+  const [method, setMethod] = useState("");
+  const [sampleSize, setSampleSize] = useState("");
+  const [dataQuality, setDataQuality] = useState("");
+  const [uncertainty, setUncertainty] = useState("");
   const [busy, setBusy] = useState(false);
 
   function load() {
@@ -835,6 +853,10 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
           relationStatus: status,
           confidence,
           note: note.trim() || undefined,
+          method: method || undefined,
+          sampleSize: sampleSize.trim() === "" ? undefined : Number(sampleSize),
+          dataQuality: dataQuality || undefined,
+          uncertainty: uncertainty || undefined,
         }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Bağlantı eklenemedi.");
@@ -843,6 +865,10 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
       setNote("");
       setStatus("observed_correlation");
       setConfidence(60);
+      setMethod("");
+      setSampleSize("");
+      setDataQuality("");
+      setUncertainty("");
       setShowForm(false);
       load();
     } catch (err) {
@@ -893,6 +919,14 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
                   {l.fromLabel} <span className="text-abys-muted">→</span> {l.toLabel}
                 </p>
                 {l.note && <p className="text-xs text-abys-muted mt-0.5">{l.note}</p>}
+                {(l.method || l.sampleSize !== null || l.dataQuality || l.uncertainty) && (
+                  <p className="text-[11px] text-abys-muted mt-0.5">
+                    {l.method ? CAUSAL_METHOD_LABELS[l.method] ?? l.method : "Yöntem belirtilmedi"}
+                    {l.sampleSize !== null && <> · n={l.sampleSize}</>}
+                    {l.dataQuality && <> · veri kalitesi {l.dataQuality}</>}
+                    {l.uncertainty && <> · belirsizlik {l.uncertainty}</>}
+                  </p>
+                )}
               </div>
               <div className="shrink-0 flex flex-col items-end gap-1">
                 <span
@@ -956,6 +990,52 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
               className="w-20 text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
             />
             <span className="text-xs text-abys-muted">% güven</span>
+          </div>
+          <div className="flex flex-wrap gap-2 items-center">
+            <select
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              aria-label="Kanıt yöntemi"
+              className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
+            >
+              <option value="">Yöntem belirtilmedi</option>
+              {Object.entries(CAUSAL_METHOD_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min={0}
+              value={sampleSize}
+              onChange={(e) => setSampleSize(e.target.value)}
+              placeholder="n"
+              aria-label="Örneklem"
+              className="w-24 text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
+            />
+            <select
+              value={dataQuality}
+              onChange={(e) => setDataQuality(e.target.value)}
+              aria-label="Veri kalitesi"
+              className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
+            >
+              <option value="">Veri kalitesi</option>
+              <option value="high">Yüksek</option>
+              <option value="medium">Orta</option>
+              <option value="low">Düşük</option>
+            </select>
+            <select
+              value={uncertainty}
+              onChange={(e) => setUncertainty(e.target.value)}
+              aria-label="Belirsizlik"
+              className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
+            >
+              <option value="">Belirsizlik</option>
+              <option value="low">Düşük</option>
+              <option value="medium">Orta</option>
+              <option value="high">Yüksek</option>
+            </select>
           </div>
           <input
             value={note}

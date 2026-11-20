@@ -66,8 +66,19 @@ export async function GET(
         ORDER BY s.created_at DESC LIMIT 10`,
       [session.orgId]
     ),
-    db.query<{ from_label: string; to_label: string; relation_status: string; confidence: number }>(
-      `SELECT from_label, to_label, relation_status, confidence FROM causal_links
+    db.query<{
+      from_label: string;
+      to_label: string;
+      relation_status: string;
+      confidence: number;
+      method: string | null;
+      sample_size: number | string | null;
+      data_quality: string | null;
+      uncertainty: string | null;
+    }>(
+      `SELECT from_label, to_label, relation_status, confidence,
+              method, sample_size, data_quality, uncertainty
+         FROM causal_links
         WHERE org_id = $1 AND case_id = $2 ORDER BY created_at DESC LIMIT 10`,
       [session.orgId, id]
     ),
@@ -141,6 +152,10 @@ export async function GET(
       toLabel: l.to_label,
       relationStatus: l.relation_status,
       confidence: Number(l.confidence),
+      method: l.method,
+      sampleSize: l.sample_size === null ? null : Number(l.sample_size),
+      dataQuality: l.data_quality,
+      uncertainty: l.uncertainty,
     })),
     outcomes: outcomesResult.rows,
   });

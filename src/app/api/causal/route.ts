@@ -9,13 +9,27 @@ import { SESSION_COOKIE } from "../auth/login/route";
 import { insertLink, listLinks, updateStatus, RELATION_STATUSES } from "@/lib/db/repos/causal";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 
+export const CAUSAL_METHODS = [
+  "randomized_controlled_trial",
+  "quasi_experimental",
+  "difference_in_differences",
+  "instrumental_variable",
+  "regression_adjustment",
+  "observational",
+  "expert_judgment",
+] as const;
+
 const postSchema = z.object({
   caseId: z.string().min(1).max(300),
   fromLabel: z.string().trim().min(1).max(300),
   toLabel: z.string().trim().min(1).max(300),
   relationStatus: z.enum(RELATION_STATUSES).optional(),
-  confidence: z.number(),
+  confidence: z.number().finite().min(0).max(100),
   note: z.string().trim().max(20000).optional(),
+  method: z.enum(CAUSAL_METHODS).optional(),
+  sampleSize: z.number().int().min(0).max(100_000_000).optional(),
+  dataQuality: z.enum(["high", "medium", "low"]).optional(),
+  uncertainty: z.enum(["low", "medium", "high"]).optional(),
 });
 
 const patchSchema = z.object({
@@ -75,6 +89,10 @@ export async function POST(req: NextRequest) {
     confidence: body.confidence,
     note: body.note,
     createdBy: session.displayName,
+    method: body.method ?? null,
+    sampleSize: body.sampleSize ?? null,
+    dataQuality: body.dataQuality ?? null,
+    uncertainty: body.uncertainty ?? null,
   });
 
   await recordAuditEvent({

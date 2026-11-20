@@ -56,7 +56,7 @@ Durum ölçeği:
 | Monte Carlo (tohumlu, üçgensel, P10/P50/P90) | E2E (test) | `src/lib/scenario-simulation.ts`, `tests/scenario-simulation.test.ts` |
 | Çok kriterli seçenek değerlendirme + Pareto | E2E (test) | `src/lib/decision-options.ts`, `/dashboard/options` |
 | Süreç madenciliği (geçiş, medyan/P90, darboğaz) | E2E (test) | `src/lib/process-mining.ts`; gerçek olay günlüğü verisi gerekir |
-| Nedensel kanıt durumu (observed/inferred/confirmed) | Kısmi | `causal_links` + `/api/causal`; otomatik nedensel çıkarım yok |
+| Nedensel kanıt durumu (observed/inferred/confirmed) | E2E (test) | `causal_links` + `/api/causal`; yöntem, örneklem, veri kalitesi ve belirsizlik üst verisi (migration 34) kaydedilir; `src/lib/causal-evidence.ts` bunlardan kanıt seviyesi türetir ve `observed_correlation` hiçbir koşulda yeterli sayılmaz; otomatik nedensel sonuç iddiası yok; `tests/causal-links-api.test.ts`, `tests/causal-evidence.test.ts` |
 | Karar brifingi: çok kaynaklı kanıt + öneri + belirsizlik | E2E (test) | `src/lib/decision-brief.ts`, `GET /api/decision-cases/[id]/intelligence`, karar detayında "Karar Zekâsı" paneli; sonuçlar `decision_records.case_id` ile vakaya bağlanır. Sinyaller yalnızca migration 33 `decision_case_signals` üzerindeki açık bağla vaka kanıtı olur; bağsız kurum sinyalleri ayrı bağlam olarak etiketlenir ve güven hesabına katılmaz. Bağlama API'si ve panel kontrolü `tests/decision-signals.test.ts` ile doğrulanır |
 | Optimizasyon · çok kaynaklı tam sayılı tahsis | E2E (test) | `src/lib/optimization.ts`, `POST /api/optimization`; kapasite, minimum taahhüt, Pareto dışı toplam değer, düğüm sınırı ve determinizm `tests/optimization.test.ts`; seçenek ekranında düzenlenebilir model |
 | Dijital ikiz · mevcut durum projeksiyonu | E2E (test) | `/api/digital-twin`; kanonik varlıklar, para birimi ayrımlı finansal durum, operasyon hacimleri, bağımlılıklar, KPI son durumu, veri tazeliği ve açık riskler gerçek kayıtlardan türetilir |
@@ -97,8 +97,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilim: karar güveni kalibrasyonu — gerçekleşen sonuçlar güven kovalarına geri besleniyor (TB-020).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020) ve kök neden bağlantılarında kanıt üst verisiyle kanıt seviyesi türetimi (TB-022).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
-2. **Kanıta dayalı nedensel çıkarım:** korelasyon/nedensellik ayrımını otomatik kanıt seviyeleriyle güçlendirme.
-3. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.
+2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.
