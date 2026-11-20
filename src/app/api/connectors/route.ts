@@ -17,6 +17,11 @@ const restConfigSchema = z.object({
   headers: z.record(z.string().max(300), z.string().max(2000)).optional(),
   secretEnvVar: z.string().trim().max(200).optional(),
   authType: z.enum(["none", "api_key", "bearer_token", "basic", "oauth2_client_credentials"]),
+  oauth2TokenUrl: z.string().trim().url().max(2000).optional(),
+  oauth2ClientIdEnvVar: z.string().trim().max(200).optional(),
+  oauth2Scope: z.string().trim().max(1000).optional(),
+  oauth2Audience: z.string().trim().max(1000).optional(),
+  oauth2Resource: z.string().trim().max(1000).optional(),
   apiKeyHeader: z.string().trim().max(200).optional(),
   entity: z.enum([
     "customer",

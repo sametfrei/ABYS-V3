@@ -47,13 +47,18 @@ async function requestPinned(
     const transport = url.protocol === "https:" ? https : http;
     const headers = new Headers(init.headers);
     headers.set("Host", url.host);
+    const method = (init.method ?? "GET").toUpperCase();
+    if (init.body !== undefined && typeof init.body !== "string") {
+      reject(new Error("Sabitlenmiş HTTP istemcisi yalnızca metin gövdesi destekler."));
+      return;
+    }
     const request = transport.request(
       {
         protocol: url.protocol,
         hostname: url.hostname,
         port: url.port || undefined,
         path: `${url.pathname}${url.search}`,
-        method: "GET",
+        method,
         headers: Object.fromEntries(headers.entries()),
         servername: url.protocol === "https:" ? url.hostname : undefined,
         signal: init.signal ?? undefined,
@@ -86,7 +91,7 @@ async function requestPinned(
     );
     request.setTimeout(FETCH_TIMEOUT_MS, () => request.destroy(new Error("İstek zaman aşımına uğradı.")));
     request.on("error", reject);
-    request.end();
+    request.end(init.body ?? undefined);
   });
 }
 
@@ -142,4 +147,33 @@ export async function fetchPinned(
     });
   }
   throw new Error("Çok fazla HTTP yönlendirmesi.");
+}
+
+/**
+ * OAuth2 token endpoint'i için dar kapsamlı POST istemcisi. Redirect izlemez;
+ * böylece istemci sırrı veya dönen token başka bir origin'e taşınamaz.
+ */
+export async function fetchPinnedTokenRequest(
+  input: string | URL,
+  init: RequestInit = {},
+  resolveHost?: ResolveHost
+): Promise<Response> {
+  if ((init.method ?? "POST").toUpperCase() !== "POST") {
+    throw new Error("Token istemcisi yalnızca POST kullanabilir.");
+  }
+  const pinned = await resolvePinnedAddress(String(input), resolveHost);
+  if (pinned.url.protocol !== "https:") {
+    throw new Error("OAuth2 token endpoint'i HTTPS olmalı.");
+  }
+  const response = await requestPinned(pinned.url, pinned.address, pinned.family, {
+    ...init,
+    method: "POST",
+  });
+  if (REDIRECT_STATUSES.has(response.status)) {
+    throw new Error("OAuth2 token endpoint'i yönlendirme döndüremaz.");
+  }
+  return new Response(new Uint8Array(response.body), {
+    status: response.status,
+    headers: response.headers,
+  });
 }

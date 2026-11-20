@@ -61,7 +61,7 @@ export const CONNECTOR_DEFINITIONS: ConnectorDefinition[] = [
     status: "requires-credentials",
     authType: "oauth2_client_credentials",
     entities: [...VENDOR_ENTITIES],
-    note: "OData uçları desteklenir. OAuth2 token akışı bu sürümde müşteri tarafından sağlanan bearer token ile yapılandırılır.",
+    note: "OData uçları desteklenir. OAuth2 client-credentials token akışı yerel testlerle doğrulanmıştır; canlı Microsoft kimliği gerekir.",
   },
   {
     id: "salesforce",
@@ -88,7 +88,7 @@ export const CONNECTOR_DEFINITIONS: ConnectorDefinition[] = [
     status: "requires-credentials",
     authType: "oauth2_client_credentials",
     entities: [...VENDOR_ENTITIES],
-    note: "SuiteQL/RESTlet çıktısı JSON ise genel adaptörle bağlanır; token yönetimi müşteri tarafındadır.",
+    note: "JSON dönen uçlarda genel adaptör ve OAuth2 client-credentials kullanılabilir; NetSuite canlı kimliği olmadan doğrulanmamıştır.",
   },
   {
     id: "odoo",

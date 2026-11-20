@@ -29,6 +29,7 @@ import { observeSourceSchema } from "./schema-discovery";
 const FETCH_TIMEOUT_MS = 15_000;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_ATTEMPTS = 3;
+const ENV_VAR_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const ENTITIES: CanonicalEntity[] = [
   "customer",
   "supplier",
@@ -160,8 +161,37 @@ export function validateRestConfig(input: unknown): string[] {
       errors.push("Bu kimlik türü için secretEnvVar (ortam değişkeni adı) gerekli.");
     }
   }
+  if (c.secretEnvVar && !ENV_VAR_NAME.test(c.secretEnvVar)) {
+    errors.push("secretEnvVar geçerli bir ortam değişkeni adı olmalı.");
+  }
   if (c.authType === "api_key" && !c.apiKeyHeader) {
     errors.push("api_key kimlik türü için apiKeyHeader gerekli.");
+  }
+  if (c.authType === "oauth2_client_credentials") {
+    if (!c.secretEnvVar) errors.push("OAuth2 için istemci sırrını taşıyan secretEnvVar gerekli.");
+    if (!c.oauth2ClientIdEnvVar) errors.push("OAuth2 için oauth2ClientIdEnvVar gerekli.");
+    if (!c.oauth2TokenUrl) errors.push("OAuth2 için oauth2TokenUrl gerekli.");
+    if (c.oauth2ClientIdEnvVar && !ENV_VAR_NAME.test(c.oauth2ClientIdEnvVar)) {
+      errors.push("oauth2ClientIdEnvVar geçerli bir ortam değişkeni adı olmalı.");
+    }
+    if (c.oauth2TokenUrl) {
+      try {
+        const tokenUrl = new URL(c.oauth2TokenUrl);
+        if (tokenUrl.protocol !== "https:") errors.push("OAuth2 token endpoint'i HTTPS olmalı.");
+        if (tokenUrl.username || tokenUrl.password) {
+          errors.push("OAuth2 token endpoint'i URL içinde kimlik bilgisi taşıyamaz.");
+        }
+      } catch {
+        errors.push("oauth2TokenUrl geçerli bir URL olmalı.");
+      }
+    }
+    for (const [name, value] of [
+      ["oauth2Scope", c.oauth2Scope],
+      ["oauth2Audience", c.oauth2Audience],
+      ["oauth2Resource", c.oauth2Resource],
+    ] as const) {
+      if (value && value.length > 1000) errors.push(`${name} en fazla 1000 karakter olabilir.`);
+    }
   }
   if (c.pagination) {
     if (c.pagination.type === "page") {
@@ -178,9 +208,76 @@ export function validateRestConfig(input: unknown): string[] {
   return errors;
 }
 
-function buildHeaders(config: RestConnectorConfig, ctx: SyncContext): Record<string, string> {
+async function resolveOAuth2AccessToken(
+  config: RestConnectorConfig,
+  ctx: SyncContext
+): Promise<string> {
+  if (!ctx.fetchTokenImpl) throw new Error("OAuth2 token istemcisi yapılandırılmamış.");
+  if (!config.oauth2TokenUrl || !config.oauth2ClientIdEnvVar || !config.secretEnvVar) {
+    throw new Error("OAuth2 token, istemci kimliği ve istemci sırrı yapılandırması eksik.");
+  }
+  const clientId = ctx.resolveSecret(config.oauth2ClientIdEnvVar);
+  const clientSecret = ctx.resolveSecret(config.secretEnvVar);
+  if (!clientId || !clientSecret) {
+    const missing = [
+      !clientId ? config.oauth2ClientIdEnvVar : null,
+      !clientSecret ? config.secretEnvVar : null,
+    ].filter(Boolean);
+    throw new Error(`OAuth2 kimlik bilgisi bulunamadı: ${missing.join(", ")} ortam değişkeni ayarlanmamış.`);
+  }
+
+  const tokenUrl = new URL(config.oauth2TokenUrl);
+  await validateOutboundUrl(tokenUrl.href, ctx.resolveHost);
+  const body = new URLSearchParams({
+    grant_type: "client_credentials",
+    client_id: clientId,
+    client_secret: clientSecret,
+  });
+  if (config.oauth2Scope) body.set("scope", config.oauth2Scope);
+  if (config.oauth2Audience) body.set("audience", config.oauth2Audience);
+  if (config.oauth2Resource) body.set("resource", config.oauth2Resource);
+
+  const res = await fetchWithRetry(
+    tokenUrl,
+    {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    },
+    ctx,
+    [],
+    ctx.fetchTokenImpl
+  );
+  const text = await readCapped(res);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("OAuth2 token endpoint'i geçerli JSON döndürmedi.");
+  }
+  if (parsed === null || typeof parsed !== "object") {
+    throw new Error("OAuth2 token yanıtı geçersiz.");
+  }
+  const token = parsed as { access_token?: unknown; token_type?: unknown };
+  if (typeof token.access_token !== "string" || token.access_token.length === 0 || token.access_token.length > 16_384) {
+    throw new Error("OAuth2 token yanıtında geçerli access_token yok.");
+  }
+  if (typeof token.token_type !== "string" || token.token_type.toLowerCase() !== "bearer") {
+    throw new Error("OAuth2 token türü Bearer olmalı.");
+  }
+  return token.access_token;
+}
+
+async function buildHeaders(config: RestConnectorConfig, ctx: SyncContext): Promise<Record<string, string>> {
   const headers: Record<string, string> = { Accept: "application/json", ...(config.headers ?? {}) };
   if (config.authType === "none") return headers;
+  if (config.authType === "oauth2_client_credentials") {
+    headers.Authorization = `Bearer ${await resolveOAuth2AccessToken(config, ctx)}`;
+    return headers;
+  }
   const secret = config.secretEnvVar ? ctx.resolveSecret(config.secretEnvVar) : undefined;
   if (!secret) {
     throw new Error(
@@ -201,11 +298,17 @@ async function readCapped(res: Response): Promise<string> {
   return text;
 }
 
-async function fetchWithRetry(url: URL, init: RequestInit, ctx: SyncContext, warnings: string[]): Promise<Response> {
+async function fetchWithRetry(
+  url: URL,
+  init: RequestInit,
+  ctx: SyncContext,
+  warnings: string[],
+  fetchImpl: typeof fetch = ctx.fetchImpl
+): Promise<Response> {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const res = await ctx.fetchImpl(url, {
+      const res = await fetchImpl(url, {
         ...init,
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
@@ -255,7 +358,7 @@ export const restAdapter: ConnectorAdapter = {
     const base = new URL(config.baseUrl);
     const target = new URL(config.path.replace(/^\//, ""), base.href.endsWith("/") ? base.href : `${base.href}/`);
     const { url: validated } = await validateOutboundUrl(target.href, ctx.resolveHost);
-    const headers = buildHeaders(config, ctx);
+    const headers = await buildHeaders(config, ctx);
 
     const maxPages = config.maxPages ?? 10;
     const pagination = config.pagination ?? { type: "none" };

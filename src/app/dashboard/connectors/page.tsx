@@ -177,6 +177,9 @@ export default function ConnectorsPage() {
   const [apiPath, setApiPath] = useState("");
   const [authType, setAuthType] = useState("none");
   const [secretEnvVar, setSecretEnvVar] = useState("");
+  const [oauth2TokenUrl, setOauth2TokenUrl] = useState("");
+  const [oauth2ClientIdEnvVar, setOauth2ClientIdEnvVar] = useState("");
+  const [oauth2Scope, setOauth2Scope] = useState("");
   const [entity, setEntity] = useState("customer");
   const [idField, setIdField] = useState("id");
   const [recordsPath, setRecordsPath] = useState("data");
@@ -280,6 +283,10 @@ export default function ConnectorsPage() {
             path: apiPath,
             authType,
             secretEnvVar: secretEnvVar || undefined,
+            oauth2TokenUrl: authType === "oauth2_client_credentials" ? oauth2TokenUrl || undefined : undefined,
+            oauth2ClientIdEnvVar:
+              authType === "oauth2_client_credentials" ? oauth2ClientIdEnvVar || undefined : undefined,
+            oauth2Scope: authType === "oauth2_client_credentials" ? oauth2Scope || undefined : undefined,
             entity,
             idField,
             recordsPath: recordsPath || undefined,
@@ -580,8 +587,16 @@ export default function ConnectorsPage() {
                 <option value="bearer_token">Bearer token</option>
                 <option value="api_key">API key</option>
                 <option value="basic">Basic</option>
+                <option value="oauth2_client_credentials">OAuth2 client credentials</option>
               </select>
-              <input value={secretEnvVar} onChange={(e) => setSecretEnvVar(e.target.value)} placeholder="Ortam değişkeni (ör. CRM_TOKEN)" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              <input value={secretEnvVar} onChange={(e) => setSecretEnvVar(e.target.value)} placeholder={authType === "oauth2_client_credentials" ? "İstemci sırrı ortam değişkeni" : "Ortam değişkeni (ör. CRM_TOKEN)"} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              {authType === "oauth2_client_credentials" && (
+                <>
+                  <input value={oauth2TokenUrl} onChange={(e) => setOauth2TokenUrl(e.target.value)} placeholder="https://login.example.com/oauth2/token" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 sm:col-span-2" />
+                  <input value={oauth2ClientIdEnvVar} onChange={(e) => setOauth2ClientIdEnvVar(e.target.value)} placeholder="İstemci kimliği ortam değişkeni" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+                  <input value={oauth2Scope} onChange={(e) => setOauth2Scope(e.target.value)} placeholder="Scope (isteğe bağlı)" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+                </>
+              )}
               <input value={idField} onChange={(e) => setIdField(e.target.value)} placeholder="Kimlik alanı (id)" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
               <input value={recordsPath} onChange={(e) => setRecordsPath(e.target.value)} placeholder="Kayıt yolu (data)" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
               <input value={updatedAtField} onChange={(e) => setUpdatedAtField(e.target.value)} placeholder="Güncelleme zamanı alanı" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />

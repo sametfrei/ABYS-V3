@@ -68,6 +68,16 @@ export interface RestConnectorConfig {
   /** Sır değeri değil, ortam değişkeni adı. */
   secretEnvVar?: string;
   authType: ConnectorAuthType;
+  /** OAuth2 client-credentials token endpoint'i; yalnızca HTTPS kabul edilir. */
+  oauth2TokenUrl?: string;
+  /** İstemci kimliğini taşıyan ortam değişkeni adı; değer saklanmaz. */
+  oauth2ClientIdEnvVar?: string;
+  /** OAuth2 scope; boşsa gönderilmez. */
+  oauth2Scope?: string;
+  /** OAuth2 audience; boşsa gönderilmez. */
+  oauth2Audience?: string;
+  /** OAuth2 resource; boşsa gönderilmez. */
+  oauth2Resource?: string;
   /** API key için header adı (örn. X-API-Key); bearer/basic için kullanılmaz. */
   apiKeyHeader?: string;
   entity: CanonicalEntity;
@@ -109,6 +119,8 @@ export interface SyncContext {
   /** Önceki çalıştırmadan kalan checkpoint (örn. son updatedAt). */
   checkpoint: string | null;
   fetchImpl: typeof fetch;
+  /** Yalnızca OAuth2 token endpoint'i için POST yapan, redirect izlemeyen istemci. */
+  fetchTokenImpl?: typeof fetch;
   resolveHost: (hostname: string) => Promise<string[]>;
   resolveSecret: (envVarName: string) => string | undefined;
   now: () => Date;

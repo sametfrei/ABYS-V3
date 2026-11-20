@@ -24,7 +24,8 @@ Durum ölçeği:
 | Bağlantı yönetimi ekranı (`/dashboard/connectors`) | Tarayıcı bekliyor | Oluştur/senkron/geçmiş akışı; Auto Mode nedeniyle tarayıcı doğrulaması yapılamadı |
 | SAP / Oracle / Dynamics / Salesforce / HubSpot / NetSuite / Odoo | Dış kimlik gerekir | Aynı REST adaptörü; müşteri uç noktası ve kimliği olmadan canlı doğrulanmadı |
 | Infor / IFS / Sage | Planlı | Adaptör yok; kayıt defterinde açıkça "planned" |
-| SOAP, JDBC/ODBC, OAuth2 token akışı (istemci kimliği ile) | Planlı | Ayrı adaptör gerekir |
+| OAuth2 client-credentials token akışı | E2E (test) | `src/lib/connectors/rest-adapter.ts`; yalnızca HTTPS token endpoint'i, SSRF doğrulaması, redirect izlemeyen dar POST istemcisi, ortam değişkeninden istemci kimliği/sırrı ve scope; `tests/connectors.test.ts`, `tests/source-readonly.test.ts` |
+| SOAP, JDBC/ODBC | Planlı | Ayrı adaptör gerekir |
 | CSV/XLSX dosya içe alma | E2E (test) | Mevcut `POST /api/ingest` + `parseTable` |
 | Zamanlanmış senkron | E2E (test) | migration 24; `PATCH /api/connectors/[id]`, `POST /api/connectors/scheduler/run`, `src/lib/connectors/scheduler.ts`; due claim, manuel run kilidi, stale kurtarma, hata izolasyonu ve `trigger=scheduled` testte doğrulanır |
 | Zamanlayıcı operasyon sağlığı | E2E (test) | `GET /api/connectors/scheduler/health`; gecikme, takılı çalıştırma, ardışık hata ve tenant izolasyonu gerçek run kayıtlarından türetilir; `/dashboard/connectors` üzerinde görünür |

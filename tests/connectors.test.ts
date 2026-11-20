@@ -51,7 +51,7 @@ const {
 } = await import("../src/lib/db/repos/connectors");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
-const { restAdapter } = await import("../src/lib/connectors/rest-adapter");
+const { restAdapter, validateRestConfig } = await import("../src/lib/connectors/rest-adapter");
 const { listDefinitions, getAdapter } = await import("../src/lib/connectors/registry");
 const connectorsRoute = await import("../src/app/api/connectors/route");
 const connectorPatchRoute = await import("../src/app/api/connectors/[id]/route");
@@ -180,6 +180,96 @@ describe("REST konnektör adaptörü", () => {
     ).rejects.toThrow(/MISSING_TOKEN/);
   });
 
+  it("OAuth2 client-credentials tokenını bir kez alır ve tüm sayfalara Bearer ekler", async () => {
+    const tokenCalls: RequestInit[] = [];
+    const pageHeaders: Headers[] = [];
+    const fetchTokenImpl = (async (_url: URL | RequestInfo, init?: RequestInit) => {
+      tokenCalls.push(init ?? {});
+      return new Response(
+        JSON.stringify({ access_token: "oauth-access-token", token_type: "Bearer", expires_in: 3600 }),
+        { status: 200, headers: { "content-type": "application/json" } }
+      );
+    }) as typeof fetch;
+    const fetchImpl = (async (url: URL | RequestInfo, init?: RequestInit) => {
+      pageHeaders.push(new Headers(init?.headers));
+      const page = Number(new URL(String(url)).searchParams.get("page"));
+      return new Response(
+        JSON.stringify({ data: page === 1 ? [{ id: "1" }] : [] }),
+        { status: 200 }
+      );
+    }) as typeof fetch;
+
+    const out = await restAdapter.sync(
+      {
+        ...BASE_CONFIG,
+        authType: "oauth2_client_credentials",
+        secretEnvVar: "OAUTH_CLIENT_SECRET",
+        oauth2ClientIdEnvVar: "OAUTH_CLIENT_ID",
+        oauth2TokenUrl: "https://login.example.com/oauth2/token",
+        oauth2Scope: "data.read",
+        pagination: { type: "page", pageParam: "page", pageSize: 1 },
+      },
+      ctx({
+        fetchImpl,
+        fetchTokenImpl,
+        resolveSecret: (name) => (name === "OAUTH_CLIENT_ID" ? "client-id" : "client-secret"),
+      })
+    );
+
+    expect(tokenCalls).toHaveLength(1);
+    expect((tokenCalls[0].method ?? "").toUpperCase()).toBe("POST");
+    const tokenBody = new URLSearchParams(String(tokenCalls[0].body));
+    expect(Object.fromEntries(tokenBody)).toMatchObject({
+      grant_type: "client_credentials",
+      client_id: "client-id",
+      client_secret: "client-secret",
+      scope: "data.read",
+    });
+    expect(pageHeaders).toHaveLength(2);
+    expect(pageHeaders.every((headers) => headers.get("authorization") === "Bearer oauth-access-token")).toBe(true);
+    expect(out.records.map((record) => record.externalId)).toEqual(["1"]);
+    expect(JSON.stringify(out)).not.toContain("client-secret");
+    expect(JSON.stringify(out)).not.toContain("oauth-access-token");
+  });
+
+  it("OAuth2 yapılandırmasını ve Bearer token türünü doğrular", async () => {
+    expect(
+      validateRestConfig({
+        ...BASE_CONFIG,
+        authType: "oauth2_client_credentials",
+        secretEnvVar: "OAUTH_CLIENT_SECRET",
+        oauth2ClientIdEnvVar: "OAUTH_CLIENT_ID",
+      })
+    ).toContain("OAuth2 için oauth2TokenUrl gerekli.");
+    expect(
+      validateRestConfig({
+        ...BASE_CONFIG,
+        authType: "oauth2_client_credentials",
+        secretEnvVar: "OAUTH_CLIENT_SECRET",
+        oauth2ClientIdEnvVar: "OAUTH_CLIENT_ID",
+        oauth2TokenUrl: "http://login.example.com/oauth2/token",
+      })
+    ).toContain("OAuth2 token endpoint'i HTTPS olmalı.");
+
+    await expect(
+      restAdapter.sync(
+        {
+          ...BASE_CONFIG,
+          authType: "oauth2_client_credentials",
+          secretEnvVar: "OAUTH_CLIENT_SECRET",
+          oauth2ClientIdEnvVar: "OAUTH_CLIENT_ID",
+          oauth2TokenUrl: "https://login.example.com/oauth2/token",
+        },
+        ctx({
+          fetchTokenImpl: (async () =>
+            new Response(JSON.stringify({ access_token: "token", token_type: "mac" }), {
+              status: 200,
+            })) as typeof fetch,
+        })
+      )
+    ).rejects.toThrow(/Bearer/);
+  });
+
   it("429/5xx durumunda yeniden dener", async () => {
     let calls = 0;
     const fetchImpl = (async () => {
@@ -296,6 +386,38 @@ describe("Konnektör API'si", () => {
     expect(listBody.definitions.length).toBeGreaterThan(5);
     expect(listBody.configs).toHaveLength(1);
     expect(JSON.stringify(listBody.configs[0].config)).not.toContain("secret-value");
+  });
+
+  it("OAuth2 konfigürasyonunu yalnızca ortam değişkeni adlarıyla saklar", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, adminA);
+    const res = await connectorsRoute.POST(
+      jsonReq({
+        connectorId: "dynamics",
+        name: "Dynamics OAuth",
+        config: {
+          ...BASE_CONFIG,
+          authType: "oauth2_client_credentials",
+          secretEnvVar: "DYNAMICS_CLIENT_SECRET",
+          oauth2ClientIdEnvVar: "DYNAMICS_CLIENT_ID",
+          oauth2TokenUrl: "https://login.microsoftonline.com/tenant/oauth2/v2.0/token",
+          oauth2Scope: "https://graph.microsoft.com/.default",
+        },
+      })
+    );
+    expect(res.status).toBe(200);
+
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const list = await connectorsRoute.GET();
+    const body = (await list.json()) as {
+      configs: { name: string; config: Record<string, unknown> }[];
+    };
+    const saved = body.configs.find((item) => item.name === "Dynamics OAuth");
+    expect(saved?.config).toMatchObject({
+      authType: "oauth2_client_credentials",
+      secretEnvVar: "DYNAMICS_CLIENT_SECRET",
+      oauth2ClientIdEnvVar: "DYNAMICS_CLIENT_ID",
+    });
+    expect(JSON.stringify(saved?.config)).not.toContain("client-secret-value");
   });
 
   it("senkron çalışır, idempotent yazar ve geçmiş döner", async () => {

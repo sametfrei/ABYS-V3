@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 const { validateRestConfig } = await import("../src/lib/connectors/rest-adapter");
-const { fetchPinned, headersForRedirectHop, resolvePinnedAddress } = await import(
+const { fetchPinned, fetchPinnedTokenRequest, headersForRedirectHop, resolvePinnedAddress } = await import(
   "../src/lib/net/pinned-fetch"
 );
 
@@ -61,6 +61,19 @@ describe("read-only source access", () => {
     await expect(fetchPinned("https://api.example.com", { method: "POST" })).rejects.toThrow(
       "Kaynak konnektörleri yalnızca GET kullanabilir."
     );
+  });
+
+  it("token istemcisi yalnızca HTTPS POST kabul eder", async () => {
+    await expect(
+      fetchPinnedTokenRequest("https://login.example.com/token", { method: "GET" })
+    ).rejects.toThrow("Token istemcisi yalnızca POST kullanabilir.");
+    await expect(
+      fetchPinnedTokenRequest(
+        "http://login.example.com/token",
+        { method: "POST", body: "grant_type=client_credentials" },
+        async () => ["93.184.216.34"]
+      )
+    ).rejects.toThrow("OAuth2 token endpoint'i HTTPS olmalı.");
   });
 
   it("özel veya karışık DNS cevaplarını reddeder", async () => {

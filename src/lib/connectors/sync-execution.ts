@@ -1,5 +1,5 @@
 import { lookup } from "dns/promises";
-import { fetchPinned } from "@/lib/net/pinned-fetch";
+import { fetchPinned, fetchPinnedTokenRequest } from "@/lib/net/pinned-fetch";
 import { SsrfError } from "@/lib/net/ssrf";
 import {
   partitionCanonicalRecords,
@@ -77,14 +77,17 @@ export async function executeConnectorSync(params: {
     const adapter = getAdapter(configRow.connectorId);
     if (!adapter) throw new Error("Adaptör bulunamadı.");
 
+    const resolveHost = async (hostname: string) =>
+      (await lookup(hostname, { all: true })).map((result) => result.address);
     const ctx: SyncContext = {
       orgId: configRow.orgId,
       configId: configRow.id,
       checkpoint,
       fetchImpl: (input, init) =>
         fetchPinned(input instanceof Request ? input.url : input, init),
-      resolveHost: async (hostname: string) =>
-        (await lookup(hostname, { all: true })).map((result) => result.address),
+      fetchTokenImpl: (input, init) =>
+        fetchPinnedTokenRequest(input instanceof Request ? input.url : input, init, resolveHost),
+      resolveHost,
       resolveSecret: (envVarName: string) => process.env[envVarName],
       now: () => new Date(),
       sleep: (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
