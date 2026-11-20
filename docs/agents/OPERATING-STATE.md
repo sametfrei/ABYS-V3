@@ -26,8 +26,8 @@ otoritedir; buradaki bir yetenek yalnızca kod bulunduğu için tamamlanmış sa
 
 - HEAD `87c3a88`; çalışma ağacında Sprint 1 ve sonraki yeteneklerin commit edilmemiş değişiklikleri korunuyor.
 - Migration başı 33. Migration 18 onay kapısı açık ve uygulanmadı.
-- Bilinen tam süit kanıtı: 73 dosya geçti, 1 atlandı; 694 test geçti, 9 atlandı.
-- Bilinen üretim derlemesi: Next.js 16.2.11, 94 sayfa ile başarılı.
+- Tam süit kanıtı (2026-11-20): 75 dosya geçti, 1 atlandı; 707 test geçti, 9 atlandı.
+- Üretim derlemesi (2026-11-20): Next.js 16.2.11, 94 sayfa ile başarılı. İlk sandbox build'i port bağlama izni nedeniyle düştü; sandbox dışı yeniden çalıştırma geçti.
 - Canlı tarayıcı görsel doğrulaması bu oturumda yapılamadı; kod/API testi ile tarayıcı kanıtı ayrı tutulur.
 
 ## Öncelikli kuyruklar
