@@ -595,6 +595,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Running-server smoke exercises decision ledger, forecast and connectors screens plus the calibration payloads on command-center, decision-cases and forecast snapshots, failing loudly if those contracts regress.",
       "evidence": "Extended smoke run against the preview server: 31 checks passed, 0 failed, including 4-bucket calibration on command-center and decision-cases and a forecast snapshot summary."
+    },
+    {
+      "id": "TB-028",
+      "commit": "f650b6a",
+      "title": "TR/EN shell localization foundation",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/lib/navigation.ts",
+        "src/app/dashboard/layout.tsx",
+        "tests/i18n.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Shell navigation, session line, logout and language switch render in TR or EN from a persisted cookie/localStorage choice with no hydration mismatch; missing keys fall back to Turkish; coverage is asserted by tests rather than assumed.",
+      "evidence": "Full suite 80 files/736 tests passed (9 skipped); eslint, tsc and production build clean; extended smoke 31/31 after the change. tests/i18n.test.ts asserts locale parsing fallbacks, coverage of every NAV entry and shell key in both locales, and safe handling of unknown keys."
     }
   ]
 }
