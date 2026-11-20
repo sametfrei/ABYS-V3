@@ -115,6 +115,17 @@
       "acceptanceCriteria": "The dashboard's top open decision case shows only existing evidence reliability, confidence rationale, counterfactual impact/horizon and recommended expected outcome, with truthful fallbacks and no invented values.",
       "ownerProcess": "Founder A resumed thread 01a1f8d2-cba6-76b1-8556-ad8b51b5f7d9",
       "evidence": "Founder A changed only dashboard/page.tsx (86 insertions, 10 deletions). Founder B reviewed the DecisionCase field usage, reran tsc and eslint, and the 94-route production build passed. Browser visual verification remains pending."
+    },
+    {
+      "id": "TF-011",
+      "title": "Release-candidate closure and delivery record",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": ["test-automation-engineer", "reliability-observability-engineer", "developer-experience-engineer"],
+      "files": ["docs/DELIVERY-2026-11-20.md", "README.md", "docs/ROADMAP.md"],
+      "status": "COMPLETED",
+      "acceptanceCriteria": "Current tree passes tests, TypeScript, full lint, production build and a running-server smoke; delivery evidence and external gates are recorded honestly.",
+      "evidence": "76 test files and 708 tests passed; 94-route production build passed; full ESLint passed; live HTTP smoke passed 22/22; audit chain valid; migration head 33 with migration 18 still gated."
     }
   ]
 }
