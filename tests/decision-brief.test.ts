@@ -54,7 +54,8 @@ describe("Karar brifingi motoru", () => {
   it("kanıtları kaynak ve güvenilirliğe göre birleştirir", () => {
     const brief = buildDecisionBrief({
       case: BASE_CASE,
-      signals: [{ severity: "critical", title: "Tahsilat riski" }],
+      caseSignals: [{ severity: "critical", title: "Tahsilat riski" }],
+      contextSignals: [{ severity: "high", title: "Kurum geneli risk" }],
       forecast: { label: "Nakit", model: "linear-trend", evidence: "medium", p10: 100, p50: 120, p90: 150, horizon: 1, unit: "bin TL" },
       anomalies: [{ score: 4.2, direction: "below", timestamp: "2026-01-01T00:00:00Z" }],
       causal: [{ fromLabel: "Tahsilat süresi", toLabel: "Nakit", relationStatus: "observed_correlation", confidence: 60 }],
@@ -67,6 +68,13 @@ describe("Karar brifingi motoru", () => {
     expect(sources).toContain("anomali");
     expect(sources).toContain("nedensel");
     expect(sources).toContain("sonuç");
+    const correlationEvidence = brief.evidence.find((e) => e.source === "nedensel");
+    expect(correlationEvidence?.reliability).toBe("low");
+    expect(correlationEvidence?.summary).toContain("gözlemlenen korelasyon");
+    expect(correlationEvidence?.summary).toContain("nedensel sonuç desteklenmiyor");
+    expect(brief.context.map((e) => e.source)).toEqual(["bağlam"]);
+    expect(brief.context[0].summary).toContain("Kurum geneli risk");
+    expect(brief.context[0].summary).toContain("vaka kanıtı sayılmadı");
     expect(brief.whyItMatters).toContain("1,2M");
     expect(brief.whatNext).toContain("100–150");
     expect(brief.recommendation?.label).toBe("Tahsilat kampanyası");
@@ -76,7 +84,8 @@ describe("Karar brifingi motoru", () => {
   it("eksik kaynaklarda güven düşer ve sınırlar açıkça yazılır", () => {
     const sparse = buildDecisionBrief({
       case: { ...BASE_CASE, evidence: [] },
-      signals: [],
+      caseSignals: [],
+      contextSignals: [],
       forecast: null,
       anomalies: [],
       causal: [],
@@ -84,10 +93,22 @@ describe("Karar brifingi motoru", () => {
     });
     const rich = buildDecisionBrief({
       case: BASE_CASE,
-      signals: [{ severity: "critical", title: "S" }],
+      caseSignals: [{ severity: "critical", title: "S" }],
+      contextSignals: [],
       forecast: { label: "Nakit", model: "ses", evidence: "high", p10: 1, p50: 2, p90: 3, horizon: 1, unit: "TL" },
       anomalies: [{ score: 5, direction: "above", timestamp: null }],
-      causal: [{ fromLabel: "A", toLabel: "B", relationStatus: "data_confirmed", confidence: 90 }],
+      causal: [
+        {
+          fromLabel: "A",
+          toLabel: "B",
+          relationStatus: "data_confirmed",
+          confidence: 90,
+          method: "randomized_controlled_trial",
+          sampleSize: 240,
+          dataQuality: "high",
+          uncertainty: "low",
+        },
+      ],
       outcomes: [{ result: "improved", lesson: null }],
     });
     expect(sparse.confidence).toBeLessThan(rich.confidence);
@@ -99,7 +120,8 @@ describe("Karar brifingi motoru", () => {
   it("öneri yoksa null döner, uydurma öneri üretmez", () => {
     const brief = buildDecisionBrief({
       case: { ...BASE_CASE, options: [] },
-      signals: [],
+      caseSignals: [],
+      contextSignals: [],
       forecast: null,
       anomalies: [],
       causal: [],
@@ -107,11 +129,40 @@ describe("Karar brifingi motoru", () => {
     });
     expect(brief.recommendation).toBeNull();
   });
+
+  it("güçlü görünen korelasyonu yüksek kanıt veya nedensel sonuç olarak sunmaz", () => {
+    const brief = buildDecisionBrief({
+      case: BASE_CASE,
+      caseSignals: [],
+      contextSignals: [],
+      forecast: null,
+      anomalies: [],
+      causal: [
+        {
+          fromLabel: "Kampanya",
+          toLabel: "Satış",
+          relationStatus: "observed_correlation",
+          confidence: 99,
+          method: "randomized_controlled_trial",
+          sampleSize: 5000,
+          dataQuality: "high",
+          uncertainty: "low",
+        },
+      ],
+      outcomes: [],
+    });
+    const causalEvidence = brief.evidence.find((e) => e.source === "nedensel");
+    expect(causalEvidence?.reliability).toBe("low");
+    expect(causalEvidence?.summary).toContain("kanıt düşük");
+    expect(causalEvidence?.summary).toContain("nedensel sonuç desteklenmiyor");
+    expect(brief.caveats.some((c) => c.includes("korelasyonlar nedensel sonuç olarak sunulmadı"))).toBe(true);
+  });
 });
 
 const ORG_A = "org-br-a";
 const ORG_B = "org-br-b";
 const CASE_ID = "case-br-1";
+const OTHER_CASE_ID = "case-br-2";
 
 describe("GET /api/decision-cases/[id]/intelligence", () => {
   let ceoA: string;
@@ -151,8 +202,24 @@ describe("GET /api/decision-cases/[id]/intelligence", () => {
     );
     await db.query(
       `INSERT INTO signals (id, org_id, sector_id, category_id, severity, title, payload)
-       VALUES ('sig-br', $1, 'other', 'risk', 'critical', 'Tahsilat riski', '{}'::jsonb)`,
+       VALUES
+         ('sig-br', $1, 'other', 'risk', 'critical', 'Tahsilat riski', '{}'::jsonb),
+         ('sig-br-other', $1, 'other', 'risk', 'high', 'Başka vakanın sinyali', '{}'::jsonb),
+         ('sig-br-context', $1, 'other', 'risk', 'high', 'Kurum geneli bağlam', '{}'::jsonb)`,
       [ORG_A]
+    );
+    await db.query(
+      `INSERT INTO decision_cases (id, org_id, sector_id, category_id, severity, status, title, confidence, payload)
+       VALUES ($1, $2, 'other', 'risk', 'high', 'decided', 'Başka vaka', 70, '{}'::jsonb)`,
+      [OTHER_CASE_ID, ORG_A]
+    );
+    await db.query(
+      `INSERT INTO decision_case_signals
+         (id, org_id, case_id, signal_id, link_reason, linked_by_id, linked_by_name)
+       VALUES
+         ('link-br', $1, $2, 'sig-br', 'Aynı tahsilat gecikmesi', 'ceo-a', 'CEO A'),
+         ('link-br-other', $1, $3, 'sig-br-other', 'Başka vaka bağı', 'ceo-a', 'CEO A')`,
+      [ORG_A, CASE_ID, OTHER_CASE_ID]
     );
     await db.query(
       `INSERT INTO causal_links (id, org_id, case_id, from_label, to_label, relation_status, confidence, created_by)
@@ -167,6 +234,16 @@ describe("GET /api/decision-cases/[id]/intelligence", () => {
     await db.query(
       `INSERT INTO outcomes (id, org_id, decision_id, result, note, lesson, recorded_by)
        VALUES ('out-br', $1, 'dec-br', 'improved', 'not', 'Erken arama', 'ceo')`,
+      [ORG_A]
+    );
+    await db.query(
+      `INSERT INTO decision_records (id, org_id, case_id, sector_id, choice, decided_by, payload)
+       VALUES ('dec-br-other', $1, $2, 'other', 'accepted', 'ceo', '{}'::jsonb)`,
+      [ORG_A, OTHER_CASE_ID]
+    );
+    await db.query(
+      `INSERT INTO outcomes (id, org_id, decision_id, result, note, lesson, recorded_by)
+       VALUES ('out-br-other', $1, 'dec-br-other', 'worsened', 'not', 'Başka vakanın sonucu', 'ceo')`,
       [ORG_A]
     );
 
@@ -215,16 +292,39 @@ describe("GET /api/decision-cases/[id]/intelligence", () => {
     const body = (await res.json()) as {
       brief: {
         headline: string;
-        evidence: { source: string }[];
+        evidence: { source: string; summary: string }[];
+        context: { source: string; summary: string }[];
         recommendation: { label: string } | null;
         confidence: number;
       };
-      sources: { forecastUsed: boolean; metricLabel: string | null; anomalyCount: number };
+      sources: {
+        forecastUsed: boolean;
+        metricLabel: string | null;
+        anomalyCount: number;
+        caseSignalCount: number;
+        outcomeCount: number;
+        caseSignalScope: string;
+        openSignalScope: string;
+        outcomeScope: string;
+      };
       provenance: { engine: string };
     };
     expect(body.sources.forecastUsed).toBe(true);
     expect(body.sources.metricLabel).toBe("Haftalık gelir");
     expect(body.brief.evidence.some((e) => e.source === "tahmin")).toBe(true);
+    const caseSignalEvidence = body.brief.evidence.find((e) => e.source === "sinyal");
+    expect(caseSignalEvidence?.summary).toContain("Tahsilat riski");
+    expect(caseSignalEvidence?.summary).not.toContain("Başka vakanın sinyali");
+    expect(caseSignalEvidence?.summary).not.toContain("Kurum geneli bağlam");
+    expect(body.brief.evidence.some((e) => e.source === "bağlam" || e.summary.includes("Başka vakanın"))).toBe(false);
+    expect(body.brief.context.some((e) => e.summary.includes("Kurum geneli bağlam"))).toBe(true);
+    expect(body.brief.context.some((e) => e.summary.includes("Tahsilat riski"))).toBe(false);
+    expect(body.brief.context.some((e) => e.summary.includes("Başka vakanın sinyali"))).toBe(false);
+    expect(body.sources.caseSignalCount).toBe(1);
+    expect(body.sources.outcomeCount).toBe(1);
+    expect(body.sources.caseSignalScope).toBe("case");
+    expect(body.sources.openSignalScope).toBe("organization");
+    expect(body.sources.outcomeScope).toBe("case");
     expect(body.brief.recommendation?.label).toBe("Tahsilat kampanyası");
     expect(body.brief.confidence).toBeGreaterThan(50);
     expect(body.provenance.engine).toContain("decision-brief.ts");
