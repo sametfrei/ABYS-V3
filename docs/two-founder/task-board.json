@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T03:25:00Z",
+  "updatedAt": "2026-11-21T03:35:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -763,6 +763,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Running-server smoke asserts the retention endpoint returns 200 with dryRun=true and reports the applied policy.",
       "evidence": "Smoke 35/35 against the preview server (was 33); endpoint returned 200 with 0 archive candidates under the default policy."
+    },
+    {
+      "id": "TB-036",
+      "commit": "acc123e",
+      "title": "Retention status in forecast panel",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/forecast/page.tsx",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Forecast snapshot panel shows the applied retention policy, tenant snapshot count and archive-candidate count, explicitly stating that nothing is deleted.",
+      "evidence": "tsc and eslint clean; production build clean; running-server smoke 35/35 with /dashboard/forecast returning 200."
     }
   ]
 }
