@@ -129,6 +129,7 @@
     },
     {
       "id": "TB-012",
+      "commit": "73d3266",
       "title": "Trust foundation and migration governance",
       "priority": "P0",
       "primaryFounder": "B",
