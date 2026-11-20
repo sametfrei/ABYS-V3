@@ -9,6 +9,47 @@ import type { SyncRunResult } from "@/lib/integrations/bitrix24/sync";
  * ailesi kurmamak için tercih edildi (bkz. kuyruk maddesi kısıtı).
  */
 export const BITRIX24_SYNC_AUDIT_TYPE = "bitrix24_sync";
+export const BITRIX24_CONNECTOR_ID = "bitrix24";
+
+/**
+ * Bitrix24 mapped kayıtlarını mevcut kanonik konnektör deposuna bağlayan,
+ * sır taşımayan deterministik konfigürasyonu garanti eder.
+ */
+export async function ensureBitrixConnectorConfig(orgId: string, actor: string): Promise<string> {
+  await migrate();
+  const configId = `bitrix24:${orgId}`;
+  await getDb().transaction(async (tx) => {
+    const existing = await tx.query<{ id: string }>(
+      "SELECT id FROM connector_configs WHERE id = $1 AND org_id = $2",
+      [configId, orgId]
+    );
+    if (existing.rows[0]) return;
+
+    const config = { kind: "bitrix24", source: "native", readOnly: true, version: 1 };
+    await tx.query(
+      `INSERT INTO connector_configs
+         (id, org_id, connector_id, name, config, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (id) DO NOTHING`,
+      [configId, orgId, BITRIX24_CONNECTOR_ID, "Bitrix24", JSON.stringify(config), actor]
+    );
+    await tx.query(
+      `INSERT INTO connector_config_versions
+         (id, org_id, config_id, version, config, change_summary, created_by)
+       VALUES ($1, $2, $3, 1, $4, $5, $6)
+       ON CONFLICT (id) DO NOTHING`,
+      [
+        `${configId}:v1`,
+        orgId,
+        configId,
+        JSON.stringify(config),
+        "Bitrix24 native connector bootstrap",
+        actor,
+      ]
+    );
+  });
+  return configId;
+}
 
 export interface StoredBitrixSyncRun {
   runId: string;
@@ -18,9 +59,15 @@ export interface StoredBitrixSyncRun {
   errors: { entity: string; message: string }[];
   cursor: Partial<Record<string, string | null>>;
   finishedAt: string;
+  persistedCount?: number;
 }
 
-export async function recordBitrixSyncRun(orgId: string, actor: string, result: SyncRunResult): Promise<void> {
+export async function recordBitrixSyncRun(
+  orgId: string,
+  actor: string,
+  result: SyncRunResult,
+  persistedCount?: number
+): Promise<void> {
   const totalImported = Object.values(result.importedCounts).reduce((sum: number, n) => sum + (n ?? 0), 0);
   const stored: StoredBitrixSyncRun = {
     runId: result.runId,
@@ -30,6 +77,7 @@ export async function recordBitrixSyncRun(orgId: string, actor: string, result: 
     errors: result.errors,
     cursor: result.cursor,
     finishedAt: result.finishedAt,
+    persistedCount,
   };
   await recordAuditEvent({
     orgId,

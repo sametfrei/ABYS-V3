@@ -169,10 +169,51 @@ describe("Bitrix24 entegrasyon uçları", () => {
       nextHeaders.__setTestCookie(SESSION_COOKIE, dataAdminSession);
       const res = await syncPOST();
       expect(res.status).toBe(200);
-      const body = (await res.json()) as { mode: string; status: string; importedCounts: Record<string, number> };
+      const body = (await res.json()) as {
+        mode: string;
+        status: string;
+        importedCounts: Record<string, number>;
+        persistedCount: number;
+      };
       expect(body.mode).toBe("demo");
       expect(body.status).toBe("ok");
       expect(body.importedCounts.companies).toBeGreaterThan(0);
+      expect(body.persistedCount).toBeGreaterThan(0);
+      expect(body).not.toHaveProperty("canonicalRecords");
+
+      const stored = await getDb().query<{ count: number }>(
+        "SELECT count(*)::int AS count FROM connector_records WHERE org_id = $1",
+        [orgA]
+      );
+      expect(stored.rows[0].count).toBe(body.persistedCount);
+
+      const persisted = await getDb().query<{
+        entity: string;
+        external_id: string;
+        data: { fields?: Record<string, unknown> };
+      }>(
+        "SELECT entity, external_id, data FROM connector_records WHERE org_id = $1 ORDER BY external_id",
+        [orgA]
+      );
+      const customerIds = persisted.rows
+        .filter((row) => row.entity === "customer")
+        .map((row) => row.external_id);
+      expect(customerIds).toEqual(expect.arrayContaining(["companies:1000", "contacts:2000"]));
+      const departmentEvent = persisted.rows.find((row) => row.external_id === "departments:100");
+      expect(departmentEvent?.data.fields).toMatchObject({
+        event_type: "department.snapshot",
+        occurred_at_source: "sync_observation",
+      });
+      expect(departmentEvent?.data.fields?.occurred_at).toEqual(expect.any(String));
+
+      nextHeaders.__setTestCookie(SESSION_COOKIE, dataAdminSession);
+      const repeat = await syncPOST();
+      expect(repeat.status).toBe(200);
+      const repeated = await getDb().query<{ count: number }>(
+        "SELECT count(*)::int AS count FROM connector_records WHERE org_id = $1",
+        [orgA]
+      );
+      expect(repeated.rows[0].count).toBe(stored.rows[0].count);
 
       nextHeaders.__setTestCookie(SESSION_COOKIE, dataAdminSession);
       const statusRes = await statusGET();

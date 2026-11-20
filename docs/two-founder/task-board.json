@@ -65,9 +65,9 @@
       "primaryFounder": "B",
       "specialists": ["crm-integration-engineer", "synchronization-event-engineer"],
       "files": ["src/lib/integrations/bitrix24/sync.ts", "src/app/api/integrations/bitrix24/sync/route.ts", "tests/bitrix24-api.test.ts", "tests/bitrix24-mapper.test.ts"],
-      "status": "BLOCKED",
-      "blocker": "Previous Peirce run ended with HTTP 429 request f48e3f4b-d59f-4606-b6eb-03b8ef75780d after analysis; no mapped-record persistence change was produced.",
-      "nextAction": "Re-run only after a free model slot and a new capacity check; preserve the queued scope."
+      "status": "COMPLETED",
+      "acceptanceCriteria": "Mapped Bitrix24 records are persisted through the canonical connector path, source IDs are namespaced, event records satisfy required canonical fields, retries are idempotent and the HTTP response does not leak internal canonical payloads.",
+      "evidence": "Demo sync persisted records through upsertCanonicalRecords; company and contact IDs are namespaced; event records include event_type/occurred_at; repeated sync preserved row count; targeted API, mapper and quarantine tests passed (45 tests); tsc and eslint passed."
     },
     {
       "id": "TF-007",

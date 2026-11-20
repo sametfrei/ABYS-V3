@@ -19,6 +19,7 @@ vi.mock("../src/lib/integrations/bitrix24/sync", () => ({
     importedCounts: {},
     errors: [],
     cursor: {},
+    canonicalRecords: [],
   }),
   runLiveSync: async () => ({
     runId: "live-1",
@@ -32,6 +33,7 @@ vi.mock("../src/lib/integrations/bitrix24/sync", () => ({
       { entity: "deals", message: "HTTP 500" },
     ],
     cursor: {},
+    canonicalRecords: [],
   }),
 }));
 
