@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T03:00:00Z",
+  "updatedAt": "2026-11-21T03:10:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -723,6 +723,29 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Connector card shows the consecutive sync failure count and last error message, offers an operator-triggered retry, and stays silent when the newest run succeeded.",
       "evidence": "Full suite 82 files/746 tests passed (9 skipped); eslint, tsc and production build clean; running-server smoke 33/33. Unit tests cover empty history, success recovery, consecutive failures, order independence and invalid timestamps."
+    },
+    {
+      "id": "TB-034",
+      "commit": "ae3f82d",
+      "title": "Forecast snapshot retention planning (dry run)",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "database-persistence-engineer",
+        "integration-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/forecast-retention.ts",
+        "src/app/api/forecast/snapshots/retention/route.ts",
+        "src/lib/db/repos/forecast-snapshots.ts",
+        "tests/forecast-retention.test.ts",
+        "tests/forecast-snapshots.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "A tenant-scoped read-only endpoint reports which snapshots a retention policy would archive (expired by age, over per-label limit) without deleting anything; invalid policy input is clamped to safe defaults.",
+      "evidence": "Full suite 83 files/754 tests (9 skipped) passed; eslint, tsc and production build clean; running-server smoke 33/33. Unit tests cover age boundary, per-label limit, invalid dates, dedupe and sanitization; route test proves no deletion and cross-tenant isolation."
     }
   ]
 }
