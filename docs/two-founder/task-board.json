@@ -78,7 +78,7 @@
       "files": ["tests/**", "package.json"],
       "status": "COMPLETED",
       "acceptanceCriteria": "Run the full Vitest suite and production build after the next integration point; report actual counts, failures and warnings.",
-      "evidence": "75 test files passed and 1 skipped; 707 tests passed and 9 skipped. Production build passed with Next.js 16.2.11 and 94 routes. Sandbox build failed only on port binding; the sandbox-free build passed."
+      "evidence": "Revalidated on 2026-11-20: 76 test files passed and 1 governance file skipped; 708 tests passed and 9 skipped; production build passed with 94 routes; running-server smoke passed 22/22."
     },
     {
       "id": "TF-008",
@@ -198,6 +198,18 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The command center distinguishes defined, instantiated and active roles from actual session records, detects verification commands without matching file bodies or arguments, and never reports a fabricated active process or successful check.",
       "evidence": "Four classification tests passed; node syntax checks and targeted eslint passed; live /api/state returned 31 defined roles (5 directors, 25 specialists), 18 Codex sessions, 1 active session, configured concurrency 8 and no synthetic lead activity."
+    },
+    {
+      "id": "TB-018",
+      "commit": "a5f615b",
+      "title": "Policy consistency and zero-baseline capability audit",
+      "priority": "P0",
+      "primaryFounder": "A",
+      "specialists": ["developer-experience-engineer", "reliability-observability-engineer", "test-automation-engineer"],
+      "files": ["AGENTS.md", "CLAUDE.md", "README.md", "docs/BASELINE-MATRIX.md", "docs/DATA_MODEL.md", "docs/DELIVERY-2026-11-20.md", "docs/PRODUCT-CONSTITUTION.md", "docs/ROADMAP.md", "docs/SPRINT-1-OWNERSHIP.md", "docs/agents/OPERATING-STATE.md", "docs/agents/README.md", "docs/agents/organization.json"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Delivery deadline, automatic verified-slice commit/push policy, human approval gates, actual EVREN concurrency, capability maturity states, production build and browser limitations are consistent across canonical instructions and accurately distinguish local verification from external validation.",
+      "evidence": "Organization JSON parsed; agent-organization and command-classification suites passed (2 files, 8 tests); full suite 76 files/708 tests passed with 1 file/9 tests skipped; full eslint and tsc passed; build 94 routes; running-server smoke 22/22; browser visual verification remains unavailable."
     }
   ]
 }
