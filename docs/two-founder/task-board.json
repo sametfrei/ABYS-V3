@@ -165,6 +165,7 @@
     },
     {
       "id": "TB-015",
+      "commit": "653c26b",
       "title": "Enterprise state, semantic graph, optimization and business context",
       "priority": "P1",
       "primaryFounder": "B",
