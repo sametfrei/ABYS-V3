@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { ExecutionAttemptStatus } from "@/components/ExecutionAttemptStatus";
 import { PageHeader } from "@/components/PageHeader";
 import { useSession } from "@/lib/use-session";
 
@@ -21,6 +22,24 @@ interface ActionRow {
   status: string;
   progress_note: string | null;
   related_risk_id: string | null;
+  decision_state: string;
+  event_count: number;
+  last_event_at: string | null;
+  last_event_by: string | null;
+  created_at: string;
+}
+
+interface ExecutionIntent {
+  id: string;
+  action_id: string;
+  idempotency_key: string;
+  mode: "manual" | "system";
+  target_system: string | null;
+  summary: string;
+  status: "prepared" | "approved" | "cancelled";
+  prepared_by_name: string;
+  approved_by_name: string | null;
+  approved_at: string | null;
   created_at: string;
 }
 
@@ -30,6 +49,23 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
   done: { label: "Tamamlandı", color: "var(--abys-healthy)" },
   cancelled: { label: "İptal", color: "var(--abys-critical)" },
 };
+
+const DECISION_STATE_LABEL: Record<string, string> = {
+  draft: "Taslak",
+  under_review: "İnceleniyor",
+  awaiting_approval: "Onay bekliyor",
+  approved: "Onaylandı",
+  rejected: "Reddedildi",
+  in_execution: "Yürütmede",
+  completed: "Tamamlandı",
+  outcome_review: "Sonuç incelemesi",
+  closed: "Kapandı",
+};
+
+function newIntentKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `intent-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 export default function ActionsPage() {
   const session = useSession();
@@ -104,6 +140,7 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState(action.progress_note ?? "");
   const [showOutcome, setShowOutcome] = useState(false);
+  const [showExecution, setShowExecution] = useState(false);
   const meta = STATUS_META[action.status] ?? STATUS_META.open;
 
   async function patch(status?: string) {
@@ -115,7 +152,15 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ actionId: action.id, status, progressNote: note || undefined }),
       });
-      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? "Aksiyon güncellenemedi.");
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as
+          | { error?: string; decisionState?: string }
+          | null;
+        const stateSuffix = payload?.decisionState
+          ? ` Karar durumu: ${DECISION_STATE_LABEL[payload.decisionState] ?? payload.decisionState}.`
+          : "";
+        throw new Error((payload?.error ?? "Aksiyon güncellenemedi.") + stateSuffix);
+      }
       onChanged();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Aksiyon güncellenemedi.");
@@ -138,6 +183,15 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
       <p className="text-xs text-abys-muted mb-3">
         Sorumlu: {action.owner} · Son tarih: {action.due_at ? new Date(action.due_at).toLocaleDateString("tr-TR") : "belirlenmedi"} · Köken karar: <span className="font-mono">{action.decision_id.slice(0, 8)}</span>
       </p>
+      <p className="text-xs text-abys-muted mb-3">
+        Karar durumu: {DECISION_STATE_LABEL[action.decision_state] ?? action.decision_state} ·{" "}
+        {action.event_count} yürütme olayı
+        {action.last_event_at && (
+          <>
+            {" "}· Son olay: {action.last_event_by} / {new Date(action.last_event_at).toLocaleString("tr-TR")}
+          </>
+        )}
+      </p>
       <p className="text-[11px] text-abys-muted mb-3">
         İlgili risk: <span className="font-mono">{action.related_risk_id ? action.related_risk_id : "risk referansı yok"}</span>
       </p>
@@ -152,17 +206,22 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
       />
 
       <div className="flex flex-wrap gap-2">
-        {action.status !== "in_progress" && action.status !== "done" && (
+        {action.status === "open" && (
           <button onClick={() => patch("in_progress")} disabled={busy} className="text-xs rounded-full bg-abys-navy text-white px-3 py-1.5 hover:opacity-90 disabled:opacity-50">
             Yürütmeye al
           </button>
         )}
-        {action.status !== "done" && (
+        {action.status === "in_progress" && (
           <button onClick={() => patch("done")} disabled={busy} className="text-xs rounded-full bg-abys-healthy text-white px-3 py-1.5 hover:opacity-90 disabled:opacity-50">
             Tamamlandı işaretle
           </button>
         )}
-        <button onClick={() => patch()} disabled={busy} className="text-xs rounded-full border border-abys-ink/15 px-3 py-1.5 hover:bg-white/60 disabled:opacity-50">
+        {(action.status === "open" || action.status === "in_progress") && (
+          <button onClick={() => patch("cancelled")} disabled={busy} className="text-xs rounded-full border border-abys-critical/30 text-abys-critical px-3 py-1.5 hover:bg-abys-critical-soft disabled:opacity-50">
+            İptal et
+          </button>
+        )}
+        <button onClick={() => patch(action.status)} disabled={busy || !note.trim() || action.status === "done" || action.status === "cancelled"} className="text-xs rounded-full border border-abys-ink/15 px-3 py-1.5 hover:bg-white/60 disabled:opacity-50">
           Notu kaydet
         </button>
         {action.status === "done" && (
@@ -170,9 +229,169 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
             {showOutcome ? "Sonuç formunu kapat" : "Sonuç & ders kaydet"}
           </button>
         )}
+        {(action.status === "open" || action.status === "in_progress") && (
+          <button onClick={() => setShowExecution((v) => !v)} className="text-xs rounded-full border border-abys-navy/25 text-abys-navy px-3 py-1.5 hover:bg-white/60">
+            {showExecution ? "Hazırlığı kapat" : "Yürütme hazırlığı"}
+          </button>
+        )}
       </div>
 
       {showOutcome && <OutcomeForm decisionId={action.decision_id} onDone={() => { setShowOutcome(false); onChanged(); }} />}
+      {showExecution && <ExecutionIntentPanel actionId={action.id} />}
+    </div>
+  );
+}
+
+function ExecutionIntentPanel({ actionId }: { actionId: string }) {
+  const [intents, setIntents] = useState<ExecutionIntent[]>([]);
+  const [summary, setSummary] = useState("");
+  const [targetSystem, setTargetSystem] = useState("");
+  const [mode, setMode] = useState<"manual" | "system">("manual");
+  const [idempotencyKey, setIdempotencyKey] = useState(newIntentKey);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    const res = await fetch(`/api/actions/execution-intents?actionId=${encodeURIComponent(actionId)}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      setError("Yürütme hazırlıkları yüklenemedi.");
+      return;
+    }
+    const payload = (await res.json()) as { intents?: ExecutionIntent[] };
+    setIntents(Array.isArray(payload.intents) ? payload.intents : []);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/actions/execution-intents?actionId=${encodeURIComponent(actionId)}`, {
+      cache: "no-store",
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error("load_failed");
+        const payload = (await res.json()) as { intents?: ExecutionIntent[] };
+        if (!cancelled) setIntents(Array.isArray(payload.intents) ? payload.intents : []);
+      })
+      .catch(() => {
+        if (!cancelled) setError("Yürütme hazırlıkları yüklenemedi.");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [actionId]);
+
+  async function prepare() {
+    if (!summary.trim() || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/actions/execution-intents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          actionId,
+          idempotencyKey,
+          mode,
+          targetSystem: targetSystem.trim() || undefined,
+          summary: summary.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Yürütme hazırlığı oluşturulamadı.");
+      }
+      setSummary("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Yürütme hazırlığı oluşturulamadı.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function approve(intentId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/actions/execution-intents", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intentId }),
+      });
+      if (!res.ok) {
+        const payload = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? "Yürütme hazırlığı onaylanamadı.");
+      }
+      setIdempotencyKey(newIntentKey());
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Yürütme hazırlığı onaylanamadı.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-4 pt-4 border-t border-abys-cream-border space-y-2">
+      <p className="text-xs font-semibold text-abys-muted">YÜRÜTME HAZIRLIĞI</p>
+      <p className="text-[11px] text-abys-muted">
+        Bu adım dış sistemde işlem yapmaz. Yalnızca insan onaylı, idempotent niyet kaydı oluşturur.
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {(["manual", "system"] as const).map((value) => (
+          <button
+            key={value}
+            onClick={() => setMode(value)}
+            className={`text-xs rounded-full px-3 py-1.5 border ${mode === value ? "bg-abys-navy text-white border-abys-navy" : "border-abys-ink/15 hover:bg-white/60"}`}
+          >
+            {value === "manual" ? "Manuel" : "Sistem"}
+          </button>
+        ))}
+      </div>
+      <input
+        value={targetSystem}
+        onChange={(e) => setTargetSystem(e.target.value)}
+        placeholder="Hedef sistem (opsiyonel, ör. ERP)"
+        className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
+      />
+      <textarea
+        value={summary}
+        onChange={(e) => setSummary(e.target.value)}
+        rows={2}
+        placeholder="Ne yapılacak? (dış çağrı yapılmayacak)"
+        className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
+      />
+      {error && <p className="text-xs text-abys-critical">{error}</p>}
+      <button onClick={prepare} disabled={busy || !summary.trim()} className="text-xs rounded-full bg-abys-navy text-white px-4 py-1.5 hover:opacity-90 disabled:opacity-50">
+        {busy ? "Kaydediliyor…" : "Hazırlığı kaydet"}
+      </button>
+      {intents.length > 0 && (
+        <ul className="space-y-1 list-none p-0 m-0 pt-2">
+          {intents.map((intent) => (
+            <li key={intent.id} className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2 text-xs">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <span className="text-abys-ink">{intent.summary}</span>
+                <span className="text-abys-muted">
+                  {intent.status === "prepared" ? "Onay bekliyor" : intent.status === "approved" ? "Onaylandı" : "İptal"}
+                </span>
+              </div>
+              <p className="mt-0.5 text-[11px] text-abys-muted">
+                {intent.mode === "manual" ? "Manuel" : "Sistem"}
+                {intent.target_system ? ` · ${intent.target_system}` : ""}
+                {" "}· {intent.prepared_by_name}
+                {intent.approved_by_name ? ` · onay: ${intent.approved_by_name}` : ""}
+              </p>
+              <ExecutionAttemptStatus key={`${intent.id}:${intent.status}`} intentId={intent.id} />
+              {intent.status === "prepared" && (
+                <button onClick={() => approve(intent.id)} disabled={busy} className="mt-1 text-[11px] rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft disabled:opacity-50">
+                  İnsan onayı ver
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
