@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-20",
+  "states": ["BACKLOG", "READY", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "IMPLEMENTED", "REVIEW_REQUIRED", "VERIFIED", "INTEGRATED", "COMPLETED", "DEFERRED"],
+  "tasks": [
+    {
+      "id": "TF-001",
+      "title": "Two-founder bootstrap and capability verification",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": ["developer-experience-engineer"],
+      "files": ["docs/two-founder/OPERATING-MODEL.md", "docs/two-founder/CAPACITY-DIAGNOSIS.md"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Founder A has a separate process and thread, same EVREN profile, a successful model response, a bounded contribution and independent verification.",
+      "evidence": "Founder A PID 31357; thread 01a1f8d2-cba6-76b1-8556-ad8b51b5f7d9; model deepseek-v4.1-flash; tsc and eslint passed."
+    },
+    {
+      "id": "TF-002",
+      "title": "Founder A bounded executive-action summary",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": ["executive-ux-engineer", "frontend-platform-engineer"],
+      "files": ["src/app/dashboard/actions/page.tsx", "docs/two-founder/founder-a/INDEPENDENCE-REPORT.md"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Executive counts use existing loaded actions only; loading and empty states remain honest; accessibility is present; tsc and eslint pass.",
+      "evidence": "59 production lines added; npx tsc --noEmit passed; npx eslint src/app/dashboard/actions/page.tsx passed; independent Founder B review passed."
+    },
+    {
+      "id": "TF-003",
+      "title": "Execution attempt read-only API",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": ["api-contract-engineer", "identity-tenant-security-engineer"],
+      "files": ["src/app/api/actions/execution-intents/[id]/attempts/route.ts", "src/lib/db/repos/execution-attempts.ts", "tests/execution-attempts-api.test.ts"],
+      "status": "COMPLETED",
+      "commit": "46e9b9f",
+      "evidence": "19 targeted tests passed; tsc and eslint passed."
+    },
+    {
+      "id": "TF-004",
+      "title": "Deterministic causal evidence calibration",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": ["predictive-causal-intelligence-engineer"],
+      "files": ["src/lib/causal-evidence.ts", "src/lib/decision-brief.ts", "tests/causal-evidence.test.ts", "tests/decision-brief.test.ts"],
+      "status": "COMPLETED",
+      "commit": "e7ff0de",
+      "evidence": "12 targeted tests passed; tsc and eslint passed."
+    },
+    {
+      "id": "TF-005",
+      "title": "Execution attempt status in action UI",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": ["executive-ux-engineer", "frontend-platform-engineer"],
+      "files": ["src/components/ExecutionAttemptStatus.tsx", "src/app/dashboard/actions/page.tsx"],
+      "status": "COMPLETED",
+      "commit": "84ee194",
+      "evidence": "tsc, eslint and diff check passed; browser verification unavailable."
+    },
+    {
+      "id": "TF-006",
+      "title": "Bitrix24 mapped-record sync audit",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": ["crm-integration-engineer", "synchronization-event-engineer"],
+      "files": ["src/lib/integrations/bitrix24/sync.ts", "src/app/api/integrations/bitrix24/sync/route.ts", "tests/bitrix24-api.test.ts", "tests/bitrix24-mapper.test.ts"],
+      "status": "BLOCKED",
+      "blocker": "Previous Peirce run ended with HTTP 429 request f48e3f4b-d59f-4606-b6eb-03b8ef75780d after analysis; no mapped-record persistence change was produced.",
+      "nextAction": "Re-run only after a free model slot and a new capacity check; preserve the queued scope."
+    },
+    {
+      "id": "TF-007",
+      "title": "Full integration verification",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": ["test-automation-engineer", "reliability-observability-engineer"],
+      "files": ["tests/**", "package.json"],
+      "status": "READY",
+      "acceptanceCriteria": "Run the full Vitest suite and production build after the next integration point; report actual counts, failures and warnings."
+    }
+  ]
+}
