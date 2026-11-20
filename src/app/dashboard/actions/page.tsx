@@ -62,6 +62,24 @@ const DECISION_STATE_LABEL: Record<string, string> = {
   closed: "Kapandı",
 };
 
+interface ActionSummaryCounts {
+  open: number;
+  in_progress: number;
+  done: number;
+  cancelled: number;
+}
+
+function summarizeActions(actions: ActionRow[]): ActionSummaryCounts {
+  const counts: ActionSummaryCounts = { open: 0, in_progress: 0, done: 0, cancelled: 0 };
+  for (const action of actions) {
+    if (action.status === "open") counts.open += 1;
+    else if (action.status === "in_progress") counts.in_progress += 1;
+    else if (action.status === "done") counts.done += 1;
+    else if (action.status === "cancelled") counts.cancelled += 1;
+  }
+  return counts;
+}
+
 function newIntentKey(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   return `intent-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -104,6 +122,8 @@ export default function ActionsPage() {
     };
   }, [session, reloadKey]);
 
+  const summary = actions === null ? null : summarizeActions(actions);
+
   return (
     <div>
       <PageHeader
@@ -117,6 +137,7 @@ export default function ActionsPage() {
           <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3 mb-4">{error}</p>
         )}
         {actions === null && <p className="text-sm text-abys-muted">Yükleniyor…</p>}
+        {actions !== null && actions.length > 0 && summary && <ActionSummary counts={summary} />}
         {actions !== null && actions.length === 0 && !error && (
           <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-8 text-center">
             <p className="text-sm text-abys-muted">
@@ -132,6 +153,44 @@ export default function ActionsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function ActionSummary({ counts }: { counts: ActionSummaryCounts }) {
+  const activeCount = counts.open + counts.in_progress;
+  const items = [
+    { key: "open", label: "Açık", hint: "Henüz başlamadı", value: counts.open },
+    { key: "in_progress", label: "Yürütülüyor", hint: "Devam ediyor", value: counts.in_progress },
+    { key: "done", label: "Tamamlandı", hint: "Tamamlanan iş", value: counts.done },
+    { key: "cancelled", label: "İptal", hint: "İptal edilen iş", value: counts.cancelled },
+  ];
+
+  return (
+    <section aria-labelledby="action-summary-heading" className="mb-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+        <h2 id="action-summary-heading" className="text-xs font-semibold tracking-widest text-abys-muted uppercase">
+          Yönetici özeti
+        </h2>
+        <p className="text-xs text-abys-muted">
+          Açık iş: <span className="font-semibold text-abys-navy">{activeCount}</span>
+          {" "}· Tamamlanan iş: <span className="font-semibold text-abys-healthy">{counts.done}</span>
+        </p>
+      </div>
+      <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 m-0">
+        {items.map((item) => (
+          <div key={item.key} className="rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3">
+            <dt className="text-[11px] tracking-wide text-abys-muted uppercase">{item.label}</dt>
+            <dd className="font-serif text-2xl text-abys-navy m-0" aria-label={`${item.label}: ${item.value}`}>
+              {item.value}
+            </dd>
+            <p className="text-[11px] text-abys-muted m-0">{item.hint}</p>
+          </div>
+        ))}
+      </dl>
+      <p className="sr-only">
+        Açık iş, açık ve yürütülmekte olan aksiyonların toplamıdır; tamamlanan iş yalnızca tamamlandı durumundaki aksiyonları kapsar.
+      </p>
+    </section>
   );
 }
 
