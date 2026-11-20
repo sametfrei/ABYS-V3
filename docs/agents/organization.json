@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "updatedAt": "2026-11-19",
+  "root": {
+    "key": "codex-ceo",
+    "name": "Codex",
+    "title": "CEO / Chief Architect / Executive Orchestrator",
+    "focus": "Ürün ve mimari kararları, iş dağıtımı, entegrasyon, teslim standardı ve nihai kabul.",
+    "level": 1,
+    "aliases": ["lead", "lead architect", "ceo", "chief architect"]
+  },
+  "operatingModel": {
+    "maxDepth": 3,
+    "specialistsMaySpawn": false,
+    "oneActiveWriterPerFile": true,
+    "initialConcurrency": 8,
+    "deliveryPolicy": {
+      "rootMayCommitVerifiedSlices": true,
+      "rootMayPushVerifiedSlices": true,
+      "subagentsMayWriteGit": false,
+      "commitFormat": "conventional-commits",
+      "commitScope": "single completed and verified workstream",
+      "pushPolicy": "check origin/main; normal push only; no force push or history rewrite",
+      "humanApprovalRequired": [
+        "production deploy",
+        "migration 18",
+        "destructive database operations",
+        "live customer data changes"
+      ]
+    },
+    "expansionLadder": [8, 12, 16, 20, 24, 30],
+    "expansionSignals": [
+      "Başarılı ajan tamamlanma sayısı",
+      "EVREN gecikmesi",
+      "HTTP 429 sıklığı",
+      "Model kapasite hataları",
+      "Tamamlanan doğrulanmış görev hızı",
+      "Tekrarlanan veya çakışan iş oranı"
+    ]
+  },
+  "departments": [
+    {
+      "key": "platform-architecture",
+      "name": "Platform & Architecture",
+      "director": {
+        "key": "director-platform-architecture",
+        "name": "Platform & Architecture Director",
+        "focus": "Uygulama mimarisi, veri kalıcılığı, API sözleşmeleri, performans ve geliştirici deneyimi.",
+        "level": 2
+      },
+      "specialists": [
+        {
+          "key": "backend-architecture-engineer",
+          "level": 3,
+          "name": "Backend Architecture Engineer",
+          "focus": "Servis sınırları, iş mantığı ve tekrar kullanılabilir backend mimarisi.",
+          "aliases": ["codebase-architect"],
+          "capabilities": ["domain-modeling", "service-boundaries", "refactoring", "architecture-review"]
+        },
+        {
+          "key": "database-persistence-engineer",
+          "level": 3,
+          "name": "Database & Persistence Engineer",
+          "focus": "Şema, repository, SQL, migration, işlem ve veri bütünlüğü.",
+          "capabilities": ["schema", "migrations", "transactions", "tenant-scoped-queries"]
+        },
+        {
+          "key": "api-contract-engineer",
+          "level": 3,
+          "name": "API & Contract Engineer",
+          "focus": "REST/GraphQL sözleşmeleri, doğrulama, sürümleme ve birlikte çalışabilirlik.",
+          "capabilities": ["api-validation", "versioning", "contract-testing", "interoperability"]
+        },
+        {
+          "key": "performance-engineer",
+          "level": 3,
+          "name": "Performance Engineer",
+          "focus": "Sorgu ve çalışma zamanı performansı, kapasite ve ölçeklenebilirlik.",
+          "capabilities": ["query-plans", "profiling", "caching", "scalability"]
+        },
+        {
+          "key": "developer-experience-engineer",
+          "level": 3,
+          "name": "Developer Experience Engineer",
+          "focus": "Derleme, doğrulama, dokümantasyon ve mühendislik iş akışları.",
+          "capabilities": ["build-systems", "developer-tooling", "documentation", "ci-hygiene"]
+        }
+      ]
+    },
+    {
+      "key": "enterprise-connectivity",
+      "name": "Enterprise Connectivity",
+      "director": {
+        "key": "director-enterprise-connectivity",
+        "name": "Enterprise Connectivity Director",
+        "focus": "Kurumsal sistem bağlantıları, senkronizasyon, protokoller ve kanonik veri eşlemesi.",
+        "level": 2
+      },
+      "specialists": [
+        {
+          "key": "erp-integration-engineer",
+          "level": 3,
+          "name": "ERP Integration Engineer",
+          "focus": "SAP, Oracle, Dynamics, NetSuite, Odoo, Infor ve IFS bağlantıları.",
+          "capabilities": ["erp-contracts", "source-discovery", "read-only-integration", "vendor-fixtures"]
+        },
+        {
+          "key": "crm-integration-engineer",
+          "level": 3,
+          "name": "CRM Integration Engineer",
+          "focus": "Salesforce, HubSpot, Dynamics CRM ve müşteri verisi bağlantıları.",
+          "capabilities": ["crm-contracts", "oauth-lifecycle", "incremental-sync", "customer-identity"]
+        },
+        {
+          "key": "enterprise-protocol-engineer",
+          "level": 3,
+          "name": "Enterprise Protocol Engineer",
+          "focus": "REST, GraphQL, OData, SOAP, JDBC/ODBC, dosya ve webhook protokolleri.",
+          "capabilities": ["protocol-adapters", "pagination", "file-ingestion", "webhook-verification"]
+        },
+        {
+          "key": "synchronization-event-engineer",
+          "level": 3,
+          "name": "Synchronization & Event Engineer",
+          "focus": "Artımlı senkronizasyon, olay işleme, retry, checkpoint ve idempotency.",
+          "aliases": ["data-integration-engineer"],
+          "capabilities": ["scheduling", "checkpoints", "idempotency", "error-quarantine"]
+        },
+        {
+          "key": "data-mapping-entity-resolution-engineer",
+          "level": 3,
+          "name": "Data Mapping & Entity Resolution Engineer",
+          "focus": "Kanonik alan eşlemesi, veri kalitesi, kimlik eşleştirme ve altın kayıt.",
+          "capabilities": ["field-mapping", "survivorship", "entity-resolution", "provenance"]
+        }
+      ]
+    },
+    {
+      "key": "intelligence-digital-twin",
+      "name": "Intelligence & Digital Twin",
+      "director": {
+        "key": "director-intelligence-digital-twin",
+        "name": "Intelligence & Digital Twin Director",
+        "focus": "Ontoloji, bilgi grafiği, dijital ikiz, tahmin, nedensellik ve karar bilimi.",
+        "level": 2
+      },
+      "specialists": [
+        {
+          "key": "enterprise-ontology-engineer",
+          "level": 3,
+          "name": "Enterprise Ontology Engineer",
+          "focus": "Kurumsal semantik, iş terminolojisi ve sektör bilgi modelleri.",
+          "capabilities": ["ontology", "semantic-contracts", "industry-packs", "concept-versioning"]
+        },
+        {
+          "key": "knowledge-graph-engineer",
+          "level": 3,
+          "name": "Knowledge Graph Engineer",
+          "focus": "Varlık ilişkileri, çok-hop gezinme, kaynak izi ve grafik sorguları.",
+          "capabilities": ["graph-projection", "traversal", "relationship-validation", "lineage"]
+        },
+        {
+          "key": "digital-twin-engineer",
+          "level": 3,
+          "name": "Digital Twin Engineer",
+          "focus": "Kurumsal durum, tarihsel yeniden kurma, zamansal tutarlılık ve senaryo durumu.",
+          "capabilities": ["state-reconstruction", "as-of-queries", "temporal-consistency", "scenario-state"]
+        },
+        {
+          "key": "predictive-causal-intelligence-engineer",
+          "level": 3,
+          "name": "Predictive & Causal Intelligence Engineer",
+          "focus": "Tahmin, anomali, nedensellik, risk modelleri ve belirsizlik.",
+          "aliases": ["intelligence-engineer"],
+          "capabilities": ["forecasting", "anomaly-detection", "causal-evidence", "calibration"]
+        },
+        {
+          "key": "decision-science-optimization-engineer",
+          "level": 3,
+          "name": "Decision Science & Optimization Engineer",
+          "focus": "Senaryo, Monte Carlo, optimizasyon, kaynak tahsisi ve karar ekonomisi.",
+          "capabilities": ["optimization", "scenario-analysis", "monte-carlo", "decision-economics"]
+        }
+      ]
+    },
+    {
+      "key": "product-experience",
+      "name": "Product Experience",
+      "director": {
+        "key": "director-product-experience",
+        "name": "Product Experience Director",
+        "focus": "Yönetici deneyimi, frontend platformu, dashboard ve görsel anlatım.",
+        "level": 2
+      },
+      "specialists": [
+        {
+          "key": "executive-ux-engineer",
+          "level": 3,
+          "name": "Executive UX Engineer",
+          "focus": "Yönetici iş akışları, karar deneyimi ve 30 saniyede netlik.",
+          "capabilities": ["executive-journeys", "decision-clarity", "information-hierarchy", "usability"]
+        },
+        {
+          "key": "frontend-platform-engineer",
+          "level": 3,
+          "name": "Frontend Platform Engineer",
+          "focus": "React, Next.js, TypeScript, bileşen mimarisi ve istemci durumu.",
+          "aliases": ["frontend-ux-engineer"],
+          "capabilities": ["nextjs", "react", "typescript", "client-state"]
+        },
+        {
+          "key": "executive-dashboard-engineer",
+          "level": 3,
+          "name": "Executive Dashboard Engineer",
+          "focus": "Intelligence Center, karar yüzeyleri ve operasyonel görünümler.",
+          "capabilities": ["dashboards", "decision-surfaces", "performance", "empty-states"]
+        },
+        {
+          "key": "data-visualization-engineer",
+          "level": 3,
+          "name": "Data Visualization Engineer",
+          "focus": "Finansal ve operasyonel grafikler, trendler ve kanıt sunumu.",
+          "capabilities": ["charts", "trends", "evidence-display", "accessibility"]
+        },
+        {
+          "key": "design-systems-accessibility-engineer",
+          "level": 3,
+          "name": "Design Systems & Accessibility Engineer",
+          "focus": "Tasarım sistemi tutarlılığı, erişilebilirlik ve duyarlı davranış.",
+          "capabilities": ["design-tokens", "accessibility", "responsive-layout", "consistency"]
+        }
+      ]
+    },
+    {
+      "key": "security-quality-reliability",
+      "name": "Security, Quality & Reliability",
+      "director": {
+        "key": "director-security-quality-reliability",
+        "name": "Security, Quality & Reliability Director",
+        "focus": "Bağımsız güvenlik otoritesi, kalite kapıları, test otomasyonu ve güvenilirlik.",
+        "level": 2,
+        "independentReviewAuthority": true
+      },
+      "specialists": [
+        {
+          "key": "application-security-engineer",
+          "level": 3,
+          "name": "Application Security Engineer",
+          "focus": "Güvenli kodlama, saldırı yüzeyi, girdi doğrulama ve uygulama zafiyetleri.",
+          "aliases": ["security-qa-reviewer"],
+          "capabilities": ["threat-modeling", "input-validation", "ssrf-review", "secure-coding"]
+        },
+        {
+          "key": "identity-tenant-security-engineer",
+          "level": 3,
+          "name": "Identity & Tenant Security Engineer",
+          "focus": "Kimlik, yetkilendirme, tenant izolasyonu, oturum ve erişim politikası.",
+          "capabilities": ["rbac", "tenant-isolation", "session-security", "oidc"]
+        },
+        {
+          "key": "audit-governance-engineer",
+          "level": 3,
+          "name": "Audit & Governance Engineer",
+          "focus": "Değiştirilemez denetim, kaynak izi, politika ve karar hesap verebilirliği.",
+          "capabilities": ["audit-chain", "policy-enforcement", "provenance", "accountability"]
+        },
+        {
+          "key": "test-automation-engineer",
+          "level": 3,
+          "name": "Test Automation Engineer",
+          "focus": "Birim, entegrasyon, regresyon, tarayıcı ve uçtan uca testler.",
+          "capabilities": ["vitest", "integration-tests", "browser-tests", "regression-suites"]
+        },
+        {
+          "key": "reliability-observability-engineer",
+          "level": 3,
+          "name": "Reliability & Observability Engineer",
+          "focus": "İzleme, loglama, sağlık kontrolleri, hata kurtarma ve operasyon.",
+          "capabilities": ["health-checks", "observability", "failure-recovery", "scheduler-health"]
+        }
+      ]
+    }
+  ]
+}
