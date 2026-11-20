@@ -424,6 +424,29 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "REST connectors can authenticate with OAuth2 client_credentials; token requests are HTTPS-only, POST-only, DNS-pinned and reject redirects so client secrets and tokens cannot leak to another origin; token_type must be Bearer; ENV var names and token URL are validated at config time.",
       "evidence": "Full suite 76 files/712 tests passed (9 skipped); full eslint clean; tsc --noEmit clean; production build succeeded (94 routes); targeted connector + source-readonly suites passed, covering token-fetch idempotency, Bearer type rejection and HTTPS/POST guard rails. Live vendor token exchange not validated (no customer credentials)."
+    },
+    {
+      "id": "TB-020",
+      "commit": "8200a76",
+      "title": "Decision confidence calibration from realized outcomes",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "decision-intelligence-engineer",
+        "data-scientist",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/decision-calibration.ts",
+        "src/lib/db/repos/decision-ledger.ts",
+        "src/app/dashboard/decision-ledger/page.tsx",
+        "tests/decision-calibration.test.ts",
+        "tests/decision-ledger.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Closed loop: realized decision outcomes feed back into the confidence the system presents. Buckets with fewer than 5 outcomes produce no adjustment; measured buckets report observed improvement rate versus stated confidence, a deterministic shrinkage estimate and an overconfident/aligned/underconfident verdict. No LLM-generated numbers; ledger API and UI expose the same payload.",
+      "evidence": "Full suite 77 files/719 tests passed (9 skipped); eslint clean; tsc --noEmit clean; production build succeeded. Calibration math covered by tests/decision-calibration.test.ts (sample gating, shrinkage, clamping, partial status, bucket boundaries, end-to-end summarizeDecisionLearning -> buildDecisionCalibration) and asserted through the /api/decision-ledger summary in tests/decision-ledger.test.ts."
     }
   ]
 }
