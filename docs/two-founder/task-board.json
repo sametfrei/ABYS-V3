@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T03:10:00Z",
+  "updatedAt": "2026-11-21T03:25:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -746,6 +746,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "A tenant-scoped read-only endpoint reports which snapshots a retention policy would archive (expired by age, over per-label limit) without deleting anything; invalid policy input is clamped to safe defaults.",
       "evidence": "Full suite 83 files/754 tests (9 skipped) passed; eslint, tsc and production build clean; running-server smoke 33/33. Unit tests cover age boundary, per-label limit, invalid dates, dedupe and sanitization; route test proves no deletion and cross-tenant isolation."
+    },
+    {
+      "id": "TB-035",
+      "commit": "6dd10d9",
+      "title": "Smoke coverage for retention plan",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "test-automation-engineer"
+      ],
+      "files": [
+        "scripts/smoke-e2e.mjs",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Running-server smoke asserts the retention endpoint returns 200 with dryRun=true and reports the applied policy.",
+      "evidence": "Smoke 35/35 against the preview server (was 33); endpoint returned 200 with 0 archive candidates under the default policy."
     }
   ]
 }
