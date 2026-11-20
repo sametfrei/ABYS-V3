@@ -153,6 +153,7 @@
     },
     {
       "id": "TB-014",
+      "commit": "147b197",
       "title": "Closed-loop decision, action and governed execution lifecycle",
       "priority": "P0",
       "primaryFounder": "B",
