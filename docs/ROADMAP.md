@@ -72,6 +72,7 @@ Durum ölçeği:
 |---|---|---|
 | Karar kaydı, aksiyon, sonuç, ders | E2E (test) | Mevcut karar/aksiyon/outcome uçları; kabul/değiştir kararında karar + aksiyon + audit tek transaction, `tests/decision-lifecycle.test.ts` rollback kanıtı |
 | Yönetilen aksiyon geçişleri | E2E (test) | `open → in_progress → done`, açık aksiyondan doğrudan tamamlama reddi, karar durumunun `in_execution` / `outcome_review` olarak ilerlemesi, tenant izolasyonu ve audit rollback `tests/action-governance.test.ts` |
+| Geciken aksiyon görünürlüğü | E2E (test) | `src/lib/action-deadline.ts`; yalnızca açık/yürütülen aksiyonlar vade geçmişse geciken sayılır, geçen tam gün raporlanır; `/api/command-center` `overdueCount` ve aksiyon başına bayrak döner, aksiyon ekranı "Vadesi geçti · N gün" gösterir; `tests/action-deadline.test.ts`, `tests/decision-ledger.test.ts` |
 | Değişmez yürütme olayları | E2E (test) | migration 30 append-only `action_events`; aktör kimliği, önceki/yeni durum ve ilerleme notu; `GET /api/actions?eventsFor=...`; UPDATE reddi testte doğrulanır |
 | İdempotent yürütme hazırlığı | E2E (test) | migration 31 `action_execution_intents`; aynı anahtar+içerik aynı kaydı döndürür, farklı içerik 409 alır; insan onayı `approved` durumuna geçirir; dış sistem çağrısı yapılmaz; `tests/execution-intents.test.ts` |
 | Sınırlı dış yürütme adaptörü sözleşmesi | Dış kimlik gerekir | `src/lib/execution/{contracts,gateway}.ts`, migration 32 `action_execution_attempts`; onaylı niyet, hedef allowlist, tek deneme, timeout, sağlayıcı sonucu ve audit testte doğrulanır. Canlı vendor adaptörü/aktarımı gerçek kimlik ve sözleşme olmadan bağlanmaz |
@@ -100,7 +101,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024) aralık kapsama ölçeklemesi (TB-025) ve Infor/IFS/Sage konnektörlerinin adaptöre bağlanması (TB-026) kabuk i18n temeli (TB-028), giriş ekranı yerelleştirmesi (TB-029) ve zamanlanmış tahmin yakalama (TB-030).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024), aralık kapsama ölçeklemesi (TB-025), Infor/IFS/Sage adaptör bağlantısı (TB-026), kabuk i18n temeli (TB-028), giriş ekranı yerelleştirmesi (TB-029), zamanlanmış tahmin yakalama (TB-030) ve geciken aksiyon görünürlüğü (TB-031).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
 2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.

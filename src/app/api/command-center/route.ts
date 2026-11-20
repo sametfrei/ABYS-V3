@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { getConfidenceCalibration } from "@/lib/db/repos/decision-ledger";
+import { isOverdue, overdueDays } from "@/lib/action-deadline";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 
@@ -114,7 +115,15 @@ export async function GET() {
     calibration,
     decisions: decisions.rows.map(({ payload, ...rest }) => { void payload; return rest; }),
     signals: { bySeverity: countMap(signalCounts.rows, "severity"), top: topSignals.rows },
-    actions: { byStatus: countMap(actionCounts.rows, "status"), open: openActions.rows },
+    actions: {
+      byStatus: countMap(actionCounts.rows, "status"),
+      open: openActions.rows.map((row) => ({
+        ...row,
+        overdue: isOverdue(row.due_at, row.status),
+        overdueDays: overdueDays(row.due_at, row.status),
+      })),
+      overdueCount: openActions.rows.filter((row) => isOverdue(row.due_at, row.status)).length,
+    },
     outcomes: outcomes.rows,
     lastActivityAt: lastAudit.rows[0]?.created_at ?? null,
   });

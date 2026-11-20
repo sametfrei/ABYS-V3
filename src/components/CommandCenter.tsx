@@ -47,7 +47,11 @@ interface CommandData {
   calibration?: CalibrationSummary | null;
   decisions: { id: string; title: string; severity: string; confidence: number }[];
   signals: { bySeverity: Record<string, number>; top: { id: string; title: string; severity: string }[] };
-  actions: { byStatus: Record<string, number>; open: { id: string; title: string; owner: string; status: string }[] };
+  actions: {
+    byStatus: Record<string, number>;
+    open: { id: string; title: string; owner: string; status: string; overdue?: boolean; overdueDays?: number | null }[];
+    overdueCount?: number;
+  };
   outcomes: { result: string; note: string; lesson: string | null }[];
   lastActivityAt: string | null;
 }
@@ -287,7 +291,16 @@ export function CommandCenter() {
         </Block>
 
         {/* Açık aksiyonlar */}
-        <Block title="Yürütmedeki aksiyonlar" href="/dashboard/actions" empty={data.actions.open.length === 0} emptyText="Açık aksiyon yok.">
+        <Block
+          title={
+            data.actions.overdueCount
+              ? `Yürütmedeki aksiyonlar · ${data.actions.overdueCount} geciken`
+              : "Yürütmedeki aksiyonlar"
+          }
+          href="/dashboard/actions"
+          empty={data.actions.open.length === 0}
+          emptyText="Açık aksiyon yok."
+        >
           {data.actions.open.map((a) => (
             <li key={a.id} className="flex items-start gap-2 text-sm">
               <Dot color={a.status === "in_progress" ? SEV_COLOR.warning : SEV_COLOR.info} />

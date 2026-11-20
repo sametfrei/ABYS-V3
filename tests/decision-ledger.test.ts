@@ -461,6 +461,7 @@ describe("Decision Value Ledger API'si", () => {
     const body = (await (await commandCenter()).json()) as {
       brief: { confidence: number } | null;
       calibration: { threshold: number; totalWithOutcome: number; buckets: unknown[] };
+      actions: { overdueCount: number; open: Array<{ overdue: boolean; overdueDays: number | null }> };
     };
     // Bu fixture'da açık vaka yok; brifing null olabilir ama kalibrasyon her
     // durumda dönmeli ki yönetici ekranı güveni bağlamlandırabilsin.
@@ -468,6 +469,22 @@ describe("Decision Value Ledger API'si", () => {
     expect(body.calibration.buckets.length).toBe(4);
     expect(body.calibration.totalWithOutcome).toBeGreaterThanOrEqual(2);
     if (body.brief) expect(body.brief.confidence).toBeGreaterThanOrEqual(0);
+    // Fixture'daki aksiyonun vadesi yok; geciken sayısı 0 ve bayrak false olmalı.
+    expect(body.actions.overdueCount).toBe(0);
+    expect(body.actions.open.every((item) => item.overdue === false)).toBe(true);
+  });
+
+  it("vadesi geçmiş açık aksiyon geciken olarak işaretlenir", async () => {
+    const db = getDb();
+    await db.query("UPDATE actions SET due_at = '2026-01-01T00:00:00Z' WHERE id = 'action-rec-1'");
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const body = (await (await commandCenter()).json()) as {
+      actions: { overdueCount: number; open: Array<{ overdue: boolean; overdueDays: number | null }> };
+    };
+    expect(body.actions.overdueCount).toBe(1);
+    const overdue = body.actions.open.find((item) => item.overdue);
+    expect(overdue).toBeTruthy();
+    expect(overdue!.overdueDays).toBeGreaterThan(0);
   });
 
   it("başka kurumun kararları görünmez", async () => {

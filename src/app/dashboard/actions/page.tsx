@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ExecutionAttemptStatus } from "@/components/ExecutionAttemptStatus";
 import { PageHeader } from "@/components/PageHeader";
+import { overdueDays } from "@/lib/action-deadline";
 import { useSession } from "@/lib/use-session";
 
 /**
@@ -242,6 +243,14 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
       <p className="text-xs text-abys-muted mb-3">
         Sorumlu: {action.owner} · Son tarih: {action.due_at ? new Date(action.due_at).toLocaleDateString("tr-TR") : "belirlenmedi"} · Köken karar: <span className="font-mono">{action.decision_id.slice(0, 8)}</span>
       </p>
+      {overdueDays(action.due_at, action.status) !== null && (
+        <p
+          className="text-[11px] font-semibold mb-2 rounded-full inline-block px-2 py-0.5"
+          style={{ color: "var(--abys-critical)", backgroundColor: "var(--abys-critical-soft)" }}
+        >
+          Vadesi geçti · {overdueDays(action.due_at, action.status)} gün
+        </p>
+      )}
       <p className="text-xs text-abys-muted mb-3">
         Karar durumu: {DECISION_STATE_LABEL[action.decision_state] ?? action.decision_state} ·{" "}
         {action.event_count} yürütme olayı
