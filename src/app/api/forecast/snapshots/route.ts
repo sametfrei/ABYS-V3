@@ -8,6 +8,7 @@ import { SESSION_COOKIE } from "../../auth/login/route";
 import { getKpiSeries } from "@/lib/db/repos/forecast";
 import { insertForecastSnapshot, listForecastSnapshots, summarizeSnapshots } from "@/lib/db/repos/forecast-snapshots";
 import { MAX_FORECAST_HORIZON, MIN_FORECAST_POINTS, forecastSeries } from "@/lib/forecasting";
+import { recordAuditEvent } from "@/lib/db/repos/audit";
 
 const postSchema = z.object({
   label: z.string().trim().min(1).max(200),
@@ -79,5 +80,13 @@ export async function POST(req: NextRequest) {
     lastObservedAt,
     createdBy: session.displayName,
   });
+  await recordAuditEvent({
+    orgId: session.orgId,
+    actor: session.displayName,
+    type: "forecast_snapshot_created",
+    summary: `Tahmin anlık görüntüsü: ${label} (${forecast.model})`,
+    detail: id,
+  });
+
   return NextResponse.json({ id, model: forecast.model, p10: first.p10, p50: first.value, p90: first.p90 });
 }

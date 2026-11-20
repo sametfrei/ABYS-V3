@@ -9,6 +9,7 @@ import {
   insertForecastSnapshot,
 } from "@/lib/db/repos/forecast-snapshots";
 import { MIN_FORECAST_POINTS, forecastSeries } from "@/lib/forecasting";
+import { recordAuditEvent } from "@/lib/db/repos/audit";
 
 /** Aynı etiket için bu süre içinde ikinci anlık görüntü alınmaz (tekrar çalıştırma güvenli). */
 const CAPTURE_IDEMPOTENCY_HOURS = 20;
@@ -69,8 +70,19 @@ export async function POST() {
     results.push({ label: label.label, status: "captured", snapshotId });
   }
 
+  const captured = results.filter((item) => item.status === "captured").length;
+  if (captured > 0) {
+    await recordAuditEvent({
+      orgId: session.orgId,
+      actor: session.displayName,
+      type: "forecast_snapshots_captured",
+      summary: `${captured} tahmin anlık görüntüsü yakalandı`,
+      detail: `${CAPTURE_IDEMPOTENCY_HOURS}sa idempotans penceresi`,
+    });
+  }
+
   return NextResponse.json({
-    captured: results.filter((item) => item.status === "captured").length,
+    captured,
     skipped: results.filter((item) => item.status === "skipped_recent").length,
     results,
     idempotencyHours: CAPTURE_IDEMPOTENCY_HOURS,

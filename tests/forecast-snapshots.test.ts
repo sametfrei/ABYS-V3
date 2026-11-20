@@ -156,6 +156,13 @@ describe("Tahmin anlık görüntüsü kalibrasyonu", () => {
     );
     expect(after.summary.evaluated).toBe(1);
     expect(after.summary.hitRate).toBe(after.snapshots[0].evaluation.insideRange ? 1 : 0);
+    const audited = await getDb().query<{ summary: string; prev_hash: string | null }>(
+      "SELECT summary, prev_hash FROM audit_events WHERE org_id = $1 AND type = $2 ORDER BY created_at DESC LIMIT 1",
+      [ORG, "forecast_snapshot_created"]
+    );
+    expect(audited.rows).toHaveLength(1);
+    expect(audited.rows[0].summary).toContain(LABEL);
+    expect(audited.rows[0].prev_hash).not.toBeNull();
   });
 
   it("yetersiz gözlemde 422 döner ve kayıt oluşmaz", async () => {
@@ -207,6 +214,12 @@ describe("Tahmin anlık görüntüsü kalibrasyonu", () => {
     expect(first.skipped).toBe(0);
     expect(first.results.find((r) => r.label === "Ciro")?.status).toBe("captured");
     expect(first.results.find((r) => r.label === "Az veri")?.status).toBe("insufficient_data");
+    const audited = await db.query<{ summary: string }>(
+      "SELECT summary FROM audit_events WHERE org_id = $1 AND type = $2 ORDER BY created_at DESC LIMIT 1",
+      [org, "forecast_snapshots_captured"]
+    );
+    expect(audited.rows).toHaveLength(1);
+    expect(audited.rows[0].summary).toContain("1");
 
     const second = (await (await capture()).json()) as {
       captured: number;
