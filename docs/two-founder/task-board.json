@@ -1,15 +1,32 @@
 {
   "version": 1,
   "updatedAt": "2026-11-20",
-  "states": ["BACKLOG", "READY", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "IMPLEMENTED", "REVIEW_REQUIRED", "VERIFIED", "INTEGRATED", "COMPLETED", "DEFERRED"],
+  "states": [
+    "BACKLOG",
+    "READY",
+    "ASSIGNED",
+    "IN_PROGRESS",
+    "BLOCKED",
+    "IMPLEMENTED",
+    "REVIEW_REQUIRED",
+    "VERIFIED",
+    "INTEGRATED",
+    "COMPLETED",
+    "DEFERRED"
+  ],
   "tasks": [
     {
       "id": "TF-001",
       "title": "Two-founder bootstrap and capability verification",
       "priority": "P0",
       "primaryFounder": "B",
-      "specialists": ["developer-experience-engineer"],
-      "files": ["docs/two-founder/OPERATING-MODEL.md", "docs/two-founder/CAPACITY-DIAGNOSIS.md"],
+      "specialists": [
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "docs/two-founder/OPERATING-MODEL.md",
+        "docs/two-founder/CAPACITY-DIAGNOSIS.md"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Founder A has a separate process and thread, same EVREN profile, a successful model response, a bounded contribution and independent verification.",
       "evidence": "Founder A PID 31357; thread 01a1f8d2-cba6-76b1-8556-ad8b51b5f7d9; model deepseek-v4.1-flash; tsc and eslint passed."
@@ -19,8 +36,14 @@
       "title": "Founder A bounded executive-action summary",
       "priority": "P1",
       "primaryFounder": "A",
-      "specialists": ["executive-ux-engineer", "frontend-platform-engineer"],
-      "files": ["src/app/dashboard/actions/page.tsx", "docs/two-founder/founder-a/INDEPENDENCE-REPORT.md"],
+      "specialists": [
+        "executive-ux-engineer",
+        "frontend-platform-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/actions/page.tsx",
+        "docs/two-founder/founder-a/INDEPENDENCE-REPORT.md"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Executive counts use existing loaded actions only; loading and empty states remain honest; accessibility is present; tsc and eslint pass.",
       "evidence": "59 production lines added; npx tsc --noEmit passed; npx eslint src/app/dashboard/actions/page.tsx passed; independent Founder B review passed."
@@ -30,8 +53,15 @@
       "title": "Execution attempt read-only API",
       "priority": "P1",
       "primaryFounder": "B",
-      "specialists": ["api-contract-engineer", "identity-tenant-security-engineer"],
-      "files": ["src/app/api/actions/execution-intents/[id]/attempts/route.ts", "src/lib/db/repos/execution-attempts.ts", "tests/execution-attempts-api.test.ts"],
+      "specialists": [
+        "api-contract-engineer",
+        "identity-tenant-security-engineer"
+      ],
+      "files": [
+        "src/app/api/actions/execution-intents/[id]/attempts/route.ts",
+        "src/lib/db/repos/execution-attempts.ts",
+        "tests/execution-attempts-api.test.ts"
+      ],
       "status": "COMPLETED",
       "commit": "46e9b9f",
       "evidence": "19 targeted tests passed; tsc and eslint passed."
@@ -41,8 +71,15 @@
       "title": "Deterministic causal evidence calibration",
       "priority": "P1",
       "primaryFounder": "B",
-      "specialists": ["predictive-causal-intelligence-engineer"],
-      "files": ["src/lib/causal-evidence.ts", "src/lib/decision-brief.ts", "tests/causal-evidence.test.ts", "tests/decision-brief.test.ts"],
+      "specialists": [
+        "predictive-causal-intelligence-engineer"
+      ],
+      "files": [
+        "src/lib/causal-evidence.ts",
+        "src/lib/decision-brief.ts",
+        "tests/causal-evidence.test.ts",
+        "tests/decision-brief.test.ts"
+      ],
       "status": "COMPLETED",
       "commit": "e7ff0de",
       "evidence": "12 targeted tests passed; tsc and eslint passed."
@@ -52,8 +89,14 @@
       "title": "Execution attempt status in action UI",
       "priority": "P1",
       "primaryFounder": "A",
-      "specialists": ["executive-ux-engineer", "frontend-platform-engineer"],
-      "files": ["src/components/ExecutionAttemptStatus.tsx", "src/app/dashboard/actions/page.tsx"],
+      "specialists": [
+        "executive-ux-engineer",
+        "frontend-platform-engineer"
+      ],
+      "files": [
+        "src/components/ExecutionAttemptStatus.tsx",
+        "src/app/dashboard/actions/page.tsx"
+      ],
       "status": "COMPLETED",
       "commit": "84ee194",
       "evidence": "tsc, eslint and diff check passed; browser verification unavailable."
@@ -63,8 +106,16 @@
       "title": "Bitrix24 mapped-record sync audit",
       "priority": "P1",
       "primaryFounder": "B",
-      "specialists": ["crm-integration-engineer", "synchronization-event-engineer"],
-      "files": ["src/lib/integrations/bitrix24/sync.ts", "src/app/api/integrations/bitrix24/sync/route.ts", "tests/bitrix24-api.test.ts", "tests/bitrix24-mapper.test.ts"],
+      "specialists": [
+        "crm-integration-engineer",
+        "synchronization-event-engineer"
+      ],
+      "files": [
+        "src/lib/integrations/bitrix24/sync.ts",
+        "src/app/api/integrations/bitrix24/sync/route.ts",
+        "tests/bitrix24-api.test.ts",
+        "tests/bitrix24-mapper.test.ts"
+      ],
       "status": "COMPLETED",
       "acceptanceCriteria": "Mapped Bitrix24 records are persisted through the canonical connector path, source IDs are namespaced, event records satisfy required canonical fields, retries are idempotent and the HTTP response does not leak internal canonical payloads.",
       "evidence": "Demo sync persisted records through upsertCanonicalRecords; company and contact IDs are namespaced; event records include event_type/occurred_at; repeated sync preserved row count; targeted API, mapper and quarantine tests passed (45 tests); tsc and eslint passed."
@@ -74,8 +125,14 @@
       "title": "Full integration verification",
       "priority": "P0",
       "primaryFounder": "B",
-      "specialists": ["test-automation-engineer", "reliability-observability-engineer"],
-      "files": ["tests/**", "package.json"],
+      "specialists": [
+        "test-automation-engineer",
+        "reliability-observability-engineer"
+      ],
+      "files": [
+        "tests/**",
+        "package.json"
+      ],
       "status": "COMPLETED",
       "acceptanceCriteria": "Run the full Vitest suite and production build after the next integration point; report actual counts, failures and warnings.",
       "evidence": "Revalidated on 2026-11-20: 76 test files passed and 1 governance file skipped; 708 tests passed and 9 skipped; production build passed with 94 routes; running-server smoke passed 22/22."
@@ -85,8 +142,14 @@
       "title": "Founder A Command Center clarity workstream",
       "priority": "P1",
       "primaryFounder": "A",
-      "specialists": ["executive-ux-engineer", "executive-dashboard-engineer"],
-      "files": ["src/components/CommandCenter.tsx", "docs/two-founder/founder-a/WORKSTREAM-002.md"],
+      "specialists": [
+        "executive-ux-engineer",
+        "executive-dashboard-engineer"
+      ],
+      "files": [
+        "src/components/CommandCenter.tsx",
+        "docs/two-founder/founder-a/WORKSTREAM-002.md"
+      ],
       "status": "COMPLETED",
       "acceptanceCriteria": "First executive viewport makes the 3-5 most important developments and next action clear using existing data only; preserve ABYS identity; tsc and targeted eslint pass.",
       "ownerProcess": "Founder A resumed thread 01a1f8d2-cba6-76b1-8556-ad8b51b5f7d9",
@@ -97,8 +160,15 @@
       "title": "Forecast evidence, uncertainty and limitations",
       "priority": "P1",
       "primaryFounder": "A",
-      "specialists": ["predictive-causal-intelligence-engineer", "executive-ux-engineer"],
-      "files": ["src/app/dashboard/forecast/page.tsx", "tests/forecast-evidence.test.ts", "docs/two-founder/founder-a/WORKSTREAM-003.md"],
+      "specialists": [
+        "predictive-causal-intelligence-engineer",
+        "executive-ux-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/forecast/page.tsx",
+        "tests/forecast-evidence.test.ts",
+        "docs/two-founder/founder-a/WORKSTREAM-003.md"
+      ],
       "status": "COMPLETED",
       "acceptanceCriteria": "Show only forecast evidence present in the existing API payload; expose MAE, P10-P90, observation freshness and assumptions; state unavailable data honestly; introduce no invented confidence or causal claims.",
       "ownerProcess": "Founder A resumed thread 01a1f8d2-cba6-76b1-8556-ad8b51b5f7d9",
@@ -109,8 +179,14 @@
       "title": "Top decision-case evidence and consequence visibility",
       "priority": "P1",
       "primaryFounder": "A",
-      "specialists": ["executive-ux-engineer", "executive-dashboard-engineer"],
-      "files": ["src/app/dashboard/page.tsx", "docs/two-founder/founder-a/WORKSTREAM-004.md"],
+      "specialists": [
+        "executive-ux-engineer",
+        "executive-dashboard-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/page.tsx",
+        "docs/two-founder/founder-a/WORKSTREAM-004.md"
+      ],
       "status": "COMPLETED",
       "acceptanceCriteria": "The dashboard's top open decision case shows only existing evidence reliability, confidence rationale, counterfactual impact/horizon and recommended expected outcome, with truthful fallbacks and no invented values.",
       "ownerProcess": "Founder A resumed thread 01a1f8d2-cba6-76b1-8556-ad8b51b5f7d9",
@@ -121,8 +197,16 @@
       "title": "Release-candidate closure and delivery record",
       "priority": "P0",
       "primaryFounder": "B",
-      "specialists": ["test-automation-engineer", "reliability-observability-engineer", "developer-experience-engineer"],
-      "files": ["docs/DELIVERY-2026-11-20.md", "README.md", "docs/ROADMAP.md"],
+      "specialists": [
+        "test-automation-engineer",
+        "reliability-observability-engineer",
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "docs/DELIVERY-2026-11-20.md",
+        "README.md",
+        "docs/ROADMAP.md"
+      ],
       "status": "COMPLETED",
       "acceptanceCriteria": "Current tree passes tests, TypeScript, full lint, production build and a running-server smoke; delivery evidence and external gates are recorded honestly.",
       "evidence": "76 test files and 708 tests passed; 94-route production build passed; full ESLint passed; live HTTP smoke passed 22/22; audit chain valid; migration head 33 with migration 18 still gated."
@@ -133,8 +217,22 @@
       "title": "Trust foundation and migration governance",
       "priority": "P0",
       "primaryFounder": "B",
-      "specialists": ["database-persistence-engineer", "application-security-engineer", "reliability-observability-engineer"],
-      "files": ["src/lib/db/client.ts", "src/lib/db/migrations.ts", "src/lib/db/migration-guard.ts", "src/lib/demo/tais/seed.ts", "src/app/api/auth/login/route.ts", "src/app/api/auth/oidc/callback/route.ts", "src/app/api/health/route.ts", "src/app/api/organizations/route.ts", "src/app/api/organizations/consolidation/route.ts"],
+      "specialists": [
+        "database-persistence-engineer",
+        "application-security-engineer",
+        "reliability-observability-engineer"
+      ],
+      "files": [
+        "src/lib/db/client.ts",
+        "src/lib/db/migrations.ts",
+        "src/lib/db/migration-guard.ts",
+        "src/lib/demo/tais/seed.ts",
+        "src/app/api/auth/login/route.ts",
+        "src/app/api/auth/oidc/callback/route.ts",
+        "src/app/api/health/route.ts",
+        "src/app/api/organizations/route.ts",
+        "src/app/api/organizations/consolidation/route.ts"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Login and OIDC do not auto-seed demo data; migration 18 remains approval-gated; health exposes pending approvals; hierarchy endpoints fail safely while migration 18 is pending; demo reset remains transactionally safe.",
       "evidence": "Targeted governance/auth/organization suites passed: 6 files, 32 tests; migration-18 dependent suite skipped as designed; tsc and eslint passed."
@@ -145,8 +243,24 @@
       "title": "Enterprise connectivity and canonical data fabric",
       "priority": "P0",
       "primaryFounder": "B",
-      "specialists": ["enterprise-protocol-engineer", "synchronization-event-engineer", "data-mapping-entity-resolution-engineer", "identity-tenant-security-engineer"],
-      "files": ["src/lib/connectors", "src/lib/db/repos/connectors.ts", "src/lib/db/repos/connector-promotion.ts", "src/lib/db/repos/connector-sync.ts", "src/app/api/connectors", "src/app/api/canonical-contracts", "src/app/api/canonical-entities", "src/app/api/survivorship-policies", "src/app/api/data-quality", "scripts/connector-scheduler.mjs"],
+      "specialists": [
+        "enterprise-protocol-engineer",
+        "synchronization-event-engineer",
+        "data-mapping-entity-resolution-engineer",
+        "identity-tenant-security-engineer"
+      ],
+      "files": [
+        "src/lib/connectors",
+        "src/lib/db/repos/connectors.ts",
+        "src/lib/db/repos/connector-promotion.ts",
+        "src/lib/db/repos/connector-sync.ts",
+        "src/app/api/connectors",
+        "src/app/api/canonical-contracts",
+        "src/app/api/canonical-entities",
+        "src/app/api/survivorship-policies",
+        "src/app/api/data-quality",
+        "scripts/connector-scheduler.mjs"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Generic read-only connectors validate canonical contracts, quarantine invalid rows, persist idempotently, promote KPI/process events, expose mapping/scheduler health, resolve strong identities and preserve tenant isolation.",
       "evidence": "Nine connector/canonical/security suites passed: 64 tests; targeted eslint and tsc passed."
@@ -157,8 +271,25 @@
       "title": "Closed-loop decision, action and governed execution lifecycle",
       "priority": "P0",
       "primaryFounder": "B",
-      "specialists": ["backend-architecture-engineer", "application-security-engineer", "decision-science-optimization-engineer"],
-      "files": ["src/app/api/actions", "src/app/api/decisions", "src/app/api/outcomes", "src/app/api/decision-cases", "src/lib/db/repos/actions.ts", "src/lib/db/repos/decisions.ts", "src/lib/db/repos/decision-ledger.ts", "src/lib/db/repos/decision-lifecycle.ts", "src/lib/db/repos/execution-intents.ts", "src/lib/db/repos/decision-signals.ts", "src/lib/execution", "src/lib/decision-economics.ts"],
+      "specialists": [
+        "backend-architecture-engineer",
+        "application-security-engineer",
+        "decision-science-optimization-engineer"
+      ],
+      "files": [
+        "src/app/api/actions",
+        "src/app/api/decisions",
+        "src/app/api/outcomes",
+        "src/app/api/decision-cases",
+        "src/lib/db/repos/actions.ts",
+        "src/lib/db/repos/decisions.ts",
+        "src/lib/db/repos/decision-ledger.ts",
+        "src/lib/db/repos/decision-lifecycle.ts",
+        "src/lib/db/repos/execution-intents.ts",
+        "src/lib/db/repos/decision-signals.ts",
+        "src/lib/execution",
+        "src/lib/decision-economics.ts"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Decision, action, audit, execution intent/attempt and outcome state transitions are tenant-scoped and transactional; external execution is approval-gated, allowlisted, single-attempt and measured without fabricated impact.",
       "evidence": "Eight lifecycle/execution/economics suites passed: 42 tests; targeted eslint and tsc passed."
@@ -169,8 +300,23 @@
       "title": "Enterprise state, semantic graph, optimization and business context",
       "priority": "P1",
       "primaryFounder": "B",
-      "specialists": ["knowledge-graph-engineer", "digital-twin-engineer", "decision-science-optimization-engineer", "enterprise-ontology-engineer"],
-      "files": ["src/app/api/digital-twin", "src/app/api/optimization", "src/app/api/semantic-graph", "src/app/api/discovery/route.ts", "src/lib/db/repos/enterprise-state.ts", "src/lib/db/repos/semantic-graph.ts", "src/lib/digital-twin-comparison.ts", "src/lib/optimization.ts", "src/lib/semantic-traversal.ts"],
+      "specialists": [
+        "knowledge-graph-engineer",
+        "digital-twin-engineer",
+        "decision-science-optimization-engineer",
+        "enterprise-ontology-engineer"
+      ],
+      "files": [
+        "src/app/api/digital-twin",
+        "src/app/api/optimization",
+        "src/app/api/semantic-graph",
+        "src/app/api/discovery/route.ts",
+        "src/lib/db/repos/enterprise-state.ts",
+        "src/lib/db/repos/semantic-graph.ts",
+        "src/lib/digital-twin-comparison.ts",
+        "src/lib/optimization.ts",
+        "src/lib/semantic-traversal.ts"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Current/historical enterprise state, semantic neighborhoods, scenario deltas, deterministic optimization and human-confirmed business context are tenant-scoped, reproducible and expose provenance/uncertainty honestly.",
       "evidence": "Seven state/semantic/optimization/discovery suites passed: 41 tests; targeted eslint and tsc passed."
@@ -181,8 +327,24 @@
       "title": "Enterprise intelligence workflows in the executive interface",
       "priority": "P1",
       "primaryFounder": "A",
-      "specialists": ["executive-dashboard-engineer", "frontend-platform-engineer", "decision-science-optimization-engineer", "test-automation-engineer"],
-      "files": ["src/app/dashboard/connectors/page.tsx", "src/app/dashboard/data-quality/page.tsx", "src/app/dashboard/decision-ledger/page.tsx", "src/app/dashboard/discovery/page.tsx", "src/app/dashboard/options/page.tsx", "src/app/dashboard/scenarios/page.tsx", "src/components/DecisionIntelligencePanel.tsx", "src/lib/db/repos/forecast.ts", "src/lib/db/repos/kpi-registry.ts", "tests/forecasting.test.ts"],
+      "specialists": [
+        "executive-dashboard-engineer",
+        "frontend-platform-engineer",
+        "decision-science-optimization-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/connectors/page.tsx",
+        "src/app/dashboard/data-quality/page.tsx",
+        "src/app/dashboard/decision-ledger/page.tsx",
+        "src/app/dashboard/discovery/page.tsx",
+        "src/app/dashboard/options/page.tsx",
+        "src/app/dashboard/scenarios/page.tsx",
+        "src/components/DecisionIntelligencePanel.tsx",
+        "src/lib/db/repos/forecast.ts",
+        "src/lib/db/repos/kpi-registry.ts",
+        "tests/forecasting.test.ts"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Executive pages use existing tenant-scoped APIs, expose loading/empty/error and governance states, preserve the ABYS visual language and disclose assumptions, provenance and unavailable evidence without fabricating financial values or certainty.",
       "evidence": "Fifteen product/connector/decision/forecast/scenario suites passed: 122 tests; targeted eslint and tsc passed; production build passed with 94 routes."
@@ -193,8 +355,16 @@
       "title": "Verifiable agent and engineering telemetry",
       "priority": "P1",
       "primaryFounder": "B",
-      "specialists": ["developer-experience-engineer", "reliability-observability-engineer", "test-automation-engineer"],
-      "files": ["scripts/agent-command-center.mjs", "scripts/command-classification.cjs", "tests/command-classification.test.ts"],
+      "specialists": [
+        "developer-experience-engineer",
+        "reliability-observability-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "scripts/agent-command-center.mjs",
+        "scripts/command-classification.cjs",
+        "tests/command-classification.test.ts"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "The command center distinguishes defined, instantiated and active roles from actual session records, detects verification commands without matching file bodies or arguments, and never reports a fabricated active process or successful check.",
       "evidence": "Four classification tests passed; node syntax checks and targeted eslint passed; live /api/state returned 31 defined roles (5 directors, 25 specialists), 18 Codex sessions, 1 active session, configured concurrency 8 and no synthetic lead activity."
@@ -205,11 +375,55 @@
       "title": "Policy consistency and zero-baseline capability audit",
       "priority": "P0",
       "primaryFounder": "A",
-      "specialists": ["developer-experience-engineer", "reliability-observability-engineer", "test-automation-engineer"],
-      "files": ["AGENTS.md", "CLAUDE.md", "README.md", "docs/BASELINE-MATRIX.md", "docs/DATA_MODEL.md", "docs/DELIVERY-2026-11-20.md", "docs/PRODUCT-CONSTITUTION.md", "docs/ROADMAP.md", "docs/SPRINT-1-OWNERSHIP.md", "docs/agents/OPERATING-STATE.md", "docs/agents/README.md", "docs/agents/organization.json"],
+      "specialists": [
+        "developer-experience-engineer",
+        "reliability-observability-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "AGENTS.md",
+        "CLAUDE.md",
+        "README.md",
+        "docs/BASELINE-MATRIX.md",
+        "docs/DATA_MODEL.md",
+        "docs/DELIVERY-2026-11-20.md",
+        "docs/PRODUCT-CONSTITUTION.md",
+        "docs/ROADMAP.md",
+        "docs/SPRINT-1-OWNERSHIP.md",
+        "docs/agents/OPERATING-STATE.md",
+        "docs/agents/README.md",
+        "docs/agents/organization.json"
+      ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Delivery deadline, automatic verified-slice commit/push policy, human approval gates, actual EVREN concurrency, capability maturity states, production build and browser limitations are consistent across canonical instructions and accurately distinguish local verification from external validation.",
       "evidence": "Organization JSON parsed; agent-organization and command-classification suites passed (2 files, 8 tests); full suite 76 files/708 tests passed with 1 file/9 tests skipped; full eslint and tsc passed; build 94 routes; running-server smoke 22/22; browser visual verification remains unavailable."
+    },
+    {
+      "id": "TB-019",
+      "commit": "216bcb0",
+      "title": "OAuth2 client credentials connector auth",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "backend-api-engineer",
+        "security-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/connectors/types.ts",
+        "src/lib/connectors/rest-adapter.ts",
+        "src/lib/connectors/sync-execution.ts",
+        "src/lib/connectors/registry.ts",
+        "src/lib/net/pinned-fetch.ts",
+        "src/app/api/connectors/route.ts",
+        "src/app/dashboard/connectors/page.tsx",
+        "tests/connectors.test.ts",
+        "tests/source-readonly.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "REST connectors can authenticate with OAuth2 client_credentials; token requests are HTTPS-only, POST-only, DNS-pinned and reject redirects so client secrets and tokens cannot leak to another origin; token_type must be Bearer; ENV var names and token URL are validated at config time.",
+      "evidence": "Full suite 76 files/712 tests passed (9 skipped); full eslint clean; tsc --noEmit clean; production build succeeded (94 routes); targeted connector + source-readonly suites passed, covering token-fetch idempotency, Bearer type rejection and HTTPS/POST guard rails. Live vendor token exchange not validated (no customer credentials)."
     }
   ]
 }
