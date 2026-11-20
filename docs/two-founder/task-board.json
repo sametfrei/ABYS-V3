@@ -657,6 +657,30 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "A single authenticated call captures one snapshot per forecastable KPI label, is safe to re-run within 20 hours per label, and reports insufficient/unforecastable labels instead of dropping them.",
       "evidence": "Full suite 80 files/737 tests passed (9 skipped); eslint, tsc and production build clean. Test asserts first call captures the forecastable label, second call skips it, and a label below the minimum observation count is reported as insufficient_data."
+    },
+    {
+      "id": "TB-031",
+      "commit": "0a303eb",
+      "title": "Overdue action visibility",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "decision-intelligence-engineer",
+        "frontend-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/action-deadline.ts",
+        "src/app/api/command-center/route.ts",
+        "src/app/dashboard/actions/page.tsx",
+        "src/components/CommandCenter.tsx",
+        "tests/action-deadline.test.ts",
+        "tests/decision-ledger.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Only open/in-progress actions past their due date are marked overdue, with the number of days late; command center exposes the count and the action card shows a critical badge.",
+      "evidence": "Full suite 81 files/741 tests passed (9 skipped); eslint, tsc and production build clean. Unit tests cover status gating, missing/invalid dates and day math; command-center test asserts overdueCount 1 after setting a past due date."
     }
   ]
 }
