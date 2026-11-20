@@ -174,6 +174,18 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Current/historical enterprise state, semantic neighborhoods, scenario deltas, deterministic optimization and human-confirmed business context are tenant-scoped, reproducible and expose provenance/uncertainty honestly.",
       "evidence": "Seven state/semantic/optimization/discovery suites passed: 41 tests; targeted eslint and tsc passed."
+    },
+    {
+      "id": "TB-016",
+      "commit": "02f7c4a",
+      "title": "Enterprise intelligence workflows in the executive interface",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": ["executive-dashboard-engineer", "frontend-platform-engineer", "decision-science-optimization-engineer", "test-automation-engineer"],
+      "files": ["src/app/dashboard/connectors/page.tsx", "src/app/dashboard/data-quality/page.tsx", "src/app/dashboard/decision-ledger/page.tsx", "src/app/dashboard/discovery/page.tsx", "src/app/dashboard/options/page.tsx", "src/app/dashboard/scenarios/page.tsx", "src/components/DecisionIntelligencePanel.tsx", "src/lib/db/repos/forecast.ts", "src/lib/db/repos/kpi-registry.ts", "tests/forecasting.test.ts"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Executive pages use existing tenant-scoped APIs, expose loading/empty/error and governance states, preserve the ABYS visual language and disclose assumptions, provenance and unavailable evidence without fabricating financial values or certainty.",
+      "evidence": "Fifteen product/connector/decision/forecast/scenario suites passed: 122 tests; targeted eslint and tsc passed; production build passed with 94 routes."
     }
   ]
 }
