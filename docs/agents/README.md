@@ -9,7 +9,7 @@ ABYS is an Executive Decision Intelligence platform: **DATA → UNDERSTANDING �
 Principle: **30 Seconds to Clarity** — surface the 3–5 things an executive must act on, each with evidence. ABYS is an
 intelligence layer on top of existing ERP/CRM/accounting systems; it does not replace them.
 
-## Architecture (last code integration commit: 9877024; re-check before relying on it)
+## Architecture (re-check `git log` and the working tree before relying on this)
 - Next.js 16 + React 19 + TypeScript (strict), App Router. **Read `node_modules/next/dist/docs/` before writing Next.js code** (see `AGENTS.md`).
 - Embedded Postgres (PGlite) via `src/lib/db/client.ts`; hand-written SQL repositories in `src/lib/db/repos/`; ordered append-only migrations in `src/lib/db/migrations.ts`. Every business table carries `org_id`.
 - Auth: `src/lib/auth/*` (scrypt, server-side sessions, OIDC), RBAC in `src/lib/auth/permissions.ts`, hash-chained audit log in `src/lib/db/repos/audit.ts` (single write path).

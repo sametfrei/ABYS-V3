@@ -23,13 +23,13 @@ otoritedir; buradaki bir yetenek yalnızca kod bulunduğu için tamamlanmış sa
 - EVREN sağlayıcısı, model uç noktası ve kimlik bilgileri değiştirilmez.
 - Canlı SAP, Oracle, Dynamics, Salesforce, HubSpot, NetSuite veya Odoo entegrasyonu; gerçek kimlik ve satıcı API kanıtı olmadan doğrulanmış sayılmaz.
 
-## Güncel doğrulama tabanı (2026-11-20)
+## Güncel doğrulama tabanı (2026-11-21)
 
-- `main` üzerinde son kod entegrasyon commit'i `9877024`; TB-012–TB-017 doğrulanmış dilimleri odaklı commit'ler halinde yerelde entegre edildi.
+- `main` üzerinde son kod entegrasyonu TB-020–TB-036 aralığında odaklı Conventional Commit'ler halinde yapıldı ve `origin/main`e gönderildi; her dilim kendi `docs(tasks)` kaydıyla eşlendi.
 - Migration başı 33. Migration 18 onay kapısı açık ve uygulanmadı.
-- Tam süit kanıtı (2026-11-20): 76 dosya geçti, 1 governance dosyası atlandı; 708 test geçti, 9 atlandı. Tam ESLint 0 hata/0 uyarı ve `npx tsc --noEmit` temiz.
+- Tam süit kanıtı (2026-11-21): 83 dosya geçti, 1 governance dosyası atlandı; 754 test geçti, 9 atlandı. Tam ESLint 0 hata/0 uyarı ve `npx tsc --noEmit` temiz.
 - Üretim derlemesi (2026-11-20): Next.js 16.2.11, 94 route/sayfa ile başarılı.
-- Çalışan önizleme smoke testi (2026-11-20): 22/22 başarılı; oturum, audit zinciri, 403 sınırı ve temel ekranlar HTTP üzerinden doğrulandı.
+- Çalışan önizleme smoke testi (2026-11-21): 35/35 başarılı; oturum, audit zinciri, 403 sınırı, tahmin kalibrasyonu/saklama planı ve temel ekranlar HTTP üzerinden doğrulandı.
 - Agent Command Center canlı state: 31 tanımlı rol (5 direktör + 25 uzman), 18 Codex oturumu, 1 gerçek aktif oturum, yapılandırılmış eşzamanlılık 8. Dört aktif süreç iddiası yoktur.
 - Canlı tarayıcı görsel doğrulaması bu oturumda yapılamadı; kod/API testi ile tarayıcı kanıtı ayrı tutulur.
 

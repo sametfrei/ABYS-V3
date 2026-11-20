@@ -101,7 +101,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024), aralık kapsama ölçeklemesi (TB-025), Infor/IFS/Sage adaptör bağlantısı (TB-026), kabuk i18n temeli (TB-028), giriş ekranı yerelleştirmesi (TB-029), zamanlanmış tahmin yakalama (TB-030) geciken aksiyon görünürlüğü (TB-031) tahmin anlık görüntüsü denetim kaydı (TB-032) ve konnektör senkron hatası/yeniden deneme görünürlüğü (TB-033) ve tahmin saklama planı (TB-034).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024), aralık kapsama ölçeklemesi (TB-025), Infor/IFS/Sage adaptör bağlantısı (TB-026), kabuk i18n temeli (TB-028), giriş ekranı yerelleştirmesi (TB-029), zamanlanmış tahmin yakalama (TB-030), geciken aksiyon görünürlüğü (TB-031), tahmin anlık görüntüsü denetim kaydı (TB-032), konnektör senkron hatası/yeniden deneme görünürlüğü (TB-033), tahmin saklama planı (TB-034), saklama smoke kapsamı (TB-035) ve tahmin panelinde saklama durumu (TB-036).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
 2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.
