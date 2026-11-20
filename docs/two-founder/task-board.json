@@ -616,6 +616,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Shell navigation, session line, logout and language switch render in TR or EN from a persisted cookie/localStorage choice with no hydration mismatch; missing keys fall back to Turkish; coverage is asserted by tests rather than assumed.",
       "evidence": "Full suite 80 files/736 tests passed (9 skipped); eslint, tsc and production build clean; extended smoke 31/31 after the change. tests/i18n.test.ts asserts locale parsing fallbacks, coverage of every NAV entry and shell key in both locales, and safe handling of unknown keys."
+    },
+    {
+      "id": "TB-029",
+      "commit": "ce0ca71",
+      "title": "Sign-in screen localization",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/login/page.tsx",
+        "src/app/login/LoginForm.tsx",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "/login renders in TR or EN from the abys_lang cookie, offers a language switch before authentication, and keeps error copy truthful about remaining Turkish-only text.",
+      "evidence": "Full suite 80 files/736 tests passed (9 skipped); eslint, tsc and production build clean. Rendered /login with and without abys_lang=en and confirmed Kurumsal/Enterprise, E-posta/Email strings from the running server."
     }
   ]
 }
