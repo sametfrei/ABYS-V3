@@ -186,6 +186,18 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Executive pages use existing tenant-scoped APIs, expose loading/empty/error and governance states, preserve the ABYS visual language and disclose assumptions, provenance and unavailable evidence without fabricating financial values or certainty.",
       "evidence": "Fifteen product/connector/decision/forecast/scenario suites passed: 122 tests; targeted eslint and tsc passed; production build passed with 94 routes."
+    },
+    {
+      "id": "TB-017",
+      "commit": "9877024",
+      "title": "Verifiable agent and engineering telemetry",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": ["developer-experience-engineer", "reliability-observability-engineer", "test-automation-engineer"],
+      "files": ["scripts/agent-command-center.mjs", "scripts/command-classification.cjs", "tests/command-classification.test.ts"],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The command center distinguishes defined, instantiated and active roles from actual session records, detects verification commands without matching file bodies or arguments, and never reports a fabricated active process or successful check.",
+      "evidence": "Four classification tests passed; node syntax checks and targeted eslint passed; live /api/state returned 31 defined roles (5 directors, 25 specialists), 18 Codex sessions, 1 active session, configured concurrency 8 and no synthetic lead activity."
     }
   ]
 }
