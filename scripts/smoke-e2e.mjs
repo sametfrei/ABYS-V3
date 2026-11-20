@@ -122,9 +122,40 @@ async function main() {
     ["ayarlar", "/dashboard/settings"],
     ["denetim günlüğü", "/dashboard/audit"],
     ["karar merkezi", "/dashboard/decisions"],
+    ["karar defteri", "/dashboard/decision-ledger"],
+    ["tahmin", "/dashboard/forecast"],
+    ["bağlantılar", "/dashboard/connectors"],
   ]) {
     const r = await req(path, { cookie });
     expectStatus(`${name} ekranı`, r.status, 200);
+  }
+
+  // 7b) Kalibrasyon uçları: kurum kapsamlı özet dönmeli
+  const commandCenter = await req("/api/command-center", { cookie });
+  expectStatus("komuta merkezi verisi", commandCenter.status, 200);
+  const commandJson = commandCenter.json;
+  if (commandJson && commandJson.calibration && Array.isArray(commandJson.calibration.buckets)) {
+    ok("komuta merkezi kalibrasyonu", `${commandJson.calibration.buckets.length} güven kovası`);
+  } else {
+    bad("komuta merkezi kalibrasyonu", "summary.calibration eksik");
+  }
+
+  const cases = await req("/api/decision-cases", { cookie });
+  expectStatus("vaka listesi", cases.status, 200);
+  const casesJson = cases.json;
+  if (casesJson && casesJson.calibration && Array.isArray(casesJson.calibration.buckets)) {
+    ok("vaka listesi kalibrasyonu", `${casesJson.calibration.buckets.length} güven kovası`);
+  } else {
+    bad("vaka listesi kalibrasyonu", "calibration eksik");
+  }
+
+  const snapshots = await req("/api/forecast/snapshots", { cookie });
+  expectStatus("tahmin anlık görüntüleri", snapshots.status, 200);
+  const snapshotsJson = snapshots.json;
+  if (snapshotsJson && snapshotsJson.summary && Array.isArray(snapshotsJson.snapshots)) {
+    ok("tahmin kalibrasyon özeti", `${snapshotsJson.summary.total} kayıt`);
+  } else {
+    bad("tahmin kalibrasyon özeti", "summary eksik");
   }
 
   // 8) Oturum kapatma
