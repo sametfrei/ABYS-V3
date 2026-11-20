@@ -52,7 +52,7 @@ const {
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
 const { restAdapter, validateRestConfig } = await import("../src/lib/connectors/rest-adapter");
-const { listDefinitions, getAdapter } = await import("../src/lib/connectors/registry");
+const { listDefinitions, getAdapter, getDefinition } = await import("../src/lib/connectors/registry");
 const connectorsRoute = await import("../src/app/api/connectors/route");
 const connectorPatchRoute = await import("../src/app/api/connectors/[id]/route");
 const connectorMappingRoute = await import("../src/app/api/connectors/[id]/mapping/route");
@@ -293,9 +293,15 @@ describe("REST konnektör adaptörü", () => {
   it("kayıt defteri durumları dürüsttür", () => {
     const defs = listDefinitions();
     expect(defs.find((d) => d.id === "rest-generic")?.status).toBe("ready");
-    expect(defs.find((d) => d.id === "infor")?.status).toBe("planned");
+    expect(defs.find((d) => d.id === "infor")?.status).toBe("requires-credentials");
+    expect(defs.find((d) => d.id === "ifs")?.status).toBe("requires-credentials");
+    expect(defs.find((d) => d.id === "sage")?.status).toBe("requires-credentials");
     expect(getAdapter("sap")).toBeTruthy();
-    expect(getAdapter("infor")).toBeUndefined();
+    expect(getAdapter("infor")).toBeTruthy();
+    expect(getAdapter("ifs")).toBeTruthy();
+    expect(getAdapter("sage")).toBeTruthy();
+    expect(getDefinition("soap-legacy")).toBeUndefined();
+    expect(getAdapter("soap-legacy")).toBeUndefined();
   });
 });
 
@@ -1277,10 +1283,10 @@ describe("Konnektör API'si", () => {
     expect(sync.status).toBe(404);
   });
 
-  it("planned konnektör ve geçersiz konfig 400 döner", async () => {
+  it("bilinmeyen konnektör ve geçersiz konfig 400 döner", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, adminA);
     expect(
-      (await connectorsRoute.POST(jsonReq({ connectorId: "infor", name: "X", config: BASE_CONFIG }))).status
+      (await connectorsRoute.POST(jsonReq({ connectorId: "soap-legacy", name: "X", config: BASE_CONFIG }))).status
     ).toBe(400);
     expect(
       (

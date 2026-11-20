@@ -23,7 +23,7 @@ Durum ölçeği:
 | Kanonik kayıt → KPI gözlemi + süreç olayı aktarımı | E2E (test) | `src/lib/db/repos/connector-promotion.ts`; tekrar senkron idempotent; KPI tahmin/anomali ve olay süreç madenciliği testte doğrulanır |
 | Bağlantı yönetimi ekranı (`/dashboard/connectors`) | Tarayıcı bekliyor | Oluştur/senkron/geçmiş akışı; Auto Mode nedeniyle tarayıcı doğrulaması yapılamadı |
 | SAP / Oracle / Dynamics / Salesforce / HubSpot / NetSuite / Odoo | Dış kimlik gerekir | Aynı REST adaptörü; müşteri uç noktası ve kimliği olmadan canlı doğrulanmadı |
-| Infor / IFS / Sage | Planlı | Adaptör yok; kayıt defterinde açıkça "planned" |
+| Infor / IFS / Sage | Dış kimlik gerekir | REST/OData uçları genel adaptöre bağlandı (Infor OAuth2, IFS basic, Sage OAuth2 client-credentials); canlı kiracı/kimlik olmadan doğrulanmadı |
 | OAuth2 client-credentials token akışı | E2E (test) | `src/lib/connectors/rest-adapter.ts`; yalnızca HTTPS token endpoint'i, SSRF doğrulaması, redirect izlemeyen dar POST istemcisi, ortam değişkeninden istemci kimliği/sırrı ve scope; `tests/connectors.test.ts`, `tests/source-readonly.test.ts` |
 | SOAP, JDBC/ODBC | Planlı | Ayrı adaptör gerekir |
 | CSV/XLSX dosya içe alma | E2E (test) | Mevcut `POST /api/ingest` + `parseTable` |
@@ -99,7 +99,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024) ve aralık kapsama ölçeklemesi (TB-025).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024) aralık kapsama ölçeklemesi (TB-025) ve Infor/IFS/Sage konnektörlerinin adaptöre bağlanması (TB-026).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
 2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.

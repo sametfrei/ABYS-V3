@@ -103,28 +103,33 @@ export const CONNECTOR_DEFINITIONS: ConnectorDefinition[] = [
     id: "infor",
     label: "Infor",
     category: "erp",
-    status: "planned",
+    status: "requires-credentials",
     authType: "oauth2_client_credentials",
     entities: [...VENDOR_ENTITIES],
-    note: "ION/API Gateway adaptörü planlı; henüz uygulanmadı.",
+    note:
+      "Infor ION API Gateway REST uçları genel adaptörle okunur; OAuth2 client-credentials token akışı " +
+      "yerel testlerle doğrulanmıştır, canlı Infor kiracısı ve kimliği olmadan doğrulanmamıştır.",
   },
   {
     id: "ifs",
     label: "IFS",
     category: "erp",
-    status: "planned",
+    status: "requires-credentials",
     authType: "basic",
     entities: [...VENDOR_ENTITIES],
-    note: "IFS REST/OData adaptörü planlı; henüz uygulanmadı.",
+    note:
+      "IFS OData v4 uçları genel REST adaptörüyle bağlanır; müşteri projesi, servis yolu ve kimliği gerekir.",
   },
   {
     id: "sage",
     label: "Sage",
     category: "erp",
-    status: "planned",
+    status: "requires-credentials",
     authType: "oauth2_client_credentials",
     entities: [...VENDOR_ENTITIES],
-    note: "Sage ürün ailesine göre değişen API'ler için adaptör planlı.",
+    note:
+      "Sage 200 / Intacct REST uçları OAuth2 client-credentials ile okunabilir; ürün sürümüne göre servis " +
+      "yolu değişir, canlı kimlik olmadan doğrulanmamıştır.",
   },
 ];
 
@@ -139,6 +144,9 @@ const ADAPTERS: Record<string, ConnectorAdapter> = {
   hubspot: restAdapter,
   netsuite: restAdapter,
   odoo: restAdapter,
+  infor: restAdapter,
+  ifs: restAdapter,
+  sage: restAdapter,
 };
 
 export function listDefinitions(): ConnectorDefinition[] {
