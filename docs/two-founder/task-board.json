@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T00:00:00Z",
+  "updatedAt": "2026-11-21T03:00:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -702,6 +702,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Manual snapshot creation and scheduled capture both append hash-chained audit events (forecast_snapshot_created, forecast_snapshots_captured) scoped to the caller's org; no audit event is written when nothing was captured.",
       "evidence": "Full suite 81 files/741 tests passed (9 skipped); eslint, tsc and production build clean; running-server smoke 33/33. Tests assert the audit rows exist with non-null prev_hash and org scoping."
+    },
+    {
+      "id": "TB-033",
+      "commit": "fe9b4a5",
+      "title": "Connector sync failure + retry visibility",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "synchronization-event-engineer",
+        "frontend-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/connector-run-health.ts",
+        "src/app/dashboard/connectors/page.tsx",
+        "tests/connector-run-health.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Connector card shows the consecutive sync failure count and last error message, offers an operator-triggered retry, and stays silent when the newest run succeeded.",
+      "evidence": "Full suite 82 files/746 tests passed (9 skipped); eslint, tsc and production build clean; running-server smoke 33/33. Unit tests cover empty history, success recovery, consecutive failures, order independence and invalid timestamps."
     }
   ]
 }
