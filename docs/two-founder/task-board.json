@@ -559,6 +559,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Once at least 5 saved forecasts are measured, P10-P90 half-widths are scaled by the ratio of 80% target coverage to observed coverage within 0.5-3x; the raw model intervals remain available and the adjustment plus its rationale is shown rather than silently applied.",
       "evidence": "Full suite 79 files/731 tests passed (9 skipped); eslint, tsc and production build clean. tests/forecasting.test.ts covers insufficient-evidence, 0% coverage widening to 3x with adjustedPoints returned, above-target narrowing to 0.8x, scaling math and identity at factor 1."
+    },
+    {
+      "id": "TB-026",
+      "commit": "2368175",
+      "title": "Infor/IFS/Sage bound to the REST adapter",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer",
+        "backend-api-engineer"
+      ],
+      "files": [
+        "src/lib/connectors/registry.ts",
+        "tests/connectors.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The three vendor definitions resolve to a working adapter with their published auth mode and honest status/notes; no vendor is marked ready without live credentials; unknown connectors still fail fast.",
+      "evidence": "Full suite 79 files/731 tests passed (9 skipped); eslint, tsc and production build clean. Connector suite (27 tests) asserts adapter resolution for infor/ifs/sage, requires-credentials status and 400 for an unknown connector id."
     }
   ]
 }
