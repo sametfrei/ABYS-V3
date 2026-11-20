@@ -35,6 +35,12 @@ const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
 const { GET } = await import("../src/app/api/forecast/route");
 const { forecastSeries, MIN_FORECAST_POINTS } = await import("../src/lib/forecasting");
 const { getKpiSeries } = await import("../src/lib/db/repos/forecast");
+const {
+  computeIntervalAdjustment,
+  applyIntervalAdjustment,
+  MIN_CALIBRATION_EVALUATIONS,
+  INTERVAL_TARGET_COVERAGE,
+} = await import("../src/lib/forecast-calibration");
 
 describe("Tahmin motoru", () => {
   it("yetersiz veride tahmin üretmez", () => {
@@ -210,5 +216,78 @@ describe("GET /api/forecast", () => {
     expect(series.timestamps[series.timestamps.length - 1]).toBe(
       new Date(base + 124 * 60_000).toISOString()
     );
+  });
+
+  it("geçmiş kapsama yetersizse aralık ayarı uygulanmaz", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const res = await req(`http://localhost/api/forecast?label=${encodeURIComponent("Gecikme oranı")}`);
+    const body = (await res.json()) as {
+      intervalAdjustment: { status: string; evaluated: number; factor: number };
+      adjustedPoints: unknown;
+    };
+    expect(body.intervalAdjustment.status).toBe("insufficient_evidence");
+    expect(body.intervalAdjustment.factor).toBe(1);
+    expect(body.adjustedPoints).toBeNull();
+  });
+
+  it("ölçülmüş tahminler kapsama hedefinin altındaysa aralıkları genişletir", async () => {
+    const db = getDb();
+    const label = "Gecikme oranı";
+    for (let i = 0; i < MIN_CALIBRATION_EVALUATIONS; i++) {
+      await db.query(
+        `INSERT INTO forecast_snapshots
+           (id, org_id, label, model, evidence, horizon, series_points, p10, p50, p90, last_observed_at, created_by)
+         VALUES ($1, $2, $3, 'naive', 'low', 3, 6, 0, 1, 2, '2025-12-01T00:00:00Z', 'tester')`,
+        [`snap-${i}`, ORG_A, label]
+      );
+    }
+    // Anlık görüntülerden sonra gelen ilk gözlem (16) aralığın dışında kalır.
+    await db.query(
+      `INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at)
+       VALUES ('kv-realized', $1, 'ds-a', $2, '16', '2026-01-20T00:00:00Z')`,
+      [ORG_A, label]
+    );
+
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const res = await req(`http://localhost/api/forecast?label=${encodeURIComponent(label)}`);
+    const body = (await res.json()) as {
+      forecast: { points: Array<{ value: number; p10: number; p90: number }> };
+      intervalAdjustment: { status: string; factor: number; observedHitRate: number };
+      adjustedPoints: Array<{ value: number; p10: number; p90: number }> | null;
+    };
+    expect(body.intervalAdjustment.status).toBe("applied");
+    expect(body.intervalAdjustment.observedHitRate).toBe(0);
+    expect(body.intervalAdjustment.factor).toBe(3);
+    expect(body.adjustedPoints).not.toBeNull();
+    const raw = body.forecast.points[0];
+    const adjusted = body.adjustedPoints![0];
+    expect(adjusted.value).toBe(raw.value);
+    expect(Math.abs(adjusted.p90 - adjusted.value)).toBeGreaterThan(Math.abs(raw.p90 - raw.value));
+  });
+
+  it("aralık ayarı hedefin üzerinde kapsamada daraltır ve sınırlara uyar", () => {
+    const tight = computeIntervalAdjustment(
+      Array.from({ length: MIN_CALIBRATION_EVALUATIONS }, () => ({
+        status: "evaluated" as const,
+        actual: 1,
+        insideRange: true,
+        absError: 0,
+        rangeWidth: 10,
+      }))
+    );
+    expect(tight.status).toBe("applied");
+    expect(tight.observedHitRate).toBe(1);
+    expect(tight.factor).toBe(Math.round(INTERVAL_TARGET_COVERAGE * 100) / 100);
+
+    const points = [
+      { step: 1, value: 100, p10: 90, p90: 110 },
+      { step: 2, value: 100, p10: 80, p90: 120 },
+    ];
+    const scaled = applyIntervalAdjustment(points, 2);
+    expect(scaled[0].p10).toBe(80);
+    expect(scaled[0].p90).toBe(120);
+    expect(scaled[1].p10).toBe(60);
+    expect(scaled[1].p90).toBe(140);
+    expect(applyIntervalAdjustment(points, 1)).toBe(points);
   });
 });

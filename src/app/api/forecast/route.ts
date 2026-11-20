@@ -9,6 +9,8 @@ import {
   forecastSeries,
   MAX_FORECAST_HORIZON,
 } from "@/lib/forecasting";
+import { listForecastSnapshots } from "@/lib/db/repos/forecast-snapshots";
+import { applyIntervalAdjustment, computeIntervalAdjustment } from "@/lib/forecast-calibration";
 
 /**
  * GET /api/forecast — KPI serisinden geriye dönük test edilmiş tahmin.
@@ -50,10 +52,22 @@ export async function GET(req: NextRequest) {
   const series = await getKpiSeries(session.orgId, label);
   const forecast = forecastSeries(series.values, horizon);
 
+  // Aralık kalibrasyonu: bu etiketin geçmiş ölçülmüş tahminleri varsa,
+  // P10–P90 gerçekleşen kapsamaya göre ölçeklenir. Ham model çıktısı
+  // `forecast.points`, kalibre edilmiş aralıklar `adjustedPoints` içindedir.
+  const snapshots = await listForecastSnapshots({ orgId: session.orgId, label, limit: 50 });
+  const intervalAdjustment = computeIntervalAdjustment(snapshots.map((item) => item.evaluation));
+  const adjustedPoints =
+    forecast && intervalAdjustment.status === "applied"
+      ? applyIntervalAdjustment(forecast.points, intervalAdjustment.factor)
+      : null;
+
   return NextResponse.json({
     label,
     history: { values: series.values, timestamps: series.timestamps },
     forecast,
+    intervalAdjustment,
+    adjustedPoints,
     insufficientData: forecast === null,
     minRequired: MIN_FORECAST_POINTS,
     provenance: {

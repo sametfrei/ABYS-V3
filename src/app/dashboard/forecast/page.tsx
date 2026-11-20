@@ -46,6 +46,15 @@ interface ForecastData {
     evidence: "low" | "medium" | "high";
     note: string;
   } | null;
+  intervalAdjustment?: {
+    status: "insufficient_evidence" | "applied";
+    evaluated: number;
+    observedHitRate: number | null;
+    targetCoverage: number;
+    factor: number;
+    note: string;
+  };
+  adjustedPoints?: ForecastPoint[] | null;
   insufficientData: boolean;
   minRequired: number;
   provenance: {
@@ -334,14 +343,23 @@ export default function ForecastPage() {
                 </p>
               ) : (
                 <>
-                  <SeriesChart history={data.history.values} points={data.forecast.points} />
+                  <SeriesChart
+                    history={data.history.values}
+                    points={data.adjustedPoints ?? data.forecast.points}
+                  />
+                  {data.intervalAdjustment?.status === "applied" && (
+                    <p className="text-[11px] text-abys-warning mt-1" data-testid="interval-adjustment">
+                      Aralıklar geçmiş kapsamaya göre ölçeklendi ({data.intervalAdjustment.factor}×).{" "}
+                      {data.intervalAdjustment.note}
+                    </p>
+                  )}
                   <p className="text-xs text-abys-muted mt-1">
                     Seçilen model: <span className="text-abys-ink">{MODEL_LABEL[data.forecast.model] ?? data.forecast.model}</span>
                     {data.forecast.model === "ses" && ` (α=${data.forecast.backtest.find((b) => b.model === "ses")?.params.alpha ?? "-"})`}
                   </p>
 
                   <div className="grid grid-cols-3 gap-3 mt-4">
-                    {data.forecast.points.map((p) => (
+                    {(data.adjustedPoints ?? data.forecast.points).map((p) => (
                       <div key={p.step} className="rounded-lg bg-white/70 px-3 py-2">
                         <p className="text-[11px] text-abys-muted">+{p.step} dönem</p>
                         <p className="font-mono text-lg text-abys-navy">{fmt(p.value)}</p>

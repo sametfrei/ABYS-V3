@@ -53,6 +53,7 @@ Durum ölçeği:
 | Sektör paketi formüllerinin çalıştırılabilir hesaplayıcıları | E2E (test) | `src/lib/industry/kpi-calculators.ts`; eksik alan/sıfır paydada değer üretilmez |
 | Tahmin (naive/SES/trend, geriye dönük test, P10–P90) | E2E (test) | `src/lib/forecasting.ts`, `tests/forecasting.test.ts` |
 | Tahmin kalibrasyonu · kaydedilen tahmin vs gerçekleşen | E2E (test) | migration 35 `forecast_snapshots`; `POST/GET /api/forecast/snapshots`; üretilen ilk adım (P10/P50/P90) saklanır, sonraki sayısal KPI gözlemiyle karşılaştırılır; aralık isabeti, ıska ve ortalama mutlak hata kayıtlı değerlerden türetilir; `src/lib/forecast-calibration.ts`, `/dashboard/forecast` paneli; `tests/forecast-snapshots.test.ts` |
+| Tahmin aralığı kalibrasyonu · kapsamaya göre ölçekleme | E2E (test) | `computeIntervalAdjustment`: en az 5 ölçülmüş tahminde gözlenen P10–P90 kapsaması %80 hedefe göre 0,5–3× aralığında ölçeklenir; ham çıktı `forecast.points` korunur, kalibre aralıklar `adjustedPoints` olarak döner ve ekranda gerekçesi gösterilir; `tests/forecasting.test.ts` |
 | Erken uyarı (median/MAD) | E2E (test) | `src/lib/anomaly.ts`, `tests/anomaly.test.ts` |
 | Monte Carlo (tohumlu, üçgensel, P10/P50/P90) | E2E (test) | `src/lib/scenario-simulation.ts`, `tests/scenario-simulation.test.ts` |
 | Çok kriterli seçenek değerlendirme + Pareto | E2E (test) | `src/lib/decision-options.ts`, `/dashboard/options` |
@@ -98,7 +99,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024) ve aralık kapsama ölçeklemesi (TB-025).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
 2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.
