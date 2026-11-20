@@ -513,6 +513,30 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The executive home brief qualifies its stated confidence with the org's observed outcome record for that confidence band, or says plainly that evidence is insufficient, without inventing statistics.",
       "evidence": "Full suite 78 files/724 tests passed (9 skipped); tsc and eslint clean; production build succeeded; running-server smoke 22/22 against the preview server after migration 34."
+    },
+    {
+      "id": "TB-024",
+      "commit": "a060eec",
+      "title": "Forecast snapshots measured against realized values",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-scientist",
+        "backend-api-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/db/migrations.ts",
+        "src/lib/forecast-calibration.ts",
+        "src/lib/db/repos/forecast-snapshots.ts",
+        "src/app/api/forecast/snapshots/route.ts",
+        "src/app/dashboard/forecast/page.tsx",
+        "tests/forecast-snapshots.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "A saved forecast is scored against the next real observation: interval hit/miss, absolute error and pending counts from stored data only; no forecast is scored against the data it was fitted on; results stay org-scoped.",
+      "evidence": "Full suite 79 files/728 tests passed (9 skipped); eslint, tsc and production build clean. tests/forecast-snapshots.test.ts covers evaluation math, save-then-realize flow, 422 on insufficient observations and cross-org isolation."
     }
   ]
 }
