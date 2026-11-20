@@ -35,6 +35,7 @@ const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
 const { GET: ledger } = await import("../src/app/api/decision-ledger/route");
 const { GET: listDecisionCases } = await import("../src/app/api/decision-cases/route");
+const { GET: commandCenter } = await import("../src/app/api/command-center/route");
 const { POST: recordDecisionRoute } = await import("../src/app/api/decisions/route");
 const { POST: recordOutcomeRoute } = await import("../src/app/api/outcomes/route");
 
@@ -453,6 +454,20 @@ describe("Decision Value Ledger API'si", () => {
       await listDecisionCases(new NextRequest("http://localhost/api/decision-cases"))
     ).json()) as { calibration: { totalWithOutcome: number } };
     expect(other.calibration.totalWithOutcome).toBe(0);
+  });
+
+  it("komuta merkezi brifingi güven kalibrasyonuyla birlikte döner", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const body = (await (await commandCenter()).json()) as {
+      brief: { confidence: number } | null;
+      calibration: { threshold: number; totalWithOutcome: number; buckets: unknown[] };
+    };
+    // Bu fixture'da açık vaka yok; brifing null olabilir ama kalibrasyon her
+    // durumda dönmeli ki yönetici ekranı güveni bağlamlandırabilsin.
+    expect(body.calibration.threshold).toBe(5);
+    expect(body.calibration.buckets.length).toBe(4);
+    expect(body.calibration.totalWithOutcome).toBeGreaterThanOrEqual(2);
+    if (body.brief) expect(body.brief.confidence).toBeGreaterThanOrEqual(0);
   });
 
   it("başka kurumun kararları görünmez", async () => {

@@ -23,8 +23,28 @@ interface Brief {
   topEvidence: { fact: string; reliability: string }[];
 }
 
+interface CalibrationBucket {
+  key: string;
+  label: string;
+  min: number;
+  max: number;
+  withOutcome: number;
+  improvedRate: number | null;
+  status: "measured" | "insufficient_evidence";
+  direction: "overconfident" | "aligned" | "underconfident" | null;
+  adjustedConfidence: number | null;
+  samplesNeeded: number;
+}
+
+interface CalibrationSummary {
+  status: "measured" | "partial" | "insufficient_evidence";
+  threshold: number;
+  buckets: CalibrationBucket[];
+}
+
 interface CommandData {
   brief: Brief | null;
+  calibration?: CalibrationSummary | null;
   decisions: { id: string; title: string; severity: string; confidence: number }[];
   signals: { bySeverity: Record<string, number>; top: { id: string; title: string; severity: string }[] };
   actions: { byStatus: Record<string, number>; open: { id: string; title: string; owner: string; status: string }[] };
@@ -234,7 +254,7 @@ export function CommandCenter() {
       {(focus || developments.length > 0) && <FocusPanel focus={focus} developments={developments} />}
 
       {/* Yapılandırılmış yönetici brifingi — en kritik açık vaka (izlenebilir) */}
-      {data.brief && <ExecutiveBrief brief={data.brief} />}
+      {data.brief && <ExecutiveBrief brief={data.brief} calibration={data.calibration} />}
 
       {/* Özet şerit — 30 saniyelik kavrama */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -351,7 +371,33 @@ const RELIABILITY_LABEL: Record<string, string> = {
   unknown: "bilinmiyor",
 };
 
-function ExecutiveBrief({ brief }: { brief: Brief }) {
+const CALIBRATION_NOTE: Record<string, string> = {
+  overconfident: "geçmişte bu güven düzeyi fazla iyimser çıktı",
+  aligned: "geçmişte bu güven düzeyi tutarlı çıktı",
+  underconfident: "geçmişte bu güven düzeyi temkinli kaldı",
+};
+
+function calibrationText(
+  confidence: number,
+  calibration: CalibrationSummary | null | undefined
+): string | null {
+  if (!calibration) return null;
+  const bucket = calibration.buckets.find((item) => confidence >= item.min && confidence <= item.max);
+  if (!bucket) return null;
+  if (bucket.status === "measured" && bucket.direction && bucket.improvedRate !== null) {
+    return `Geçmişte bu güven düzeyinde (${bucket.withOutcome} sonuç) iyileşme %${(bucket.improvedRate * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} · ${CALIBRATION_NOTE[bucket.direction] ?? ""}`;
+  }
+  return `Kalibrasyon için kanıt yetersiz · bu kovada ${bucket.withOutcome}/${calibration.threshold} sonuç`;
+}
+
+function ExecutiveBrief({
+  brief,
+  calibration,
+}: {
+  brief: Brief;
+  calibration?: CalibrationSummary | null;
+}) {
+  const calibrationNote = calibrationText(brief.confidence, calibration);
   return (
     <div className="mb-6 rounded-xl border border-abys-accent/25 bg-white/70 p-5">
       <div className="flex items-center justify-between mb-3">
@@ -364,6 +410,7 @@ function ExecutiveBrief({ brief }: { brief: Brief }) {
         {brief.nextDevelopment && <BriefLine label="Aksiyon alınmazsa" value={brief.nextDevelopment} />}
         {brief.recommendedAction && <BriefLine label="Önerilen aksiyon" value={brief.recommendedAction} accent />}
         {brief.confidenceRationale && <BriefLine label="Güven gerekçesi" value={brief.confidenceRationale} muted />}
+        {calibrationNote && <BriefLine label="Geçmiş kalibrasyon" value={calibrationNote} muted />}
       </div>
       {brief.topEvidence.length > 0 && (
         <div className="mt-3 pt-3 border-t border-abys-cream-border">

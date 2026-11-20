@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
+import { getConfidenceCalibration } from "@/lib/db/repos/decision-ledger";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 
@@ -105,9 +106,12 @@ export async function GET() {
   const countMap = (rows: { [k: string]: string | number }[], key: string) =>
     Object.fromEntries(rows.map((r) => [r[key], Number(r.n)]));
 
+  const calibration = await getConfidenceCalibration(org);
+
   return NextResponse.json({
     org: { id: org, viewer: session.displayName, role: session.role },
     brief,
+    calibration,
     decisions: decisions.rows.map(({ payload, ...rest }) => { void payload; return rest; }),
     signals: { bySeverity: countMap(signalCounts.rows, "severity"), top: topSignals.rows },
     actions: { byStatus: countMap(actionCounts.rows, "status"), open: openActions.rows },
