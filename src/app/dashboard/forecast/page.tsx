@@ -447,6 +447,11 @@ interface SnapshotSummary {
 function ForecastSnapshotPanel({ label }: { label: string }) {
   const [snapshots, setSnapshots] = useState<SnapshotRow[]>([]);
   const [summary, setSummary] = useState<SnapshotSummary | null>(null);
+  const [retention, setRetention] = useState<{
+    total: number;
+    archiveCount: number;
+    policy: { maxAgeDays: number; maxPerLabel: number };
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
@@ -475,6 +480,32 @@ function ForecastSnapshotPanel({ label }: { label: string }) {
       cancelled = true;
     };
   }, [label]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/forecast/snapshots/retention", { cache: "no-store" })
+      .then(async (res) =>
+        res.ok
+          ? ((await res.json()) as {
+              total?: number;
+              archiveCount?: number;
+              policy?: { maxAgeDays: number; maxPerLabel: number };
+            })
+          : null
+      )
+      .then((body) => {
+        if (cancelled || !body || !body.policy) return;
+        setRetention({
+          total: body.total ?? 0,
+          archiveCount: body.archiveCount ?? 0,
+          policy: body.policy,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function save() {
     if (busy) return;
@@ -572,6 +603,15 @@ function ForecastSnapshotPanel({ label }: { label: string }) {
       )}
       {summary && summary.total === 0 && (
         <p className="mt-2 text-xs text-abys-muted">Henüz kaydedilmiş tahmin yok.</p>
+      )}
+      {retention && (
+        <p className="mt-2 text-[11px] text-abys-muted">
+          Saklama politikası: {retention.policy.maxAgeDays} gün / etiket başına{" "}
+          {retention.policy.maxPerLabel} kayıt · kurumda {retention.total} anlık görüntü ·{" "}
+          {retention.archiveCount === 0
+            ? "arşiv adayı yok."
+            : `${retention.archiveCount} arşiv adayı (silme yapılmaz, yalnızca rapor).`}
+        </p>
       )}
     </div>
   );
