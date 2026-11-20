@@ -578,6 +578,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The three vendor definitions resolve to a working adapter with their published auth mode and honest status/notes; no vendor is marked ready without live credentials; unknown connectors still fail fast.",
       "evidence": "Full suite 79 files/731 tests passed (9 skipped); eslint, tsc and production build clean. Connector suite (27 tests) asserts adapter resolution for infor/ifs/sage, requires-credentials status and 400 for an unknown connector id."
+    },
+    {
+      "id": "TB-027",
+      "commit": "8f89391",
+      "title": "Smoke coverage for calibration endpoints and screens",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "test-automation-engineer",
+        "reliability-observability-engineer"
+      ],
+      "files": [
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Running-server smoke exercises decision ledger, forecast and connectors screens plus the calibration payloads on command-center, decision-cases and forecast snapshots, failing loudly if those contracts regress.",
+      "evidence": "Extended smoke run against the preview server: 31 checks passed, 0 failed, including 4-bucket calibration on command-center and decision-cases and a forecast snapshot summary."
     }
   ]
 }
