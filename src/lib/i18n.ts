@@ -39,7 +39,16 @@ export type ShellKey =
   | "shell.session"
   | "shell.logout"
   | "shell.language"
-  | "shell.user";
+  | "shell.user"
+  | "login.title"
+  | "login.accent"
+  | "login.subtitle"
+  | "login.email"
+  | "login.password"
+  | "login.submit"
+  | "login.submitting"
+  | "login.forgot"
+  | "login.sso";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -68,6 +77,21 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "shell.logout": { tr: "Çıkış yap", en: "Sign out" },
   "shell.language": { tr: "Dil", en: "Language" },
   "shell.user": { tr: "Kullanıcı", en: "User" },
+  "login.title": { tr: "Kurumsal", en: "Enterprise" },
+  "login.accent": { tr: "giriş.", en: "sign-in." },
+  "login.subtitle": {
+    tr: "Yetkileriniz rolünüze göre sunucuda uygulanır.",
+    en: "Permissions are enforced server-side according to your role.",
+  },
+  "login.email": { tr: "E-posta", en: "Email" },
+  "login.password": { tr: "Parola", en: "Password" },
+  "login.submit": { tr: "Giriş yap →", en: "Sign in →" },
+  "login.submitting": { tr: "Giriş yapılıyor…", en: "Signing in…" },
+  "login.forgot": {
+    tr: "Parolanızı unuttuysanız kurum yöneticinize başvurun.",
+    en: "If you forgot your password, contact your organization administrator.",
+  },
+  "login.sso": { tr: "Kurumsal hesapla giriş →", en: "Sign in with enterprise account →" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
