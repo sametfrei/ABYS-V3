@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-20",
+  "updatedAt": "2026-11-21",
   "states": [
     "BACKLOG",
     "READY",
@@ -493,6 +493,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Root-cause links can record method, sample size, data quality and uncertainty so causal-evidence grading is evidence-based rather than status-only; observed correlation can never be graded sufficient; metadata is optional and absence keeps grading conservative.",
       "evidence": "Full suite 78 files/723 tests passed (9 skipped); eslint and tsc clean; production build succeeded. New API tests assert metadata round-trip, RCT+n=120+high quality grading to high evidence, 400s for invalid method/quality/confidence, and null metadata by default."
+    },
+    {
+      "id": "TB-023",
+      "commit": "d83fa46",
+      "title": "Calibrated confidence in the executive brief",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "decision-intelligence-engineer",
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/api/command-center/route.ts",
+        "src/components/CommandCenter.tsx",
+        "tests/decision-ledger.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The executive home brief qualifies its stated confidence with the org's observed outcome record for that confidence band, or says plainly that evidence is insufficient, without inventing statistics.",
+      "evidence": "Full suite 78 files/724 tests passed (9 skipped); tsc and eslint clean; production build succeeded; running-server smoke 22/22 against the preview server after migration 34."
     }
   ]
 }
