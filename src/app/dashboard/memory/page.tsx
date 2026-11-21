@@ -1,9 +1,46 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { loadProfile } from "@/lib/profile";
 import { useSession } from "@/lib/use-session";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function outcomeText(locale: Locale, result: OutcomeResult): string {
+  return t(locale, `memory.outcome.${result}` as ShellKey);
+}
+
+function choiceLabel(locale: Locale, choice: DecisionRecord["choice"]): string {
+  return t(locale, `memory.choice.${choice}` as ShellKey);
+}
+
+function auditTypeLabel(locale: Locale, type: AuditEvent["type"]): string {
+  const key = `memory.auditType.${type}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? (AUDIT_TYPE_META[type] ?? type) : label;
+}
 import { SEVERITY_META } from "@/lib/signals";
 import {
   type DecisionRecord,
@@ -21,6 +58,7 @@ import {
 type Tab = "decisions" | "audit" | "documents";
 
 export default function MemoryPage() {
+  const locale = useLocale();
   const session = useSession();
   const isTais = session?.orgCode === "tais-ikf-demo";
   const [tab, setTab] = useState<Tab>("decisions");
@@ -56,31 +94,37 @@ export default function MemoryPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="KURUMSAL HAFIZA"
-        title="Karar geçmişi ve"
-        accent="denetim günlüğü."
-        desc="ABYS her öneriyi, her kararı ve her sonucu kaydeder. Sistemi değiştirmek bir yazılımı değiştirmek değil, kurumun karar hafızasını kaybetmek anlamına gelir — bu sayfa o hafızadır."
+        eyebrow={t(locale, "memory.eyebrow")}
+        title={t(locale, "memory.title")}
+        accent={t(locale, "memory.titleAccent")}
+        desc={t(locale, "memory.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-4xl space-y-6">
         {/* İstatistikler */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="Toplam karar" value={String(stats.total)} />
-          <StatCard label="Öneri kabul oranı" value={`%${stats.acceptanceRate}`} />
-          <StatCard label="Sonucu kaydedilen" value={String(stats.outcomeCount)} />
-          <StatCard label="İyileşme oranı" value={`%${stats.successRate}`} />
+          <StatCard label={t(locale, "memory.statTotal")} value={String(stats.total)} />
+          <StatCard
+            label={t(locale, "memory.statAcceptance")}
+            value={`%${stats.acceptanceRate}`}
+          />
+          <StatCard
+            label={t(locale, "memory.statOutcome")}
+            value={String(stats.outcomeCount)}
+          />
+          <StatCard label={t(locale, "memory.statSuccess")} value={`%${stats.successRate}`} />
         </div>
 
         {/* Sekmeler */}
         <div className="flex gap-2">
           <TabButton active={tab === "decisions"} onClick={() => setTab("decisions")}>
-            Karar hafızası ({records.length})
+            {formatMessage(locale, "memory.tabDecisions", { count: records.length })}
           </TabButton>
           <TabButton active={tab === "audit"} onClick={() => setTab("audit")}>
-            Denetim günlüğü ({audit.length})
+            {formatMessage(locale, "memory.tabAudit", { count: audit.length })}
           </TabButton>
           <TabButton active={tab === "documents"} onClick={() => setTab("documents")}>
-            Belgeler
+            {t(locale, "memory.tabDocuments")}
           </TabButton>
         </div>
 
@@ -90,7 +134,7 @@ export default function MemoryPage() {
           <div className="space-y-3">
             {records.length === 0 && (
               <p className="text-sm text-abys-muted">
-                Henüz karar kaydı yok. Karar Merkezi&apos;nde bir vakayı karara bağladığınızda burada görünür.
+                {t(locale, "memory.emptyDecisions")}
               </p>
             )}
             {records.map((r) => (
@@ -101,11 +145,13 @@ export default function MemoryPage() {
 
         {tab === "audit" && (
           <div className="space-y-1.5">
-            {audit.length === 0 && <p className="text-sm text-abys-muted">Henüz denetim kaydı yok.</p>}
+            {audit.length === 0 && (
+              <p className="text-sm text-abys-muted">{t(locale, "memory.emptyAudit")}</p>
+            )}
             {audit.map((e) => (
               <div key={e.id} className="flex items-start gap-3 text-sm bg-abys-cream/60 rounded-lg px-4 py-2.5">
                 <span className="text-xs text-abys-muted shrink-0 w-32 mt-0.5">
-                  {new Date(e.createdAt).toLocaleString("tr-TR", {
+                  {new Date(e.createdAt).toLocaleString(locale, {
                     day: "2-digit",
                     month: "2-digit",
                     hour: "2-digit",
@@ -114,10 +160,12 @@ export default function MemoryPage() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-abys-ink">
-                    <span className="font-medium">{AUDIT_TYPE_META[e.type]}</span> · {e.summary}
+                    <span className="font-medium">{auditTypeLabel(locale, e.type)}</span> · {e.summary}
                   </p>
                   {e.detail && <p className="text-xs text-abys-muted mt-0.5">{e.detail}</p>}
-                  <p className="text-xs text-abys-muted mt-0.5">Aktör: {e.actor}</p>
+                  <p className="text-xs text-abys-muted mt-0.5">
+                    {formatMessage(locale, "memory.actor", { actor: e.actor })}
+                  </p>
                 </div>
               </div>
             ))}
@@ -129,6 +177,7 @@ export default function MemoryPage() {
 }
 
 function TaisMemoryView() {
+  const locale = useLocale();
   const [cases, setCases] = useState<{ id: string; case: { title: string; confidence: number }; status: string }[] | null>(null);
   const [audit, setAudit] = useState<{ id: string; type: string; summary: string; created_at: string }[] | null>(null);
 
@@ -151,33 +200,48 @@ function TaisMemoryView() {
   return (
     <div>
       <PageHeader
-        eyebrow="TAIS KURUMSAL HAFIZA"
-        title="Karar geçmişi ve"
-        accent="denetim izi."
-        desc="TAIS oturumu yalnızca sunucu tarafındaki TAIS karar ve denetim kayıtlarını gösterir."
+        eyebrow={t(locale, "memory.tais.eyebrow")}
+        title={t(locale, "memory.title")}
+        accent={t(locale, "memory.tais.titleAccent")}
+        desc={t(locale, "memory.tais.subtitle")}
       />
       <div className="px-10 pb-16 max-w-4xl space-y-6">
         <div className="grid grid-cols-2 gap-3">
-          <StatCard label="TAIS karar vakası" value={cases ? String(cases.length) : "…"} />
-          <StatCard label="Son denetim olayı" value={audit ? String(audit.length) : "…"} />
+          <StatCard
+            label={t(locale, "memory.tais.statCases")}
+            value={cases ? String(cases.length) : "…"}
+          />
+          <StatCard
+            label={t(locale, "memory.tais.statAudit")}
+            value={audit ? String(audit.length) : "…"}
+          />
         </div>
         <div>
-          <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">TAIS KARARLARI</p>
+          <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
+            {t(locale, "memory.tais.casesHeading")}
+          </p>
           <div className="space-y-2">
             {cases?.map((row) => (
               <div key={row.id} className="rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3">
                 <p className="text-sm text-abys-ink">{row.case.title}</p>
-                <p className="text-xs text-abys-muted mt-1">Durum: {row.status} · Güven %{row.case.confidence}</p>
+                <p className="text-xs text-abys-muted mt-1">
+                  {formatMessage(locale, "memory.tais.statusLine", {
+                    status: row.status,
+                    confidence: row.case.confidence,
+                  })}
+                </p>
               </div>
             ))}
           </div>
         </div>
         <div>
-          <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">TAIS DENETİM OLAYLARI</p>
+          <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
+            {t(locale, "memory.tais.auditHeading")}
+          </p>
           <div className="space-y-1.5">
             {audit?.map((event) => (
               <p key={event.id} className="text-sm text-abys-ink bg-abys-cream/60 rounded-lg px-4 py-2.5">
-                <span className="text-xs text-abys-muted">{new Date(event.created_at).toLocaleString("tr-TR")}</span> · {event.summary}
+                <span className="text-xs text-abys-muted">{new Date(event.created_at).toLocaleString(locale)}</span> · {event.summary}
               </p>
             ))}
           </div>
@@ -214,6 +278,7 @@ const DOC_TYPES = ["policy", "procedure", "report", "incident", "txt", "md", "cs
  * Rol kısıtı verilirse belge yalnızca o rollere görünür/erişilebilir olur.
  */
 function DocumentsTab() {
+  const locale = useLocale();
   const [docs, setDocs] = useState<DocRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -244,7 +309,7 @@ function DocumentsTab() {
         }
         const j = await r.json();
         if (!r.ok) {
-          setError(j.error ?? "Belgeler yüklenemedi.");
+          setError(j.error ?? t(readLocale(), "memory.docs.docsFailed"));
           setDocs([]);
           return;
         }
@@ -253,7 +318,7 @@ function DocumentsTab() {
       })
       .catch(() => {
         if (!cancelled) {
-          setError("Belgeler yüklenemedi.");
+          setError(t(readLocale(), "memory.docs.docsFailed"));
           setDocs([]);
         }
       });
@@ -290,16 +355,18 @@ function DocumentsTab() {
       const r = await fetch("/api/documents/upload", { method: "POST", body: formData });
       const j = await r.json();
       if (!r.ok) {
-        setFileError(j.error ?? "Dosya yüklenemedi.");
+        setFileError(j.error ?? t(readLocale(), "memory.docs.uploadFailed"));
         return;
       }
-      setFileOkMsg(`Belge eklendi — ${j.chunkCount} parçaya bölündü ve Ask ABYS'te aranabilir.`);
+      setFileOkMsg(
+        formatMessage(readLocale(), "memory.docs.added", { chunks: j.chunkCount })
+      );
       setFileTitle("");
       setFilePick(null);
       setFileRestrictRole("");
       setReloadKey((k) => k + 1);
     } catch {
-      setFileError("Dosya yüklenemedi.");
+      setFileError(t(readLocale(), "memory.docs.uploadFailed"));
     } finally {
       setFileBusy(false);
     }
@@ -323,10 +390,10 @@ function DocumentsTab() {
       });
       const j = await r.json();
       if (!r.ok) {
-        setError(j.error ?? "Belge eklenemedi.");
+        setError(j.error ?? t(readLocale(), "memory.docs.addFailed"));
         return;
       }
-      setOkMsg(`Belge eklendi — ${j.chunkCount} parçaya bölündü ve Ask ABYS'te aranabilir.`);
+      setOkMsg(formatMessage(readLocale(), "memory.docs.added", { chunks: j.chunkCount }));
       setTitle("");
       setText("");
       setRestrictRole("");
@@ -339,39 +406,40 @@ function DocumentsTab() {
   return (
     <div className="space-y-6">
       <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 space-y-3">
-        <p className="text-xs tracking-widest text-abys-muted font-semibold">BELGE EKLE</p>
+        <p className="text-xs tracking-widest text-abys-muted font-semibold">
+          {t(locale, "memory.docs.heading")}
+        </p>
         <p className="text-xs text-abys-muted">
-          Prosedür, politika, olay raporu veya toplantı kararı ekleyin. Belge parçalara bölünür ve
-          Ask ABYS cevaplarında <strong>atıfla</strong> kullanılır. İçerik talimat olarak değil,
-          yalnızca veri olarak işlenir.
+          {t(locale, "memory.docs.intro")}
         </p>
 
         <div className="flex flex-wrap gap-2">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Belge başlığı"
+            placeholder={t(locale, "memory.docs.titlePlaceholder")}
             className="flex-1 min-w-[200px] text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
           />
           <select
             value={sourceType}
             onChange={(e) => setSourceType(e.target.value)}
+            title={t(locale, "memory.docs.typeTitle")}
             className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
           >
-            {DOC_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
+            {DOC_TYPES.map((type) => (
+              <option key={type} value={type}>{type}</option>
             ))}
           </select>
           <select
             value={restrictRole}
             onChange={(e) => setRestrictRole(e.target.value)}
-            title="Rol kısıtı — boş bırakılırsa tüm roller erişebilir"
+            title={t(locale, "memory.docs.roleHint")}
             className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
           >
-            <option value="">Tüm roller erişebilir</option>
-            <option value="ceo">Yalnızca CEO</option>
-            <option value="sys_admin">Yalnızca sistem yöneticisi</option>
-            <option value="auditor">Yalnızca denetçi</option>
+            <option value="">{t(locale, "memory.docs.roleAny")}</option>
+            <option value="ceo">{t(locale, "memory.docs.roleCeo")}</option>
+            <option value="sys_admin">{t(locale, "memory.docs.roleSysAdmin")}</option>
+            <option value="auditor">{t(locale, "memory.docs.roleAuditor")}</option>
           </select>
         </div>
 
@@ -381,7 +449,7 @@ function DocumentsTab() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={5}
-          placeholder="Belge metnini yapıştırın ya da yukarıdan dosya seçin…"
+          placeholder={t(locale, "memory.docs.textPlaceholder")}
           className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
         />
 
@@ -393,28 +461,29 @@ function DocumentsTab() {
           disabled={busy || !title.trim() || !text.trim()}
           className="text-sm rounded-full bg-abys-navy text-white px-5 py-2 hover:opacity-90 disabled:opacity-40"
         >
-          {busy ? "Ekleniyor…" : "Belgeyi kurumsal hafızaya ekle"}
+          {busy ? t(locale, "memory.docs.adding") : t(locale, "memory.docs.add")}
         </button>
       </div>
 
       <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 space-y-3">
-        <p className="text-xs tracking-widest text-abys-muted font-semibold">DOSYADAN BELGE EKLE (PDF / DOCX)</p>
+        <p className="text-xs tracking-widest text-abys-muted font-semibold">
+          {t(locale, "memory.docs.fileHeading")}
+        </p>
         <p className="text-xs text-abys-muted">
-          PDF veya Word (.docx) dosyasından metin otomatik çıkarılır. Diğer türler için
-          yukarıdaki yapıştırma yolunu kullanın.
+          {t(locale, "memory.docs.fileIntro")}
         </p>
 
         <div className="flex flex-wrap gap-2">
           <input
             value={fileTitle}
             onChange={(e) => setFileTitle(e.target.value)}
-            placeholder="Belge başlığı (boşsa dosya adı kullanılır)"
+            placeholder={t(locale, "memory.docs.fileTitlePlaceholder")}
             className="flex-1 min-w-[200px] text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
           />
           <select
             value={fileRestrictRole}
             onChange={(e) => setFileRestrictRole(e.target.value)}
-            title="Rol kısıtı — boş bırakılırsa tüm roller erişebilir"
+            title={t(locale, "memory.docs.roleHint")}
             className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
           >
             <option value="">Tüm roller erişebilir</option>
@@ -434,17 +503,21 @@ function DocumentsTab() {
           disabled={fileBusy || !filePick}
           className="text-sm rounded-full bg-abys-navy text-white px-5 py-2 hover:opacity-90 disabled:opacity-40"
         >
-          {fileBusy ? "Yükleniyor…" : "Dosyayı kurumsal hafızaya ekle"}
+          {fileBusy ? t(locale, "memory.docs.uploading") : t(locale, "memory.docs.addFile")}
         </button>
       </div>
 
       <div>
         <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
-          KURUMSAL BELGELER {docs ? `(${docs.length})` : ""}
+          {docs
+            ? formatMessage(locale, "memory.docs.listHeadingCount", { count: docs.length })
+            : t(locale, "memory.docs.listHeading")}
         </p>
-        {docs === null && <p className="text-sm text-abys-muted">Yükleniyor…</p>}
+        {docs === null && (
+          <p className="text-sm text-abys-muted">{t(locale, "memory.docs.loading")}</p>
+        )}
         {docs?.length === 0 && (
-          <p className="text-sm text-abys-muted">Henüz belge yok. Yukarıdan ekleyin.</p>
+          <p className="text-sm text-abys-muted">{t(locale, "memory.docs.empty")}</p>
         )}
         <div className="space-y-2">
           {docs?.map((d) => (
@@ -454,7 +527,11 @@ function DocumentsTab() {
               </span>
               <span className="text-sm text-abys-ink flex-1">{d.title}</span>
               <span className="text-xs text-abys-muted shrink-0">
-                {d.chunk_count} parça · {Math.max(1, Math.round(d.byte_size / 1024))} KB · {d.uploaded_by}
+                {formatMessage(locale, "memory.docs.chunkInfo", {
+                  chunks: d.chunk_count,
+                  kb: Math.max(1, Math.round(d.byte_size / 1024)),
+                  by: d.uploaded_by,
+                })}
               </span>
             </div>
           ))}
@@ -486,6 +563,7 @@ function TabButton({
 }
 
 function DecisionRow({ r, onChanged }: { r: DecisionRecord; onChanged: () => void }) {
+  const locale = useLocale();
   const [recording, setRecording] = useState(false);
   const [result, setResult] = useState<OutcomeResult>("improved");
   const [note, setNote] = useState("");
@@ -520,24 +598,32 @@ function DecisionRow({ r, onChanged }: { r: DecisionRecord; onChanged: () => voi
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-abys-ink">{r.caseTitle}</p>
           <p className="text-xs text-abys-muted mt-1">
-            {r.categoryLabel} · {new Date(r.createdAt).toLocaleDateString("tr-TR")} · {r.decidedBy} · Güven %{r.confidence}
+            {r.categoryLabel} · {new Date(r.createdAt).toLocaleDateString(locale)} · {r.decidedBy} ·{" "}
+            {formatMessage(locale, "memory.row.confidence", { value: r.confidence })}
           </p>
 
           <div className="mt-3 space-y-1.5 text-sm">
             <p>
-              <span className="text-xs font-semibold text-abys-muted">ABYS önerisi: </span>
+              <span className="text-xs font-semibold text-abys-muted">
+                {t(locale, "memory.row.recommendation")}{" "}
+              </span>
               <span className="text-abys-ink">{r.recommendedAction || "—"}</span>
             </p>
             <p>
               <span className="text-xs font-semibold" style={{ color: choiceMeta.color }}>
-                {choiceMeta.label}
+                {choiceLabel(locale, r.choice)}
               </span>
               {r.choice !== "accepted" && r.chosenAction && (
-                <span className="text-abys-ink"> · Uygulanan: {r.chosenAction}</span>
+                <span className="text-abys-ink">
+                  {" "}
+                  {formatMessage(locale, "memory.row.applied", { action: r.chosenAction })}
+                </span>
               )}
             </p>
             {r.reason && (
-              <p className="text-xs text-abys-muted">Gerekçe: {r.reason}</p>
+              <p className="text-xs text-abys-muted">
+                {formatMessage(locale, "memory.row.reason", { reason: r.reason })}
+              </p>
             )}
           </div>
 
@@ -545,7 +631,9 @@ function DecisionRow({ r, onChanged }: { r: DecisionRecord; onChanged: () => voi
           <div className="mt-3 pt-3 border-t border-abys-ink/10">
             {r.outcome ? (
               <p className="text-sm">
-                <span className="text-xs font-semibold text-abys-muted">SONUÇ: </span>
+                <span className="text-xs font-semibold text-abys-muted">
+                  {t(locale, "memory.row.outcomeHeading")}{" "}
+                </span>
                 <span
                   className="font-medium"
                   style={{
@@ -557,7 +645,7 @@ function DecisionRow({ r, onChanged }: { r: DecisionRecord; onChanged: () => voi
                           : "var(--abys-warning)",
                   }}
                 >
-                  {outcomeLabel(r.outcome.result)}
+                  {outcomeText(locale, r.outcome.result)}
                 </span>
                 {r.outcome.note && <span className="text-abys-ink"> — {r.outcome.note}</span>}
               </p>
@@ -574,25 +662,25 @@ function DecisionRow({ r, onChanged }: { r: DecisionRecord; onChanged: () => voi
                           : "border-abys-ink/15 text-abys-ink hover:bg-white/60"
                       }`}
                     >
-                      {outcomeLabel(res)}
+                      {outcomeText(locale, res)}
                     </button>
                   ))}
                 </div>
                 <input
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Ne oldu? (örn: rötar 12 dk ile sınırlı kaldı)"
+                  placeholder={t(locale, "memory.row.notePlaceholder")}
                   className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
                 />
                 <div className="flex gap-2">
                   <button onClick={saveOutcome} className="text-xs rounded-lg bg-abys-navy text-white px-3 py-1.5">
-                    Kaydet
+                    {t(locale, "memory.row.save")}
                   </button>
                   <button
                     onClick={() => setRecording(false)}
                     className="text-xs rounded-lg border border-abys-ink/15 text-abys-ink px-3 py-1.5"
                   >
-                    Vazgeç
+                    {t(locale, "memory.row.cancel")}
                   </button>
                 </div>
               </div>
@@ -601,7 +689,7 @@ function DecisionRow({ r, onChanged }: { r: DecisionRecord; onChanged: () => voi
                 onClick={() => setRecording(true)}
                 className="text-xs rounded-full px-3 py-1.5 border border-abys-ink/15 text-abys-ink hover:bg-white/60"
               >
-                + Sonucu kaydet — ABYS bundan öğrenir
+                {t(locale, "memory.row.record")}
               </button>
             )}
           </div>

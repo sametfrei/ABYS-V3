@@ -909,6 +909,74 @@ export type ShellKey =
   | "ledger.exportCsv"
   | "audit.exportCsv"
   | "forecast.exportCsv"
+  | "memory.eyebrow"
+  | "memory.title"
+  | "memory.titleAccent"
+  | "memory.subtitle"
+  | "memory.statTotal"
+  | "memory.statAcceptance"
+  | "memory.statOutcome"
+  | "memory.statSuccess"
+  | "memory.tabDecisions"
+  | "memory.tabAudit"
+  | "memory.tabDocuments"
+  | "memory.emptyDecisions"
+  | "memory.emptyAudit"
+  | "memory.actor"
+  | "memory.tais.eyebrow"
+  | "memory.tais.titleAccent"
+  | "memory.tais.subtitle"
+  | "memory.tais.statCases"
+  | "memory.tais.statAudit"
+  | "memory.tais.casesHeading"
+  | "memory.tais.statusLine"
+  | "memory.tais.auditHeading"
+  | "memory.docs.heading"
+  | "memory.docs.intro"
+  | "memory.docs.titlePlaceholder"
+  | "memory.docs.typeTitle"
+  | "memory.docs.roleHint"
+  | "memory.docs.roleAny"
+  | "memory.docs.roleCeo"
+  | "memory.docs.roleSysAdmin"
+  | "memory.docs.roleAuditor"
+  | "memory.docs.textPlaceholder"
+  | "memory.docs.adding"
+  | "memory.docs.add"
+  | "memory.docs.fileHeading"
+  | "memory.docs.fileIntro"
+  | "memory.docs.fileTitlePlaceholder"
+  | "memory.docs.uploading"
+  | "memory.docs.addFile"
+  | "memory.docs.listHeading"
+  | "memory.docs.listHeadingCount"
+  | "memory.docs.loading"
+  | "memory.docs.empty"
+  | "memory.docs.chunkInfo"
+  | "memory.docs.docsFailed"
+  | "memory.docs.uploadFailed"
+  | "memory.docs.addFailed"
+  | "memory.docs.added"
+  | "memory.row.confidence"
+  | "memory.row.recommendation"
+  | "memory.row.applied"
+  | "memory.row.reason"
+  | "memory.row.outcomeHeading"
+  | "memory.row.notePlaceholder"
+  | "memory.row.save"
+  | "memory.row.cancel"
+  | "memory.row.record"
+  | "memory.outcome.improved"
+  | "memory.outcome.unchanged"
+  | "memory.outcome.worsened"
+  | "memory.choice.accepted"
+  | "memory.choice.rejected"
+  | "memory.choice.modified"
+  | "memory.auditType.analysis_run"
+  | "memory.auditType.case_generated"
+  | "memory.auditType.decision_made"
+  | "memory.auditType.outcome_recorded"
+  | "memory.auditType.data_ingested"
   | "scenarios.eyebrow"
   | "scenarios.title"
   | "scenarios.titleAccent"
@@ -2486,6 +2554,77 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
+  "memory.eyebrow": { tr: "KURUMSAL HAFIZA", en: "INSTITUTIONAL MEMORY" },
+  "memory.title": { tr: "Karar geçmişi ve", en: "Decision history and" },
+  "memory.titleAccent": { tr: "denetim günlüğü.", en: "the audit trail." },
+  "memory.subtitle": { tr: "ABYS her öneriyi, her kararı ve her sonucu kaydeder. Sistemi değiştirmek bir yazılımı değiştirmek değil, kurumun karar hafızasını kaybetmek anlamına gelir — bu sayfa o hafızadır.", en: "ABYS records every recommendation, every decision and every outcome. Changing the system is not swapping software; it is losing the institution's decision memory — this page is that memory." },
+  "memory.statTotal": { tr: "Toplam karar", en: "Total decisions" },
+  "memory.statAcceptance": { tr: "Öneri kabul oranı", en: "Recommendation acceptance" },
+  "memory.statOutcome": { tr: "Sonucu kaydedilen", en: "Outcomes recorded" },
+  "memory.statSuccess": { tr: "İyileşme oranı", en: "Improvement rate" },
+  "memory.tabDecisions": { tr: "Karar hafızası ({count})", en: "Decision memory ({count})" },
+  "memory.tabAudit": { tr: "Denetim günlüğü ({count})", en: "Audit log ({count})" },
+  "memory.tabDocuments": { tr: "Belgeler", en: "Documents" },
+  "memory.emptyDecisions": { tr: "Henüz karar kaydı yok. Karar Merkezi'nde bir vakayı karara bağladığınızda burada görünür.", en: "No decision records yet. Once you decide a case in the Decision Center it appears here." },
+  "memory.emptyAudit": { tr: "Henüz denetim kaydı yok.", en: "No audit records yet." },
+  "memory.actor": { tr: "Aktör: {actor}", en: "Actor: {actor}" },
+  "memory.tais.eyebrow": { tr: "TAIS KURUMSAL HAFIZA", en: "TAIS INSTITUTIONAL MEMORY" },
+  "memory.tais.titleAccent": { tr: "denetim izi.", en: "the audit trail." },
+  "memory.tais.subtitle": { tr: "TAIS oturumu yalnızca sunucu tarafındaki TAIS karar ve denetim kayıtlarını gösterir.", en: "The TAIS session shows only server-side TAIS decision and audit records." },
+  "memory.tais.statCases": { tr: "TAIS karar vakası", en: "TAIS decision cases" },
+  "memory.tais.statAudit": { tr: "Son denetim olayı", en: "Latest audit events" },
+  "memory.tais.casesHeading": { tr: "TAIS KARARLARI", en: "TAIS DECISIONS" },
+  "memory.tais.statusLine": { tr: "Durum: {status} · Güven %{confidence}", en: "Status: {status} · Confidence {confidence}%" },
+  "memory.tais.auditHeading": { tr: "TAIS DENETİM OLAYLARI", en: "TAIS AUDIT EVENTS" },
+  "memory.docs.heading": { tr: "BELGE EKLE", en: "ADD DOCUMENT" },
+  "memory.docs.intro": { tr: "Prosedür, politika, olay raporu veya toplantı kararı ekleyin. Belge parçalara bölünür ve Ask ABYS cevaplarında atıfla kullanılır. İçerik talimat olarak değil, yalnızca veri olarak işlenir.", en: "Add a procedure, policy, incident report or meeting decision. The document is split into chunks and cited in Ask ABYS answers. Content is treated as data, never as instructions." },
+  "memory.docs.titlePlaceholder": { tr: "Belge başlığı", en: "Document title" },
+  "memory.docs.typeTitle": { tr: "Belge türü", en: "Document type" },
+  "memory.docs.roleHint": {
+    tr: "Rol kısıtı — boş bırakılırsa tüm roller erişebilir",
+    en: "Role restriction — leave empty to allow all roles",
+  },
+  "memory.docs.roleAny": { tr: "Tüm roller erişebilir", en: "All roles can access" },
+  "memory.docs.roleCeo": { tr: "Yalnızca CEO", en: "CEO only" },
+  "memory.docs.roleSysAdmin": { tr: "Yalnızca sistem yöneticisi", en: "System administrator only" },
+  "memory.docs.roleAuditor": { tr: "Yalnızca denetçi", en: "Auditor only" },
+  "memory.docs.textPlaceholder": { tr: "Belge metnini yapıştırın ya da yukarıdan dosya seçin…", en: "Paste the document text or choose a file above…" },
+  "memory.docs.adding": { tr: "Ekleniyor…", en: "Adding…" },
+  "memory.docs.add": { tr: "Belgeyi kurumsal hafızaya ekle", en: "Add document to institutional memory" },
+  "memory.docs.fileHeading": { tr: "DOSYADAN BELGE EKLE (PDF / DOCX)", en: "ADD DOCUMENT FROM FILE (PDF / DOCX)" },
+  "memory.docs.fileIntro": { tr: "PDF veya Word (.docx) dosyasından metin otomatik çıkarılır. Diğer türler için yukarıdaki yapıştırma yolunu kullanın.", en: "Text is extracted automatically from PDF or Word (.docx) files. For other types use the paste path above." },
+  "memory.docs.fileTitlePlaceholder": { tr: "Belge başlığı (boşsa dosya adı kullanılır)", en: "Document title (file name used if empty)" },
+  "memory.docs.uploading": { tr: "Yükleniyor…", en: "Uploading…" },
+  "memory.docs.addFile": { tr: "Dosyayı kurumsal hafızaya ekle", en: "Add file to institutional memory" },
+  "memory.docs.listHeading": { tr: "KURUMSAL BELGELER", en: "INSTITUTIONAL DOCUMENTS" },
+  "memory.docs.listHeadingCount": { tr: "KURUMSAL BELGELER ({count})", en: "INSTITUTIONAL DOCUMENTS ({count})" },
+  "memory.docs.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "memory.docs.empty": { tr: "Henüz belge yok. Yukarıdan ekleyin.", en: "No documents yet. Add one above." },
+  "memory.docs.chunkInfo": { tr: "{chunks} parça · {kb} KB · {by}", en: "{chunks} chunks · {kb} KB · {by}" },
+  "memory.docs.docsFailed": { tr: "Belgeler yüklenemedi.", en: "Documents could not be loaded." },
+  "memory.docs.uploadFailed": { tr: "Dosya yüklenemedi.", en: "File could not be uploaded." },
+  "memory.docs.addFailed": { tr: "Belge eklenemedi.", en: "Document could not be added." },
+  "memory.docs.added": { tr: "Belge eklendi — {chunks} parçaya bölündü ve Ask ABYS'te aranabilir.", en: "Document added — split into {chunks} chunks and searchable in Ask ABYS." },
+  "memory.row.confidence": { tr: "Güven %{value}", en: "Confidence {value}%" },
+  "memory.row.recommendation": { tr: "ABYS önerisi:", en: "ABYS recommendation:" },
+  "memory.row.applied": { tr: "· Uygulanan: {action}", en: "· Applied: {action}" },
+  "memory.row.reason": { tr: "Gerekçe: {reason}", en: "Rationale: {reason}" },
+  "memory.row.outcomeHeading": { tr: "SONUÇ:", en: "OUTCOME:" },
+  "memory.row.notePlaceholder": { tr: "Ne oldu? (örn: rötar 12 dk ile sınırlı kaldı)", en: "What happened? (e.g. delay stayed within 12 min)" },
+  "memory.row.save": { tr: "Kaydet", en: "Save" },
+  "memory.row.cancel": { tr: "Vazgeç", en: "Cancel" },
+  "memory.row.record": { tr: "+ Sonucu kaydet — ABYS bundan öğrenir", en: "+ Record outcome — ABYS learns from it" },
+  "memory.outcome.improved": { tr: "iyileşme sağlandı", en: "improved" },
+  "memory.outcome.unchanged": { tr: "değişim olmadı", en: "unchanged" },
+  "memory.outcome.worsened": { tr: "durum kötüleşti", en: "worsened" },
+  "memory.choice.accepted": { tr: "Kabul edildi", en: "Accepted" },
+  "memory.choice.rejected": { tr: "Reddedildi", en: "Rejected" },
+  "memory.choice.modified": { tr: "Değiştirilerek uygulandı", en: "Applied with changes" },
+  "memory.auditType.analysis_run": { tr: "Analiz çalıştırıldı", en: "Analysis run" },
+  "memory.auditType.case_generated": { tr: "Vaka üretildi", en: "Case generated" },
+  "memory.auditType.decision_made": { tr: "Karar verildi", en: "Decision made" },
+  "memory.auditType.outcome_recorded": { tr: "Sonuç kaydedildi", en: "Outcome recorded" },
+  "memory.auditType.data_ingested": { tr: "Veri alındı", en: "Data ingested" },
   "scenarios.eyebrow": { tr: "SENARYO LABORATUVARI", en: "SCENARIO LAB" },
   "scenarios.title": { tr: "Ya şöyle", en: "What if" },
   "scenarios.titleAccent": { tr: "olsaydı?", en: "it were so?" },
