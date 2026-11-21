@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T22:25:41Z",
+  "updatedAt": "2026-11-21T22:31:41Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1572,6 +1572,24 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Header, metric entry form, bulk paste, metric list, latest-points table, delete actions and all validation/error/empty states render in TR and EN; dates and numbers follow the active locale.",
       "evidence": "Founder B gates: tsc clean, eslint clean, i18n 20/20, full suite 822 passed (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-080",
+      "commit": "9a1c246",
+      "title": "Ask ABYS screen TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/ask/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Header, question input, submit states, example chips, statement labels, source lines and sources heading render in TR and EN. Example prompts still send the canonical Turkish text the server matcher expects.",
+      "evidence": "Founder B gates: tsc clean, eslint clean, i18n 21/21, full suite 824 passed (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
