@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T23:29:43Z",
+  "updatedAt": "2026-11-21T23:45:29Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1664,6 +1664,31 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Range filters, all-entity selects, KPI labels, service-area status labels, risk cards, main decision card, recommended actions, evidence details and all empty states render in TR and EN with locale-aware dates. Turkish server-provided content remains unchanged.",
       "evidence": "Gates: tsc clean, eslint clean, i18n 23/23, full suite 827 passed (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-085",
+      "commit": "88a748a",
+      "title": "Session device and last-seen visibility",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-engineer",
+        "backend-engineer",
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/lib/db/migrations.ts",
+        "src/lib/auth/core.ts",
+        "src/app/api/auth/login/route.ts",
+        "src/app/api/auth/oidc/callback/route.ts",
+        "src/app/api/auth/sessions/route.ts",
+        "src/components/SessionManagement.tsx",
+        "src/lib/i18n.ts",
+        "tests/sessions-api.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Migration 36 adds normalized user_agent and last_seen_at; login and OIDC record the user agent (max 300 chars); getSession refreshes last_seen_at at most every 5 minutes; the sessions API returns device/last-seen only to the owner; the settings screen shows device and last-seen in TR/EN. No IP or extra personal data is stored.",
+      "evidence": "Gates: tsc clean, eslint clean, sessions API 8/8 (device echo + stale last-seen refresh + cross-user exclusion), full suite 829 passed (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
