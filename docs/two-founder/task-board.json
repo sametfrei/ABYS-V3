@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T20:20:00Z",
+  "updatedAt": "2026-11-21T19:11:06.794Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1273,6 +1273,28 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The data quality screen shows overall score, weakest dimension, four dimension rows with samples, total rows and a truncation warning; null scores show 'insufficient data' rather than zero.",
       "evidence": "Founder A implemented; Founder B ran gates: full suite 91 files/817 tests (9 skipped), eslint/tsc/build clean, smoke 43/43."
+    },
+    {
+      "id": "TB-063",
+      "commit": "df8d812",
+      "title": "Deployment build fingerprint via /api/health",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "devops-engineer",
+        "backend-engineer"
+      ],
+      "files": [
+        "next.config.ts",
+        "src/app/api/health/route.ts",
+        "Dockerfile",
+        "docker-compose.yml",
+        "tests/health.test.ts",
+        "docs/DEPLOYMENT.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "GET /api/health returns build.commit equal to the commit the artifact was built from, locally and in Docker (via GIT_SHA build-arg); a runbook documents the exact update/build/restart steps.",
+      "evidence": "Founder B ran gates: health tests 2/2, full suite 91 files/819 tests (9 skipped), tsc clean, eslint clean, build OK; next start on :3101 returned build.commit=5f4757ac7e6caaee1cdfc977457904e8c8dc9a5f; smoke 43/43."
     }
   ]
 }
