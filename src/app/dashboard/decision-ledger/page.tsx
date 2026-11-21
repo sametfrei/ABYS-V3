@@ -1,7 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 interface LedgerOutcome {
   result: "improved" | "unchanged" | "worsened";
@@ -125,10 +133,10 @@ interface Summary {
   };
 }
 
-const RESULT_LABEL: Record<LedgerOutcome["result"], string> = {
-  improved: "İyileşti",
-  unchanged: "Değişmedi",
-  worsened: "Kötüleşti",
+const RESULT_LABEL: Record<LedgerOutcome["result"], ShellKey> = {
+  improved: "ledger.resultImproved",
+  unchanged: "ledger.resultUnchanged",
+  worsened: "ledger.resultWorsened",
 };
 
 const RESULT_STYLE: Record<LedgerOutcome["result"], string> = {
@@ -137,10 +145,10 @@ const RESULT_STYLE: Record<LedgerOutcome["result"], string> = {
   worsened: "bg-abys-critical-soft text-abys-critical",
 };
 
-const CALIBRATION_DIRECTION_LABEL: Record<string, string> = {
-  overconfident: "Aşırı güvenli",
-  aligned: "Tutarlı",
-  underconfident: "Temkinli",
+const CALIBRATION_DIRECTION_LABEL: Record<string, ShellKey> = {
+  overconfident: "ledger.directionOverconfident",
+  aligned: "ledger.directionAligned",
+  underconfident: "ledger.directionUnderconfident",
 };
 
 const CALIBRATION_DIRECTION_STYLE: Record<string, string> = {
@@ -149,64 +157,97 @@ const CALIBRATION_DIRECTION_STYLE: Record<string, string> = {
   underconfident: "text-abys-warning",
 };
 
-const CHOICE_LABEL: Record<string, string> = {
-  accepted: "Kabul",
-  rejected: "Ret",
-  modified: "Değiştirilmiş",
+const CHOICE_LABEL: Record<string, ShellKey> = {
+  accepted: "ledger.choiceAccepted",
+  rejected: "ledger.choiceRejected",
+  modified: "ledger.choiceModified",
 };
 
-const DECISION_STATE_LABEL: Record<string, string> = {
-  draft: "Taslak",
-  under_review: "İnceleniyor",
-  awaiting_approval: "Onay bekliyor",
-  approved: "Onaylandı",
-  rejected: "Reddedildi",
-  in_execution: "Yürütmede",
-  completed: "Tamamlandı",
-  outcome_review: "Sonuç incelemesi",
-  closed: "Kapandı",
+const DECISION_STATE_LABEL: Record<string, ShellKey> = {
+  draft: "ledger.stateDraft",
+  under_review: "ledger.stateUnderReview",
+  awaiting_approval: "ledger.stateAwaitingApproval",
+  approved: "ledger.stateApproved",
+  rejected: "ledger.stateRejected",
+  in_execution: "ledger.stateInExecution",
+  completed: "ledger.stateCompleted",
+  outcome_review: "ledger.stateOutcomeReview",
+  closed: "ledger.stateClosed",
 };
 
-const ACTION_STATUS_LABEL: Record<string, string> = {
-  open: "Açık",
-  in_progress: "Yürütülüyor",
-  done: "Tamamlandı",
-  cancelled: "İptal",
+const ACTION_STATUS_LABEL: Record<string, ShellKey> = {
+  open: "ledger.actionOpen",
+  in_progress: "ledger.actionInProgress",
+  done: "ledger.actionDone",
+  cancelled: "ledger.actionCancelled",
 };
 
-function formatDate(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleString("tr-TR");
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
 }
 
-function formatMoney(value: number, currency: string): string {
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function localizedLabel(
+  locale: Locale,
+  labels: Record<string, ShellKey>,
+  value: string
+): string {
+  const key = labels[value];
+  return key ? t(locale, key) : value;
+}
+
+function formatDate(value: string, locale: Locale): string {
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? value : d.toLocaleString(locale);
+}
+
+function formatNumber(value: number, locale: Locale): string {
+  return value.toLocaleString(locale);
+}
+
+function formatMoney(value: number, currency: string, locale: Locale): string {
   try {
-    return new Intl.NumberFormat("tr-TR", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency,
       maximumFractionDigits: 2,
     }).format(value);
   } catch {
-    return `${value.toLocaleString("tr-TR")} ${currency}`;
+    return `${value.toLocaleString(locale)} ${currency}`;
   }
 }
 
-function formatPercent(value: number | null): string {
-  if (value === null) return "taban sıfır";
-  return `${value >= 0 ? "+" : ""}${value.toLocaleString("tr-TR", { maximumFractionDigits: 1 })}%`;
+function formatPercent(value: number | null, locale: Locale): string {
+  if (value === null) return t(locale, "ledger.percentBaseZero");
+  return `${value >= 0 ? "+" : ""}${value.toLocaleString(locale, { maximumFractionDigits: 1 })}%`;
 }
 
-function formatRate(value: number | null): string {
-  if (value === null) return "örnek yok";
-  return `${(value * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}%`;
+function formatRate(value: number | null, locale: Locale): string {
+  if (value === null) return t(locale, "ledger.rateNoSample");
+  return `${(value * 100).toLocaleString(locale, { maximumFractionDigits: 1 })}%`;
 }
 
 /** Decision Value Ledger — kararlar ve gerçekleşen sonuçları. Salt okunur. */
 export default function DecisionLedgerPage() {
+  const locale = useLocale();
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<
+    | { kind: "unauthorized" | "forbidden" | "loadFailed" }
+    | { kind: "http"; status: number }
+    | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -214,16 +255,23 @@ export default function DecisionLedgerPage() {
       try {
         const res = await fetch("/api/decision-ledger", { cache: "no-store" });
         if (!res.ok) {
-          if (res.status === 401) throw new Error("Bu sayfa için oturum gerekir.");
-          if (res.status === 403) throw new Error("Karar geçmişini görüntüleme yetkiniz yok.");
-          throw new Error(`Karar geçmişi yüklenemedi (HTTP ${res.status}).`);
+          if (res.status === 401) {
+            if (!cancelled) setError({ kind: "unauthorized" });
+            return;
+          }
+          if (res.status === 403) {
+            if (!cancelled) setError({ kind: "forbidden" });
+            return;
+          }
+          if (!cancelled) setError({ kind: "http", status: res.status });
+          return;
         }
         const data = (await res.json()) as { summary?: Summary; entries?: LedgerEntry[] };
         if (cancelled) return;
         setSummary(data.summary ?? null);
         setEntries(Array.isArray(data.entries) ? data.entries : []);
-      } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Yükleme başarısız.");
+      } catch {
+        if (!cancelled) setError({ kind: "loadFailed" });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -233,41 +281,52 @@ export default function DecisionLedgerPage() {
     };
   }, []);
 
+  const errorMessage =
+    error === null
+      ? ""
+      : error.kind === "http"
+        ? formatMessage(locale, "ledger.loadFailedHttp", { status: error.status })
+        : t(locale, `ledger.${error.kind}` as ShellKey);
+
   return (
     <div>
       <PageHeader
-        eyebrow="KARAR DEFTERİ"
-        title="Ne karar verdik,"
-        accent="ne oldu?"
-        desc="Alınan kararlar ve kaydedilmiş sonuçları. Kurumsal öğrenme: hangi karar hangi koşulda işe yaradı."
+        eyebrow={t(locale, "ledger.eyebrow")}
+        title={t(locale, "ledger.title")}
+        accent={t(locale, "ledger.titleAccent")}
+        desc={t(locale, "ledger.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-4xl">
         {loading ? (
-          <p className="text-sm text-abys-muted" role="status">Yükleniyor…</p>
+          <p className="text-sm text-abys-muted" role="status">{t(locale, "ledger.loading")}</p>
         ) : error ? (
           <p role="alert" className="rounded-xl border border-abys-critical/40 bg-abys-critical-soft px-4 py-3 text-sm text-abys-critical">
-            {error}
+            {errorMessage}
           </p>
         ) : entries.length === 0 ? (
-          <p className="text-sm text-abys-muted">Henüz karar kaydı bulunmuyor.</p>
+          <p className="text-sm text-abys-muted">{t(locale, "ledger.empty")}</p>
         ) : (
           <>
             {summary && (
               <>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   {[
-                    ["Toplam karar", summary.totalDecisions],
-                    ["Sonuçlanan", summary.withOutcome],
-                    ["İyileşen", summary.improved],
-                    ["Kötüleşen", summary.worsened],
+                    ["ledger.totalDecisions", summary.totalDecisions],
+                    ["ledger.withOutcome", summary.withOutcome],
+                    ["ledger.improved", summary.improved],
+                    ["ledger.worsened", summary.worsened],
                   ].map(([label, value]) => (
                     <div
                       key={String(label)}
                       className="rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3"
                     >
-                      <p className="text-[11px] tracking-wide text-abys-muted uppercase">{label}</p>
-                      <p className="font-serif text-2xl text-abys-navy">{String(value)}</p>
+                      <p className="text-[11px] tracking-wide text-abys-muted uppercase">
+                        {t(locale, label as ShellKey)}
+                      </p>
+                      <p className="font-serif text-2xl text-abys-navy">
+                        {formatNumber(Number(value), locale)}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -275,22 +334,26 @@ export default function DecisionLedgerPage() {
                 <div className="mb-6 rounded-xl border border-abys-cream-border bg-abys-cream p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="text-[11px] tracking-widest text-abys-muted font-semibold">
-                      KARAR → YÜRÜTME BAĞLANTISI
+                      {t(locale, "ledger.executionHeading")}
                     </p>
                     <p className="text-[11px] text-abys-muted">
-                      {summary.execution.totalActions} aksiyon · her geçiş değişmez olay kaydı taşır
+                      {formatMessage(locale, "ledger.executionSummary", {
+                        count: formatNumber(summary.execution.totalActions, locale),
+                      })}
                     </p>
                   </div>
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     {[
-                      ["Açık", summary.execution.open],
-                      ["Yürütülüyor", summary.execution.inProgress],
-                      ["Tamamlandı", summary.execution.done],
-                      ["İptal", summary.execution.cancelled],
+                      ["ledger.statusOpen", summary.execution.open],
+                      ["ledger.statusInProgress", summary.execution.inProgress],
+                      ["ledger.statusDone", summary.execution.done],
+                      ["ledger.statusCancelled", summary.execution.cancelled],
                     ].map(([label, value]) => (
                       <div key={String(label)} className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-                        <p className="text-abys-muted">{label}</p>
-                        <p className="mt-1 font-semibold text-abys-ink">{value}</p>
+                        <p className="text-abys-muted">{t(locale, label as ShellKey)}</p>
+                        <p className="mt-1 font-semibold text-abys-ink">
+                          {formatNumber(Number(value), locale)}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -300,10 +363,12 @@ export default function DecisionLedgerPage() {
                   <div className="mb-6 rounded-xl border border-abys-cream-border bg-abys-cream p-4">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <p className="text-[11px] tracking-widest text-abys-muted font-semibold">
-                        SAYISAL EKONOMİK ETKİ
+                        {t(locale, "ledger.economicsHeading")}
                       </p>
                       <p className="text-[11px] text-abys-muted">
-                        {summary.economics.reconciledCount} mutabık karar · para birimleri ayrı toplanır
+                        {formatMessage(locale, "ledger.economicsSummary", {
+                          count: formatNumber(summary.economics.reconciledCount, locale),
+                        })}
                       </p>
                     </div>
                     <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -314,16 +379,20 @@ export default function DecisionLedgerPage() {
                         >
                           <p className="text-xs font-semibold text-abys-ink">{item.currency}</p>
                           <p className="mt-1 text-[11px] text-abys-muted">
-                            Beklenen {formatMoney(item.expectedTotal, item.currency)} · Gerçekleşen{" "}
-                            {formatMoney(item.actualTotal, item.currency)}
+                            {formatMessage(locale, "ledger.economicsLine", {
+                              expected: formatMoney(item.expectedTotal, item.currency, locale),
+                              actual: formatMoney(item.actualTotal, item.currency, locale),
+                            })}
                           </p>
                           <p
                             className={`mt-0.5 text-[11px] ${
                               item.varianceTotal >= 0 ? "text-abys-healthy" : "text-abys-critical"
                             }`}
                           >
-                            Mutabık fark {formatMoney(item.varianceTotal, item.currency)} ·{" "}
-                            {item.reconciledCount} çift
+                            {formatMessage(locale, "ledger.economicsVariance", {
+                              variance: formatMoney(item.varianceTotal, item.currency, locale),
+                              count: formatNumber(item.reconciledCount, locale),
+                            })}
                           </p>
                         </div>
                       ))}
@@ -334,50 +403,66 @@ export default function DecisionLedgerPage() {
                 <div className="mb-6 rounded-xl border border-abys-cream-border bg-abys-cream p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="text-[11px] tracking-widest text-abys-muted font-semibold">
-                      KAPALI DÖNGÜ ÖĞRENME
+                      {t(locale, "ledger.learningHeading")}
                     </p>
                     <p className="text-[11px] text-abys-muted">
-                      Öneri kabul oranı {formatRate(summary.learning.choices.acceptanceRate)} ·{" "}
-                      {summary.learning.choices.total} karar
+                      {formatMessage(locale, "ledger.learningAcceptance", {
+                        rate: formatRate(summary.learning.choices.acceptanceRate, locale),
+                        count: formatNumber(summary.learning.choices.total, locale),
+                      })}
                     </p>
                   </div>
                   <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                     <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-                      <p className="text-abys-muted">Aralık isabeti</p>
+                      <p className="text-abys-muted">{t(locale, "ledger.rangeAccuracy")}</p>
                       <p className="mt-1 font-semibold text-abys-ink">
-                        {formatRate(summary.learning.rangeAccuracy.hitRate)}
+                        {formatRate(summary.learning.rangeAccuracy.hitRate, locale)}
                       </p>
                       <p className="text-[11px] text-abys-muted">
-                        {summary.learning.rangeAccuracy.hitCount} isabet ·{" "}
-                        {summary.learning.rangeAccuracy.missCount} ıska
+                        {formatMessage(locale, "ledger.rangeHits", {
+                          hits: formatNumber(summary.learning.rangeAccuracy.hitCount, locale),
+                          misses: formatNumber(summary.learning.rangeAccuracy.missCount, locale),
+                        })}
                       </p>
                     </div>
                     <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-                      <p className="text-abys-muted">Aralık kapsamı</p>
+                      <p className="text-abys-muted">{t(locale, "ledger.rangeCoverage")}</p>
                       <p className="mt-1 font-semibold text-abys-ink">
-                        {summary.learning.rangeAccuracy.evaluableCount} değerlendirilebilir
+                        {formatMessage(locale, "ledger.rangeEvaluable", {
+                          count: formatNumber(summary.learning.rangeAccuracy.evaluableCount, locale),
+                        })}
                       </p>
                       <p className="text-[11px] text-abys-muted">
-                        {summary.learning.rangeAccuracy.missingRangeCount} aralıksız ·{" "}
-                        {summary.learning.rangeAccuracy.currencyMismatchCount} para birimi farkı
+                        {formatMessage(locale, "ledger.rangeGaps", {
+                          missing: formatNumber(summary.learning.rangeAccuracy.missingRangeCount, locale),
+                          mismatch: formatNumber(
+                            summary.learning.rangeAccuracy.currencyMismatchCount,
+                            locale
+                          ),
+                        })}
                       </p>
                     </div>
                     <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-                      <p className="text-abys-muted">Kabul / ret</p>
+                      <p className="text-abys-muted">{t(locale, "ledger.acceptedRejected")}</p>
                       <p className="mt-1 font-semibold text-abys-ink">
-                        {summary.learning.choices.accepted} / {summary.learning.choices.rejected}
+                        {formatNumber(summary.learning.choices.accepted, locale)} /{" "}
+                        {formatNumber(summary.learning.choices.rejected, locale)}
                       </p>
                       <p className="text-[11px] text-abys-muted">
-                        {summary.learning.choices.modified} değiştirilmiş
+                        {formatMessage(locale, "ledger.modifiedCount", {
+                          count: formatNumber(summary.learning.choices.modified, locale),
+                        })}
                       </p>
                     </div>
                     <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-                      <p className="text-abys-muted">Güven kovaları</p>
+                      <p className="text-abys-muted">{t(locale, "ledger.confidenceBuckets")}</p>
                       <p className="mt-1 font-semibold text-abys-ink">
-                        {summary.learning.confidenceBuckets.length} kova
+                        {formatMessage(locale, "ledger.bucketCount", {
+                          count: formatNumber(summary.learning.confidenceBuckets.length, locale),
+                        })}
                       </p>
                       <p className="text-[11px] text-abys-muted">
-                        Düşük örneklem açıkça gösterilir
+                        {t(locale, "ledger.lowSample")}
                       </p>
                     </div>
                   </div>
@@ -385,26 +470,34 @@ export default function DecisionLedgerPage() {
                     <table className="w-full text-left text-[11px]">
                       <thead className="text-abys-muted">
                         <tr>
-                          <th className="py-1 pr-3 font-medium">Güven</th>
-                          <th className="py-1 pr-3 font-medium">Karar</th>
-                          <th className="py-1 pr-3 font-medium">Sonuçlanan</th>
-                          <th className="py-1 pr-3 font-medium">İyileşme</th>
-                          <th className="py-1 pr-3 font-medium">Aralık isabeti</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableConfidence")}</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableDecisions")}</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableResolved")}</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableImprovement")}</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableRangeHit")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {summary.learning.confidenceBuckets.map((bucket) => (
                           <tr key={bucket.key} className="border-t border-abys-cream-border">
                             <td className="py-1 pr-3 text-abys-ink">{bucket.label}</td>
-                            <td className="py-1 pr-3">{bucket.total}</td>
-                            <td className="py-1 pr-3">{bucket.withOutcome}</td>
+                            <td className="py-1 pr-3">{formatNumber(bucket.total, locale)}</td>
+                            <td className="py-1 pr-3">{formatNumber(bucket.withOutcome, locale)}</td>
                             <td className="py-1 pr-3">
-                              {formatRate(bucket.improvedRate)}{" "}
-                              <span className="text-abys-muted">({bucket.withOutcome} örnek)</span>
+                              {formatRate(bucket.improvedRate, locale)}{" "}
+                              <span className="text-abys-muted">
+                                {formatMessage(locale, "ledger.sampleCount", {
+                                  count: formatNumber(bucket.withOutcome, locale),
+                                })}
+                              </span>
                             </td>
                             <td className="py-1 pr-3">
-                              {formatRate(bucket.rangeHitRate)}{" "}
-                              <span className="text-abys-muted">({bucket.rangeEvaluable} örnek)</span>
+                              {formatRate(bucket.rangeHitRate, locale)}{" "}
+                              <span className="text-abys-muted">
+                                {formatMessage(locale, "ledger.sampleCount", {
+                                  count: formatNumber(bucket.rangeEvaluable, locale),
+                                })}
+                              </span>
                             </td>
                           </tr>
                         ))}
@@ -416,51 +509,69 @@ export default function DecisionLedgerPage() {
                 <div className="mb-6 rounded-xl border border-abys-cream-border bg-abys-cream p-4">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p className="text-[11px] tracking-widest text-abys-muted font-semibold">
-                      GÜVEN KALİBRASYONU
+                      {t(locale, "ledger.calibrationHeading")}
                     </p>
                     <p className="text-[11px] text-abys-muted">
                       {summary.calibration.status === "insufficient_evidence"
-                        ? `Kanıt yetersiz · kova başına en az ${summary.calibration.threshold} sonuç gerekir`
-                        : `${summary.calibration.totalWithOutcome} sonuçlanan karardan türetildi`}
+                        ? formatMessage(locale, "ledger.calibrationInsufficient", {
+                            threshold: formatNumber(summary.calibration.threshold, locale),
+                          })
+                        : formatMessage(locale, "ledger.calibrationDerived", {
+                            count: formatNumber(summary.calibration.totalWithOutcome, locale),
+                          })}
                     </p>
                   </div>
                   <div className="mt-3 overflow-x-auto">
                     <table className="w-full text-left text-[11px]">
                       <thead className="text-abys-muted">
                         <tr>
-                          <th className="py-1 pr-3 font-medium">Güven</th>
-                          <th className="py-1 pr-3 font-medium">Örnek</th>
-                          <th className="py-1 pr-3 font-medium">Gözlenen iyileşme</th>
-                          <th className="py-1 pr-3 font-medium">Değerlendirme</th>
-                          <th className="py-1 pr-3 font-medium">Düzeltilmiş güven</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableConfidence")}</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableSample")}</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableObservedImprovement")}</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableAssessment")}</th>
+                          <th className="py-1 pr-3 font-medium">{t(locale, "ledger.tableAdjustedConfidence")}</th>
                         </tr>
                       </thead>
                       <tbody>
                         {summary.calibration.buckets.map((bucket) => (
                           <tr key={bucket.key} className="border-t border-abys-cream-border">
                             <td className="py-1 pr-3 text-abys-ink">
-                              %{bucket.statedConfidence} <span className="text-abys-muted">({bucket.label})</span>
+                              {formatMessage(locale, "ledger.confidenceValue", {
+                                value: formatNumber(bucket.statedConfidence, locale),
+                              })}{" "}
+                              <span className="text-abys-muted">({bucket.label})</span>
                             </td>
-                            <td className="py-1 pr-3">{bucket.withOutcome}</td>
-                            <td className="py-1 pr-3">{formatRate(bucket.improvedRate)}</td>
+                            <td className="py-1 pr-3">{formatNumber(bucket.withOutcome, locale)}</td>
+                            <td className="py-1 pr-3">{formatRate(bucket.improvedRate, locale)}</td>
                             <td className="py-1 pr-3">
                               {bucket.status === "measured" && bucket.direction ? (
                                 <span className={CALIBRATION_DIRECTION_STYLE[bucket.direction]}>
-                                  {CALIBRATION_DIRECTION_LABEL[bucket.direction]}
+                                  {localizedLabel(locale, CALIBRATION_DIRECTION_LABEL, bucket.direction)}
                                   {bucket.gap !== null && (
                                     <span className="text-abys-muted">
-                                      {" "}(fark {(bucket.gap * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} puan)
+                                      {" "}
+                                      {formatMessage(locale, "ledger.gapPoints", {
+                                        gap: (bucket.gap * 100).toLocaleString(locale, {
+                                          maximumFractionDigits: 1,
+                                        }),
+                                      })}
                                     </span>
                                   )}
                                 </span>
                               ) : (
                                 <span className="text-abys-muted">
-                                  Kanıt yetersiz · {bucket.samplesNeeded} sonuç daha gerekli
+                                  {formatMessage(locale, "ledger.samplesNeeded", {
+                                    count: formatNumber(bucket.samplesNeeded, locale),
+                                  })}
                                 </span>
                               )}
                             </td>
                             <td className="py-1 pr-3 text-abys-ink">
-                              {bucket.adjustedConfidence === null ? "—" : `%${bucket.adjustedConfidence}`}
+                              {bucket.adjustedConfidence === null
+                                ? "—"
+                                : formatMessage(locale, "ledger.confidenceValue", {
+                                    value: formatNumber(bucket.adjustedConfidence, locale),
+                                  })}
                             </td>
                           </tr>
                         ))}
@@ -482,19 +593,25 @@ export default function DecisionLedgerPage() {
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-abys-ink">{entry.title}</p>
                       <p className="text-xs text-abys-muted mt-0.5">
-                        {CHOICE_LABEL[entry.choice] ?? entry.choice} · {entry.decidedBy} ·{" "}
-                        {formatDate(entry.decidedAt)} · güven %{entry.confidence}
+                        {formatMessage(locale, "ledger.entryMeta", {
+                          choice: localizedLabel(locale, CHOICE_LABEL, entry.choice),
+                          decidedBy: entry.decidedBy,
+                          date: formatDate(entry.decidedAt, locale),
+                          confidence: formatMessage(locale, "ledger.confidenceValue", {
+                            value: formatNumber(entry.confidence, locale),
+                          }),
+                        })}
                       </p>
                     </div>
                     {entry.outcome ? (
                       <span
                         className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${RESULT_STYLE[entry.outcome.result]}`}
                       >
-                        {RESULT_LABEL[entry.outcome.result]}
+                        {t(locale, RESULT_LABEL[entry.outcome.result])}
                       </span>
                     ) : (
                       <span className="rounded-full bg-abys-cream px-2 py-0.5 text-[10px] text-abys-muted">
-                        Sonuç bekliyor
+                        {t(locale, "ledger.resultPending")}
                       </span>
                     )}
                   </div>
@@ -502,54 +619,71 @@ export default function DecisionLedgerPage() {
                   {entry.execution ? (
                     <div className="mt-2 rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2 text-xs">
                       <p className="text-abys-ink">
-                        <span className="text-abys-muted">Yürütme: </span>
-                        {entry.execution.title} · {ACTION_STATUS_LABEL[entry.execution.status] ?? entry.execution.status}
-                        <span className="text-abys-muted">
-                          {" "}· {entry.execution.owner} · {entry.execution.eventCount} olay
-                        </span>
+                        <span className="text-abys-muted">{t(locale, "ledger.executionLabel")} </span>
+                        {entry.execution.title} ·{" "}
+                        {formatMessage(locale, "ledger.executionMeta", {
+                          status: localizedLabel(locale, ACTION_STATUS_LABEL, entry.execution.status),
+                          owner: entry.execution.owner,
+                          count: formatNumber(entry.execution.eventCount, locale),
+                        })}
                       </p>
                       <p className="mt-0.5 text-[11px] text-abys-muted">
-                        Karar durumu: {DECISION_STATE_LABEL[entry.decisionState] ?? entry.decisionState}
-                        {entry.execution.dueAt && <> · Son tarih {formatDate(entry.execution.dueAt)}</>}
-                        {entry.execution.progressNote && <> · Not: {entry.execution.progressNote}</>}
+                        {formatMessage(locale, "ledger.decisionState", {
+                          state: localizedLabel(locale, DECISION_STATE_LABEL, entry.decisionState),
+                        })}
+                        {entry.execution.dueAt && (
+                          <> {formatMessage(locale, "ledger.dueDate", { date: formatDate(entry.execution.dueAt, locale) })}</>
+                        )}
+                        {entry.execution.progressNote && (
+                          <> {formatMessage(locale, "ledger.note", { note: entry.execution.progressNote })}</>
+                        )}
                       </p>
                     </div>
                   ) : (
                     <p className="mt-2 text-[11px] text-abys-muted">
-                      Yürütme kaydı yok · Karar durumu: {DECISION_STATE_LABEL[entry.decisionState] ?? entry.decisionState}
+                      {formatMessage(locale, "ledger.noExecution", {
+                        state: localizedLabel(locale, DECISION_STATE_LABEL, entry.decisionState),
+                      })}
                     </p>
                   )}
 
                   {entry.businessImpact && (
                     <p className="mt-2 text-xs text-abys-ink">
-                      <span className="text-abys-muted">Beklenen etki: </span>
+                      <span className="text-abys-muted">{t(locale, "ledger.businessImpact")} </span>
                       {entry.businessImpact}
                     </p>
                   )}
                   {entry.expectedImpact && (
                     <div className="mt-2 rounded-lg border border-abys-cream-border bg-abys-cream/60 px-3 py-2 text-xs">
                       <p className="text-abys-ink">
-                        <span className="text-abys-muted">Sayısal beklenti: </span>
-                        {formatMoney(entry.expectedImpact.value, entry.expectedImpact.currency)}
+                        <span className="text-abys-muted">{t(locale, "ledger.expectedNumeric")} </span>
+                        {formatMoney(entry.expectedImpact.value, entry.expectedImpact.currency, locale)}
                         {entry.expectedImpact.low !== null && entry.expectedImpact.high !== null && (
                           <span className="text-abys-muted">
-                            {" "}· aralık {formatMoney(entry.expectedImpact.low, entry.expectedImpact.currency)} –{" "}
-                            {formatMoney(entry.expectedImpact.high, entry.expectedImpact.currency)}
+                            {" "}
+                            {formatMessage(locale, "ledger.rangeText", {
+                              low: formatMoney(entry.expectedImpact.low, entry.expectedImpact.currency, locale),
+                              high: formatMoney(entry.expectedImpact.high, entry.expectedImpact.currency, locale),
+                            })}
                           </span>
                         )}
                       </p>
                       {entry.expectedImpact.basis && (
-                        <p className="mt-0.5 text-abys-muted">Dayanak: {entry.expectedImpact.basis}</p>
+                        <p className="mt-0.5 text-abys-muted">
+                          {formatMessage(locale, "ledger.basis", { basis: entry.expectedImpact.basis })}
+                        </p>
                       )}
                       {entry.expectedImpact.assumptions.length > 0 && (
                         <p className="mt-0.5 text-abys-muted">
-                          Varsayımlar: {entry.expectedImpact.assumptions.join("; ")}
+                          {formatMessage(locale, "ledger.assumptions", {
+                            list: entry.expectedImpact.assumptions.join("; "),
+                          })}
                         </p>
                       )}
                       {entry.actualImpact && (
                         <p className="mt-1 text-abys-ink">
-                          <span className="text-abys-muted">Gerçekleşen: </span>
-                          {formatMoney(entry.actualImpact.value, entry.actualImpact.currency)}
+                          <span className="text-abys-muted">{t(locale, "ledger.actual")} </span>
+                          {formatMoney(entry.actualImpact.value, entry.actualImpact.currency, locale)}
                           {entry.economicVariance && (
                             <span
                               className={
@@ -558,31 +692,40 @@ export default function DecisionLedgerPage() {
                                   : " text-abys-critical"
                               }
                             >
-                              {" "}· fark {formatMoney(entry.economicVariance.amount, entry.economicVariance.currency)} (
-                              {formatPercent(entry.economicVariance.percent)})
+                              {" "}
+                              {formatMessage(locale, "ledger.variance", {
+                                amount: formatMoney(
+                                  entry.economicVariance.amount,
+                                  entry.economicVariance.currency,
+                                  locale
+                                ),
+                                percent: formatPercent(entry.economicVariance.percent, locale),
+                              })}
                             </span>
                           )}
                         </p>
                       )}
                       {entry.actualImpact && !entry.economicVariance && (
                         <p className="mt-1 text-[11px] text-abys-muted">
-                          Fark hesaplanmadı: beklenen ve gerçekleşen para birimi farklı.
+                          {t(locale, "ledger.varianceUnavailable")}
                         </p>
                       )}
                       {entry.actualImpact?.evidence && (
-                        <p className="mt-0.5 text-abys-muted">Kanıt: {entry.actualImpact.evidence}</p>
+                        <p className="mt-0.5 text-abys-muted">
+                          {formatMessage(locale, "ledger.evidence", { evidence: entry.actualImpact.evidence })}
+                        </p>
                       )}
                     </div>
                   )}
                   {entry.outcome && (
                     <div className="mt-2 text-xs text-abys-muted">
                       <p>
-                        <span className="text-abys-ink">Sonuç: </span>
+                        <span className="text-abys-ink">{t(locale, "ledger.outcome")} </span>
                         {entry.outcome.note}
                       </p>
                       {entry.outcome.lesson && (
                         <p className="mt-0.5">
-                          <span className="text-abys-ink">Ders: </span>
+                          <span className="text-abys-ink">{t(locale, "ledger.lesson")} </span>
                           {entry.outcome.lesson}
                         </p>
                       )}

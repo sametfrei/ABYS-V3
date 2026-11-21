@@ -359,7 +359,102 @@ export type ShellKey =
   | "forecast.noSnapshots"
   | "forecast.retentionPolicy"
   | "forecast.noArchiveCandidates"
-  | "forecast.archiveCandidates";
+  | "forecast.archiveCandidates"
+  | "ledger.eyebrow"
+  | "ledger.title"
+  | "ledger.titleAccent"
+  | "ledger.subtitle"
+  | "ledger.loading"
+  | "ledger.unauthorized"
+  | "ledger.forbidden"
+  | "ledger.loadFailedHttp"
+  | "ledger.loadFailed"
+  | "ledger.empty"
+  | "ledger.totalDecisions"
+  | "ledger.withOutcome"
+  | "ledger.improved"
+  | "ledger.worsened"
+  | "ledger.executionHeading"
+  | "ledger.executionSummary"
+  | "ledger.statusOpen"
+  | "ledger.statusInProgress"
+  | "ledger.statusDone"
+  | "ledger.statusCancelled"
+  | "ledger.economicsHeading"
+  | "ledger.economicsSummary"
+  | "ledger.economicsLine"
+  | "ledger.economicsVariance"
+  | "ledger.learningHeading"
+  | "ledger.learningAcceptance"
+  | "ledger.rangeAccuracy"
+  | "ledger.rangeHits"
+  | "ledger.rangeCoverage"
+  | "ledger.rangeEvaluable"
+  | "ledger.rangeGaps"
+  | "ledger.acceptedRejected"
+  | "ledger.modifiedCount"
+  | "ledger.confidenceBuckets"
+  | "ledger.bucketCount"
+  | "ledger.lowSample"
+  | "ledger.tableConfidence"
+  | "ledger.tableDecisions"
+  | "ledger.tableResolved"
+  | "ledger.tableImprovement"
+  | "ledger.tableRangeHit"
+  | "ledger.sampleCount"
+  | "ledger.calibrationHeading"
+  | "ledger.calibrationInsufficient"
+  | "ledger.calibrationDerived"
+  | "ledger.tableSample"
+  | "ledger.tableObservedImprovement"
+  | "ledger.tableAssessment"
+  | "ledger.tableAdjustedConfidence"
+  | "ledger.directionOverconfident"
+  | "ledger.directionAligned"
+  | "ledger.directionUnderconfident"
+  | "ledger.gapPoints"
+  | "ledger.samplesNeeded"
+  | "ledger.confidenceValue"
+  | "ledger.choiceAccepted"
+  | "ledger.choiceRejected"
+  | "ledger.choiceModified"
+  | "ledger.stateDraft"
+  | "ledger.stateUnderReview"
+  | "ledger.stateAwaitingApproval"
+  | "ledger.stateApproved"
+  | "ledger.stateRejected"
+  | "ledger.stateInExecution"
+  | "ledger.stateCompleted"
+  | "ledger.stateOutcomeReview"
+  | "ledger.stateClosed"
+  | "ledger.actionOpen"
+  | "ledger.actionInProgress"
+  | "ledger.actionDone"
+  | "ledger.actionCancelled"
+  | "ledger.entryMeta"
+  | "ledger.resultImproved"
+  | "ledger.resultUnchanged"
+  | "ledger.resultWorsened"
+  | "ledger.resultPending"
+  | "ledger.executionLabel"
+  | "ledger.executionMeta"
+  | "ledger.decisionState"
+  | "ledger.dueDate"
+  | "ledger.note"
+  | "ledger.noExecution"
+  | "ledger.businessImpact"
+  | "ledger.expectedNumeric"
+  | "ledger.rangeText"
+  | "ledger.basis"
+  | "ledger.assumptions"
+  | "ledger.actual"
+  | "ledger.variance"
+  | "ledger.varianceUnavailable"
+  | "ledger.evidence"
+  | "ledger.outcome"
+  | "ledger.lesson"
+  | "ledger.percentBaseZero"
+  | "ledger.rateNoSample";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -1030,6 +1125,179 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     tr: "{count} arşiv adayı (silme yapılmaz, yalnızca rapor).",
     en: "{count} archive candidates (nothing is deleted; report only).",
   },
+  "ledger.eyebrow": { tr: "KARAR DEFTERİ", en: "DECISION LEDGER" },
+  "ledger.title": { tr: "Ne karar verdik,", en: "What did we decide," },
+  "ledger.titleAccent": { tr: "ne oldu?", en: "and what happened?" },
+  "ledger.subtitle": {
+    tr: "Alınan kararlar ve kaydedilmiş sonuçları. Kurumsal öğrenme: hangi karar hangi koşulda işe yaradı.",
+    en: "Decisions made and their recorded outcomes. Institutional learning: which decision worked under which conditions.",
+  },
+  "ledger.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "ledger.unauthorized": {
+    tr: "Bu sayfa için oturum gerekir.",
+    en: "This page requires an enterprise session.",
+  },
+  "ledger.forbidden": {
+    tr: "Karar geçmişini görüntüleme yetkiniz yok.",
+    en: "You do not have permission to view decision history.",
+  },
+  "ledger.loadFailedHttp": {
+    tr: "Karar geçmişi yüklenemedi (HTTP {status}).",
+    en: "Decision history could not be loaded (HTTP {status}).",
+  },
+  "ledger.loadFailed": { tr: "Yükleme başarısız.", en: "Loading failed." },
+  "ledger.empty": {
+    tr: "Henüz karar kaydı bulunmuyor.",
+    en: "No decision records yet.",
+  },
+  "ledger.totalDecisions": { tr: "Toplam karar", en: "Total decisions" },
+  "ledger.withOutcome": { tr: "Sonuçlanan", en: "With outcome" },
+  "ledger.improved": { tr: "İyileşen", en: "Improved" },
+  "ledger.worsened": { tr: "Kötüleşen", en: "Worsened" },
+  "ledger.executionHeading": {
+    tr: "KARAR → YÜRÜTME BAĞLANTISI",
+    en: "DECISION → EXECUTION LINK",
+  },
+  "ledger.executionSummary": {
+    tr: "{count} aksiyon · her geçiş değişmez olay kaydı taşır",
+    en: "{count} actions · every transition carries an immutable event record",
+  },
+  "ledger.statusOpen": { tr: "Açık", en: "Open" },
+  "ledger.statusInProgress": { tr: "Yürütülüyor", en: "In progress" },
+  "ledger.statusDone": { tr: "Tamamlandı", en: "Done" },
+  "ledger.statusCancelled": { tr: "İptal", en: "Cancelled" },
+  "ledger.economicsHeading": {
+    tr: "SAYISAL EKONOMİK ETKİ",
+    en: "QUANTIFIED ECONOMIC IMPACT",
+  },
+  "ledger.economicsSummary": {
+    tr: "{count} mutabık karar · para birimleri ayrı toplanır",
+    en: "{count} reconciled decisions · currencies are totaled separately",
+  },
+  "ledger.economicsLine": {
+    tr: "Beklenen {expected} · Gerçekleşen {actual}",
+    en: "Expected {expected} · Actual {actual}",
+  },
+  "ledger.economicsVariance": {
+    tr: "Mutabık fark {variance} · {count} çift",
+    en: "Reconciled variance {variance} · {count} pairs",
+  },
+  "ledger.learningHeading": { tr: "KAPALI DÖNGÜ ÖĞRENME", en: "CLOSED-LOOP LEARNING" },
+  "ledger.learningAcceptance": {
+    tr: "Öneri kabul oranı {rate} · {count} karar",
+    en: "Recommendation acceptance rate {rate} · {count} decisions",
+  },
+  "ledger.rangeAccuracy": { tr: "Aralık isabeti", en: "Interval hit rate" },
+  "ledger.rangeHits": {
+    tr: "{hits} isabet · {misses} ıska",
+    en: "{hits} hits · {misses} misses",
+  },
+  "ledger.rangeCoverage": { tr: "Aralık kapsamı", en: "Interval coverage" },
+  "ledger.rangeEvaluable": {
+    tr: "{count} değerlendirilebilir",
+    en: "{count} evaluable",
+  },
+  "ledger.rangeGaps": {
+    tr: "{missing} aralıksız · {mismatch} para birimi farkı",
+    en: "{missing} without range · {mismatch} currency mismatches",
+  },
+  "ledger.acceptedRejected": { tr: "Kabul / ret", en: "Accepted / rejected" },
+  "ledger.modifiedCount": {
+    tr: "{count} değiştirilmiş",
+    en: "{count} modified",
+  },
+  "ledger.confidenceBuckets": { tr: "Güven kovaları", en: "Confidence buckets" },
+  "ledger.bucketCount": { tr: "{count} kova", en: "{count} buckets" },
+  "ledger.lowSample": {
+    tr: "Düşük örneklem açıkça gösterilir",
+    en: "Low sample sizes are shown explicitly",
+  },
+  "ledger.tableConfidence": { tr: "Güven", en: "Confidence" },
+  "ledger.tableDecisions": { tr: "Karar", en: "Decisions" },
+  "ledger.tableResolved": { tr: "Sonuçlanan", en: "Resolved" },
+  "ledger.tableImprovement": { tr: "İyileşme", en: "Improvement" },
+  "ledger.tableRangeHit": { tr: "Aralık isabeti", en: "Interval hit rate" },
+  "ledger.sampleCount": { tr: "({count} örnek)", en: "({count} samples)" },
+  "ledger.calibrationHeading": { tr: "GÜVEN KALİBRASYONU", en: "CONFIDENCE CALIBRATION" },
+  "ledger.calibrationInsufficient": {
+    tr: "Kanıt yetersiz · kova başına en az {threshold} sonuç gerekir",
+    en: "Insufficient evidence · at least {threshold} outcomes per bucket required",
+  },
+  "ledger.calibrationDerived": {
+    tr: "{count} sonuçlanan karardan türetildi",
+    en: "Derived from {count} resolved decisions",
+  },
+  "ledger.tableSample": { tr: "Örnek", en: "Sample" },
+  "ledger.tableObservedImprovement": {
+    tr: "Gözlenen iyileşme",
+    en: "Observed improvement",
+  },
+  "ledger.tableAssessment": { tr: "Değerlendirme", en: "Assessment" },
+  "ledger.tableAdjustedConfidence": {
+    tr: "Düzeltilmiş güven",
+    en: "Adjusted confidence",
+  },
+  "ledger.directionOverconfident": { tr: "Aşırı güvenli", en: "Overconfident" },
+  "ledger.directionAligned": { tr: "Tutarlı", en: "Aligned" },
+  "ledger.directionUnderconfident": { tr: "Temkinli", en: "Underconfident" },
+  "ledger.gapPoints": { tr: "(fark {gap} puan)", en: "(gap {gap} points)" },
+  "ledger.samplesNeeded": {
+    tr: "Kanıt yetersiz · {count} sonuç daha gerekli",
+    en: "Insufficient evidence · {count} more outcomes required",
+  },
+  "ledger.confidenceValue": { tr: "%{value}", en: "{value}%" },
+  "ledger.choiceAccepted": { tr: "Kabul", en: "Accepted" },
+  "ledger.choiceRejected": { tr: "Ret", en: "Rejected" },
+  "ledger.choiceModified": { tr: "Değiştirilmiş", en: "Modified" },
+  "ledger.stateDraft": { tr: "Taslak", en: "Draft" },
+  "ledger.stateUnderReview": { tr: "İnceleniyor", en: "Under review" },
+  "ledger.stateAwaitingApproval": { tr: "Onay bekliyor", en: "Awaiting approval" },
+  "ledger.stateApproved": { tr: "Onaylandı", en: "Approved" },
+  "ledger.stateRejected": { tr: "Reddedildi", en: "Rejected" },
+  "ledger.stateInExecution": { tr: "Yürütmede", en: "In execution" },
+  "ledger.stateCompleted": { tr: "Tamamlandı", en: "Completed" },
+  "ledger.stateOutcomeReview": { tr: "Sonuç incelemesi", en: "Outcome review" },
+  "ledger.stateClosed": { tr: "Kapandı", en: "Closed" },
+  "ledger.actionOpen": { tr: "Açık", en: "Open" },
+  "ledger.actionInProgress": { tr: "Yürütülüyor", en: "In progress" },
+  "ledger.actionDone": { tr: "Tamamlandı", en: "Done" },
+  "ledger.actionCancelled": { tr: "İptal", en: "Cancelled" },
+  "ledger.entryMeta": {
+    tr: "{choice} · {decidedBy} · {date} · güven {confidence}",
+    en: "{choice} · {decidedBy} · {date} · confidence {confidence}",
+  },
+  "ledger.resultImproved": { tr: "İyileşti", en: "Improved" },
+  "ledger.resultUnchanged": { tr: "Değişmedi", en: "Unchanged" },
+  "ledger.resultWorsened": { tr: "Kötüleşti", en: "Worsened" },
+  "ledger.resultPending": { tr: "Sonuç bekliyor", en: "Awaiting outcome" },
+  "ledger.executionLabel": { tr: "Yürütme:", en: "Execution:" },
+  "ledger.executionMeta": {
+    tr: "{status} · {owner} · {count} olay",
+    en: "{status} · {owner} · {count} events",
+  },
+  "ledger.decisionState": { tr: "Karar durumu: {state}", en: "Decision state: {state}" },
+  "ledger.dueDate": { tr: "· Son tarih {date}", en: "· Due {date}" },
+  "ledger.note": { tr: "· Not: {note}", en: "· Note: {note}" },
+  "ledger.noExecution": {
+    tr: "Yürütme kaydı yok · Karar durumu: {state}",
+    en: "No execution record · Decision state: {state}",
+  },
+  "ledger.businessImpact": { tr: "Beklenen etki:", en: "Expected impact:" },
+  "ledger.expectedNumeric": { tr: "Sayısal beklenti:", en: "Quantified expectation:" },
+  "ledger.rangeText": { tr: "· aralık {low} – {high}", en: "· range {low} – {high}" },
+  "ledger.basis": { tr: "Dayanak: {basis}", en: "Basis: {basis}" },
+  "ledger.assumptions": { tr: "Varsayımlar: {list}", en: "Assumptions: {list}" },
+  "ledger.actual": { tr: "Gerçekleşen:", en: "Actual:" },
+  "ledger.variance": { tr: "· fark {amount} ({percent})", en: "· variance {amount} ({percent})" },
+  "ledger.varianceUnavailable": {
+    tr: "Fark hesaplanmadı: beklenen ve gerçekleşen para birimi farklı.",
+    en: "Variance not calculated: expected and actual currencies differ.",
+  },
+  "ledger.evidence": { tr: "Kanıt: {evidence}", en: "Evidence: {evidence}" },
+  "ledger.outcome": { tr: "Sonuç:", en: "Outcome:" },
+  "ledger.lesson": { tr: "Ders:", en: "Lesson:" },
+  "ledger.percentBaseZero": { tr: "taban sıfır", en: "zero baseline" },
+  "ledger.rateNoSample": { tr: "örnek yok", en: "no samples" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
