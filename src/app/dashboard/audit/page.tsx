@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportLink } from "@/components/ExportLink";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -184,15 +185,21 @@ export default function AuditPage() {
             </select>
           </div>
 
-          <button
-            type="button"
-            onClick={verifyChain}
-            disabled={verifying}
-            aria-busy={verifying}
-            className="text-sm rounded-full border border-abys-ink/15 px-4 py-2 hover:bg-white/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {verifying ? t(locale, "audit.verifying") : t(locale, "audit.verify")}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <ExportLink
+              href={`/api/audit/export?limit=${limit}`}
+              label={t(locale, "audit.exportCsv")}
+            />
+            <button
+              type="button"
+              onClick={verifyChain}
+              disabled={verifying}
+              aria-busy={verifying}
+              className="text-sm rounded-full border border-abys-ink/15 px-4 py-2 hover:bg-white/60 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {verifying ? t(locale, "audit.verifying") : t(locale, "audit.verify")}
+            </button>
+          </div>
         </div>
 
         <div aria-live="polite" className="space-y-3">

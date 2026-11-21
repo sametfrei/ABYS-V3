@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportLink } from "@/components/ExportLink";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -298,6 +299,13 @@ export default function DecisionLedgerPage() {
       />
 
       <div className="px-10 pb-16 max-w-4xl">
+        {!loading && !error && (
+          <div className="mb-4 flex flex-wrap justify-end">
+            {entries.length > 0 && (
+              <ExportLink href="/api/decision-ledger/export" label={t(locale, "ledger.exportCsv")} />
+            )}
+          </div>
+        )}
         {loading ? (
           <p className="text-sm text-abys-muted" role="status">{t(locale, "ledger.loading")}</p>
         ) : error ? (

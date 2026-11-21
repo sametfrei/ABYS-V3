@@ -905,7 +905,10 @@ export type ShellKey =
   | "reports.counselor.conversionLabel"
   | "reports.status.open"
   | "reports.status.in_progress"
-  | "reports.status.done";
+  | "reports.status.done"
+  | "ledger.exportCsv"
+  | "audit.exportCsv"
+  | "forecast.exportCsv";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -2437,6 +2440,9 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "reports.status.open": { tr: "açık", en: "open" },
   "reports.status.in_progress": { tr: "devam ediyor", en: "in progress" },
   "reports.status.done": { tr: "tamamlandı", en: "done" },
+  "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
+  "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
+  "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

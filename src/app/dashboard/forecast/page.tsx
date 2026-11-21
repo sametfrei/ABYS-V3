@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportLink } from "@/components/ExportLink";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -640,13 +641,21 @@ function ForecastSnapshotPanel({ label }: { label: string }) {
         <p className="text-xs tracking-widest text-abys-muted font-semibold uppercase">
           {t(locale, "forecast.calibrationHeading")}
         </p>
-        <button
-          onClick={save}
-          disabled={busy}
-          className="text-xs rounded-full border border-abys-navy/25 text-abys-navy px-3 py-1.5 hover:bg-white/60 disabled:opacity-50"
-        >
-          {busy ? t(locale, "forecast.saving") : t(locale, "forecast.saveSnapshot")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {summary && summary.total > 0 && (
+            <ExportLink
+              href={`/api/forecast/snapshots/export?label=${encodeURIComponent(label)}`}
+              label={t(locale, "forecast.exportCsv")}
+            />
+          )}
+          <button
+            onClick={save}
+            disabled={busy}
+            className="text-xs rounded-full border border-abys-navy/25 text-abys-navy px-3 py-1.5 hover:bg-white/60 disabled:opacity-50"
+          >
+            {busy ? t(locale, "forecast.saving") : t(locale, "forecast.saveSnapshot")}
+          </button>
+        </div>
       </div>
       <p className="text-[11px] text-abys-muted">
         {t(locale, "forecast.calibrationDescription")}
