@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T19:54:29.632Z",
+  "updatedAt": "2026-11-21T20:10:35.670Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1313,6 +1313,43 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Reports page renders TR and EN with no hardcoded Turkish copy; dates and percentages follow the selected locale; every reports.* key is non-empty in both dictionaries.",
       "evidence": "Founder A implemented; Founder B ran gates: i18n 19/19, full suite 91 files/819 tests (9 skipped), tsc clean, eslint clean, build OK, smoke 43/43."
+    },
+    {
+      "id": "TB-065",
+      "commit": "a1dc957",
+      "title": "CSV download links in UI",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/components/ExportLink.tsx",
+        "src/app/dashboard/decision-ledger/page.tsx",
+        "src/app/dashboard/audit/page.tsx",
+        "src/app/dashboard/forecast/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Ledger, audit and forecast screens expose a download link to their CSV endpoints; audit link honors the selected limit and forecast link carries the selected series label; labels render in TR and EN.",
+      "evidence": "Founder B ran gates: i18n 19/19, full suite 91 files/819 tests (9 skipped), tsc clean, eslint clean, build OK, smoke 43/43 (export endpoints already covered by smoke)."
+    },
+    {
+      "id": "TB-066",
+      "commit": "1e95385",
+      "title": "Bitrix24 sync idempotency, provenance and isolation tests",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer",
+        "data-integration-engineer"
+      ],
+      "files": [
+        "tests/bitrix-sync-idempotency.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Repeated demo sync does not add rows or change row ids; no duplicate (config_id, entity, external_id); live sync stores source_updated_at and source identity; org A rows never visible to org B.",
+      "evidence": "Specialist Copernicus/Mendel wrote the tests; Founder B reviewed and ran gates: 3/3 tests, full suite 92 files/822 tests (9 skipped), tsc clean, eslint clean."
     }
   ]
 }
