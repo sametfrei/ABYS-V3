@@ -152,9 +152,12 @@ export function parseAuditLimit(
 ): { ok: true; limit: number } | { ok: false; error: string } {
   const parsed = auditLimitSchema.safeParse(raw);
   if (!parsed.success) {
+    const message = parsed.error.issues[0]?.message ?? "";
     return {
       ok: false,
-      error: parsed.error.issues[0]?.message ?? "Geçersiz limit.",
+      error: message.includes("limit")
+        ? message
+        : `limit 1 ile ${MAX_AUDIT_LIMIT} arasında tam sayı olmalı`,
     };
   }
   return { ok: true, limit: parsed.data };
@@ -166,25 +169,33 @@ export function parseAuditLimit(
  * çünkü bu satırlar alt kayıtlarla daha ağırdır. Aynı "yalnızca onluk
  * tamsayı" kuralı geçerlidir.
  */
-export const MAX_LEDGER_LIMIT = 200;
-export const DEFAULT_LEDGER_LIMIT = 50;
+export const MAX_LIST_LIMIT = 200;
+export const DEFAULT_LIST_LIMIT = 50;
 
-const ledgerLimitSchema = z.preprocess((v) => {
-  if (v === undefined || v === null) return DEFAULT_LEDGER_LIMIT;
+export const listLimitSchema = z.preprocess((v) => {
+  if (v === undefined || v === null) return DEFAULT_LIST_LIMIT;
   if (typeof v === "string") {
     const trimmed = v.trim();
-    if (!trimmed) return DEFAULT_LEDGER_LIMIT;
+    if (!trimmed) return DEFAULT_LIST_LIMIT;
     if (/^\d+$/.test(trimmed)) return Number(trimmed);
   }
   return v;
-}, z.number().int("limit tam sayı olmalı").min(1, "limit 1 ile 200 arasında olmalı").max(MAX_LEDGER_LIMIT, "limit 1 ile 200 arasında olmalı"));
+}, z.number().int("limit tam sayı olmalı").min(1, `limit 1 ile ${MAX_LIST_LIMIT} arasında olmalı`)
+  .max(MAX_LIST_LIMIT, `limit 1 ile ${MAX_LIST_LIMIT} arasında olmalı`));
 
 export function parseListLimit(
   raw: string | null
 ): { ok: true; limit: number } | { ok: false; error: string } {
-  const parsed = ledgerLimitSchema.safeParse(raw);
+  const parsed = listLimitSchema.safeParse(raw);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Geçersiz limit." };
+    const message = parsed.error.issues[0]?.message ?? "";
+    // zod'un İngilizce "expected number" mesajı yerine kullanıcıya Türkçe gerekçe ver.
+    return {
+      ok: false,
+      error: message.includes("limit")
+        ? message
+        : `limit 1 ile ${MAX_LIST_LIMIT} arasında tam sayı olmalı`,
+    };
   }
   return { ok: true, limit: parsed.data };
 }
