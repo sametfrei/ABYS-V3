@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T14:45:00Z",
+  "updatedAt": "2026-11-21T15:05:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -858,6 +858,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "GET /api/connectors/[id]/runs returns health (lastStatus, consecutiveFailures, message, retryRecommended) plus failureKind, without changing existing fields.",
       "evidence": "connectors tests 27/27; new assertion covers the clean-run health shape; tsc/eslint/build clean; smoke 35/35."
+    },
+    {
+      "id": "TB-041",
+      "commit": "",
+      "title": "Decision ledger CSV export",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer",
+        "security-auditor"
+      ],
+      "files": [
+        "src/lib/ledger-csv.ts",
+        "src/app/api/decision-ledger/export/route.ts",
+        "tests/ledger-csv.test.ts",
+        "scripts/smoke-e2e.mjs",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Authorized roles can download a tenant-scoped CSV of up to 500 ledger rows with a fixed column order and RFC 4180 escaping; unauthorized roles get 401/403.",
+      "evidence": "Unit tests 5/5 (escaping, header, null handling, empty ledger); smoke 37/37 including a live export returning text/csv with a decision_id header and 6 rows; build lists the new route; tsc/eslint clean."
     }
   ]
 }
