@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T03:20:00Z",
+  "updatedAt": "2026-11-21T14:15:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -801,6 +801,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Every user-facing string on the actions screen and execution-attempt component resolves through the i18n dictionary, switching between TR and EN without hydration mismatches.",
       "evidence": "Founder A implemented; Founder B reviewed the diff and ran the gates: full suite 83 files/756 tests (9 skipped); eslint, tsc and production build clean; smoke 35/35. i18n tests assert both locales are non-empty and differ for key labels."
+    },
+    {
+      "id": "TB-038",
+      "commit": "1a00c25",
+      "title": "Connector failure classification",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer",
+        "synchronization-event-engineer"
+      ],
+      "files": [
+        "src/lib/connector-run-health.ts",
+        "tests/connector-run-health.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Sync error messages map to rate_limit/auth/timeout/server/network/unknown, and retry advice is backoff only for transient classes, fix_config for auth, manual otherwise.",
+      "evidence": "Unit tests 7/7 for the module; tsc and targeted eslint clean. UI wiring deferred to TB-039 because Founder A currently owns the connectors screen for localization."
     }
   ]
 }
