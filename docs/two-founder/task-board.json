@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T19:11:06.794Z",
+  "updatedAt": "2026-11-21T19:54:29.632Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1295,6 +1295,24 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "GET /api/health returns build.commit equal to the commit the artifact was built from, locally and in Docker (via GIT_SHA build-arg); a runbook documents the exact update/build/restart steps.",
       "evidence": "Founder B ran gates: health tests 2/2, full suite 91 files/819 tests (9 skipped), tsc clean, eslint clean, build OK; next start on :3101 returned build.commit=5f4757ac7e6caaee1cdfc977457904e8c8dc9a5f; smoke 43/43."
+    },
+    {
+      "id": "TB-064",
+      "commit": "60b51c2",
+      "title": "Reports screen TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/reports/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Reports page renders TR and EN with no hardcoded Turkish copy; dates and percentages follow the selected locale; every reports.* key is non-empty in both dictionaries.",
+      "evidence": "Founder A implemented; Founder B ran gates: i18n 19/19, full suite 91 files/819 tests (9 skipped), tsc clean, eslint clean, build OK, smoke 43/43."
     }
   ]
 }
