@@ -9,6 +9,7 @@ import { getKpiSeries } from "@/lib/db/repos/forecast";
 import { insertForecastSnapshot, listForecastSnapshots, summarizeSnapshots } from "@/lib/db/repos/forecast-snapshots";
 import { MAX_FORECAST_HORIZON, MIN_FORECAST_POINTS, forecastSeries } from "@/lib/forecasting";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { parseListLimit } from "@/lib/data/route-schemas";
 
 const postSchema = z.object({
   label: z.string().trim().min(1).max(200),
@@ -31,7 +32,16 @@ export async function GET(req: NextRequest) {
   if (label && label.length > 200) {
     return NextResponse.json({ error: "Geçersiz etiket." }, { status: 400 });
   }
-  const snapshots = await listForecastSnapshots({ orgId: session.orgId, label });
+  const rawLimit = req.nextUrl.searchParams.get("limit");
+  let limit: number | undefined;
+  if (rawLimit !== null) {
+    const parsedLimit = parseListLimit(rawLimit);
+    if (!parsedLimit.ok) {
+      return NextResponse.json({ error: `Geçersiz limit: ${parsedLimit.error}` }, { status: 400 });
+    }
+    limit = parsedLimit.limit;
+  }
+  const snapshots = await listForecastSnapshots({ orgId: session.orgId, label, limit });
   return NextResponse.json({ snapshots, summary: summarizeSnapshots(snapshots) });
 }
 

@@ -161,9 +161,10 @@ export function parseAuditLimit(
 }
 
 /**
- * Karar defteri `limit`: 1..200 tam sayı, varsayılan 50. Audit'ten farklı
- * üst sınır kullanır çünkü ledger satırları yürütme/sonuç alt kayıtlarıyla
- * daha ağırdır. Aynı "yalnızca onluk tamsayı" kuralı geçerlidir.
+ * Liste uç noktaları için `limit`: 1..200 tam sayı, varsayılan 50 (karar
+ * defteri, tahmin anlık görüntüleri). Audit'ten farklı üst sınır kullanır
+ * çünkü bu satırlar alt kayıtlarla daha ağırdır. Aynı "yalnızca onluk
+ * tamsayı" kuralı geçerlidir.
  */
 export const MAX_LEDGER_LIMIT = 200;
 export const DEFAULT_LEDGER_LIMIT = 50;
@@ -178,7 +179,7 @@ const ledgerLimitSchema = z.preprocess((v) => {
   return v;
 }, z.number().int("limit tam sayı olmalı").min(1, "limit 1 ile 200 arasında olmalı").max(MAX_LEDGER_LIMIT, "limit 1 ile 200 arasında olmalı"));
 
-export function parseLedgerLimit(
+export function parseListLimit(
   raw: string | null
 ): { ok: true; limit: number } | { ok: false; error: string } {
   const parsed = ledgerLimitSchema.safeParse(raw);

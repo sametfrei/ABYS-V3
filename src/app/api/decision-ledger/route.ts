@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { getLedgerEntries, getLedgerSummary } from "@/lib/db/repos/decision-ledger";
-import { parseLedgerLimit } from "@/lib/data/route-schemas";
+import { parseListLimit } from "@/lib/data/route-schemas";
 
 /**
  * GET /api/decision-ledger — karar geçmişi ve kaydedilmiş sonuçlar.
@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
-  const parsedLimit = parseLedgerLimit(new URL(req.url).searchParams.get("limit"));
+  const parsedLimit = parseListLimit(new URL(req.url).searchParams.get("limit"));
   if (!parsedLimit.ok) {
     return NextResponse.json({ error: `Geçersiz limit: ${parsedLimit.error}` }, { status: 400 });
   }

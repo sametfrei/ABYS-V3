@@ -177,6 +177,22 @@ describe("Tahmin anlık görüntüsü kalibrasyonu", () => {
     const other = (await (await GET(getRequest())).json()) as { snapshots: unknown[] };
     expect(other.snapshots).toHaveLength(0);
   });
+
+  it("limit parametresi doğrulanır ve sonuç sayısını sınırlar", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, await createSession("user-forecast", ORG));
+    for (const bad of ["abc", "0", "-2", "1.5", "201"]) {
+      const res = await GET(
+        new NextRequest(`http://localhost/api/forecast/snapshots?limit=${encodeURIComponent(bad)}`)
+      );
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error?: string };
+      expect(body.error).toContain("limit");
+    }
+    const ok = await GET(new NextRequest("http://localhost/api/forecast/snapshots?limit=1"));
+    expect(ok.status).toBe(200);
+    const body = (await ok.json()) as { snapshots: unknown[] };
+    expect(body.snapshots.length).toBeLessThanOrEqual(1);
+  });
   it("ilk çağrıda yakalar, tekrar çağrıda atlar ve yetersiz veriyi raporlar", async () => {
     const { POST: capture } = await import("../src/app/api/forecast/snapshots/capture/route");
     const { migrate: mig, getDb: gdb } = await import("../src/lib/db/client");
