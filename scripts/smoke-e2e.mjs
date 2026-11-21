@@ -100,6 +100,15 @@ async function main() {
   expectStatus("denetim zinciri doğrulama", verify.status, 200);
   if (verify.json?.verify?.valid === true) ok("denetim zinciri", "geçerli"); else bad("denetim zinciri", JSON.stringify(verify.json?.verify));
 
+  const auditCsv = await req("/api/audit/export?limit=5", { cookie });
+  expectStatus("denetim CSV", auditCsv.status, 200);
+  const auditCsvType = auditCsv.headers?.get?.("content-type") ?? "";
+  if (auditCsvType.startsWith("text/csv") && String(auditCsv.text ?? "").startsWith("id,created_at,actor,type")) {
+    ok("denetim CSV başlığı", `${String(auditCsv.text).split("\r\n").length - 2} kayıt`);
+  } else {
+    bad("denetim CSV başlığı", `content-type=${auditCsvType || "yok"}`);
+  }
+
   const sessions = await req("/api/auth/sessions", { cookie });
   expectStatus("aktif oturum listesi", sessions.status, 200);
   if (Array.isArray(sessions.json?.sessions)) ok("oturum kayıtları", `${sessions.json.sessions.length} oturum`); else bad("oturum kayıtları");
