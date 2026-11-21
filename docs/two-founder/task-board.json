@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T15:50:00Z",
+  "updatedAt": "2026-11-21T16:25:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -933,6 +933,43 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Export endpoint rejects unauthenticated and unauthorized callers and never leaks another organization's ledger rows.",
       "evidence": "6 tests pass covering 401, 403 (verified via hasPermission), CSV headers, exact header row, CRLF-only line endings, empty ledger and tenant isolation; tsc/eslint clean."
+    },
+    {
+      "id": "TB-045",
+      "commit": "59736b6",
+      "title": "Decision ledger TR/EN localization",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/decision-ledger/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Ledger summary cards, table headers and empty states resolve via the dictionary with locale-aware date/number/currency formatting.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 85 files/773 tests (9 skipped), eslint/tsc/build clean, smoke 37/37."
+    },
+    {
+      "id": "TB-046",
+      "commit": "cca5861",
+      "title": "Audit every ledger CSV export",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-auditor",
+        "integration-engineer"
+      ],
+      "files": [
+        "src/app/api/decision-ledger/export/route.ts",
+        "tests/decision-ledger-export.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Each successful export appends a hash-chained audit event with actor, row count and limit, scoped to the caller's organization.",
+      "evidence": "Export tests 7/7 including a new assertion that the audit row exists with a non-null prev_hash and that no audit row appears for another org; build and smoke 37/37 clean."
     }
   ]
 }
