@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T17:30:00Z",
+  "updatedAt": "2026-11-21T17:50:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1064,6 +1064,46 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Settings tabs, profile/session labels, sector and role options and status messages resolve via the dictionary in both locales.",
       "evidence": "Founder A implemented; Founder B ran gates: full suite 86 files/781 tests (9 skipped), eslint/tsc/build clean, smoke 39/39. Embedded ChangePassword/SessionManagement/UserManagement components remain Turkish (next slice)."
+    },
+    {
+      "id": "TB-052",
+      "commit": "f739886",
+      "title": "Settings sub-components TR/EN",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/components/ChangePassword.tsx",
+        "src/components/SessionManagement.tsx",
+        "src/components/UserManagement.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Password change, session management and user management components resolve all local strings and dates through the locale.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 86 files/783 tests (9 skipped), eslint/tsc/build clean, smoke 39/39."
+    },
+    {
+      "id": "TB-053",
+      "commit": "a9f14b6",
+      "title": "Validated limit for forecast snapshots",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer"
+      ],
+      "files": [
+        "src/lib/data/route-schemas.ts",
+        "src/app/api/forecast/snapshots/route.ts",
+        "src/app/api/decision-ledger/route.ts",
+        "tests/forecast-snapshots.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Snapshot listing accepts limit 1..200 and rejects invalid values with 400; the shared parser is named generically since both list routes use it.",
+      "evidence": "forecast-snapshots 7/7 and decision-ledger 9/9; tsc/eslint/build clean; smoke 39/39."
     }
   ]
 }
