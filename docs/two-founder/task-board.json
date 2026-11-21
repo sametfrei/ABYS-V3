@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T14:15:00Z",
+  "updatedAt": "2026-11-21T14:45:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -820,6 +820,44 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Sync error messages map to rate_limit/auth/timeout/server/network/unknown, and retry advice is backoff only for transient classes, fix_config for auth, manual otherwise.",
       "evidence": "Unit tests 7/7 for the module; tsc and targeted eslint clean. UI wiring deferred to TB-039 because Founder A currently owns the connectors screen for localization."
+    },
+    {
+      "id": "TB-039",
+      "commit": "5e05ff9",
+      "title": "Connectors screen TR/EN localization",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/connectors/page.tsx",
+        "tests/i18n.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "All connectors-screen copy (catalog, form, scheduling, health banner, run history, mapping) resolves through the dictionary with locale-aware date formatting.",
+      "evidence": "Founder A implemented; Founder B ran the gates: full suite 83 files/759 tests (9 skipped) before this commit's additions; eslint/tsc/build clean; smoke 35/35."
+    },
+    {
+      "id": "TB-040",
+      "commit": "d5090d0",
+      "title": "Connector run health in API",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer"
+      ],
+      "files": [
+        "src/app/api/connectors/[id]/runs/route.ts",
+        "tests/connectors.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "GET /api/connectors/[id]/runs returns health (lastStatus, consecutiveFailures, message, retryRecommended) plus failureKind, without changing existing fields.",
+      "evidence": "connectors tests 27/27; new assertion covers the clean-run health shape; tsc/eslint/build clean; smoke 35/35."
     }
   ]
 }
