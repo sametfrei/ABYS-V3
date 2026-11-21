@@ -193,6 +193,18 @@ describe("i18n kabuk sözlüğü", () => {
     }
   });
 
+  it("KPI verisi ekranı anahtarları iki dilde dolu ve farklı", () => {
+    const keys = shellKeys().filter((key) => key.startsWith("kpi."));
+    expect(keys.length).toBeGreaterThan(25);
+    for (const key of keys) {
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+    expect(t("tr", "kpi.save")).toBe("Kaydet");
+    expect(t("en", "kpi.save")).toBe("Save");
+    expect(t("tr", "kpi.metricsHeading")).not.toBe(t("en", "kpi.metricsHeading"));
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });

@@ -1387,7 +1387,39 @@ export type ShellKey =
   | "scenarios.sim.probability"
   | "scenarios.sim.assumptionsHeading"
   | "scenarios.sim.assumptionLine"
-  | "scenarios.sim.engineNote";
+  | "scenarios.sim.engineNote"
+  | "kpi.eyebrow"
+  | "kpi.title"
+  | "kpi.titleAccent"
+  | "kpi.subtitle"
+  | "kpi.loadFailed"
+  | "kpi.needMetricAndValue"
+  | "kpi.saveFailedHttp"
+  | "kpi.saveFailed"
+  | "kpi.deleteFailed"
+  | "kpi.savedPoints"
+  | "kpi.invalidDate"
+  | "kpi.numericValue"
+  | "kpi.bulkNoValidRows"
+  | "kpi.newValue"
+  | "kpi.metricPlaceholder"
+  | "kpi.observedAtAria"
+  | "kpi.valuePlaceholder"
+  | "kpi.saving"
+  | "kpi.save"
+  | "kpi.bulkSummary"
+  | "kpi.bulkSave"
+  | "kpi.metricsHeading"
+  | "kpi.goForecast"
+  | "kpi.forecast"
+  | "kpi.loading"
+  | "kpi.emptyLabels"
+  | "kpi.pointCounts"
+  | "kpi.latestPoints"
+  | "kpi.emptyPoints"
+  | "kpi.colTime"
+  | "kpi.colValue"
+  | "kpi.delete";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -3449,6 +3481,38 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     en: "{label}: low {low} · mode {mode} · high {high} {unit}",
   },
   "scenarios.sim.engineNote": { tr: "Motor: {engine}. {note}", en: "Engine: {engine}. {note}" },
+  "kpi.eyebrow": { tr: "KPI VERİSİ", en: "KPI DATA" },
+  "kpi.title": { tr: "Ne ölçüyorsunuz,", en: "What are you measuring," },
+  "kpi.titleAccent": { tr: "hangi geçmişle?", en: "with which history?" },
+  "kpi.subtitle": { tr: "Tahmin ve erken uyarı, kurumun gerçek zaman serisinden beslenir. Metriği tanımlayın, geçmiş değerleri tek tek veya toplu yapıştırarak ekleyin. Buradaki her nokta denetim kaydına ve veri soyuna bağlanır.", en: "Forecasting and early warning are fed by the institution's real time series. Define the metric, then add historical values one by one or by pasting a batch. Every point here is tied to the audit trail and data lineage." },
+  "kpi.loadFailed": { tr: "KPI verisi yüklenemedi.", en: "KPI data could not be loaded." },
+  "kpi.needMetricAndValue": { tr: "Metrik adı ve en az bir değer gerekir.", en: "A metric name and at least one value are required." },
+  "kpi.saveFailedHttp": { tr: "Kaydetme başarısız (HTTP {status}).", en: "Save failed (HTTP {status})." },
+  "kpi.saveFailed": { tr: "Kaydetme başarısız.", en: "Save failed." },
+  "kpi.deleteFailed": { tr: "Silme başarısız.", en: "Delete failed." },
+  "kpi.savedPoints": { tr: "{count} nokta kaydedildi: {label}", en: "{count} points saved: {label}" },
+  "kpi.invalidDate": { tr: "Geçerli bir tarih seçin.", en: "Choose a valid date." },
+  "kpi.numericValue": { tr: "Değer sayısal olmalı.", en: "The value must be numeric." },
+  "kpi.bulkNoValidRows": { tr: "Yapıştırılan satırlarda geçerli tarih,değer bulunamadı.", en: "No valid date,value rows were found in the pasted text." },
+  "kpi.newValue": { tr: "YENİ DEĞER", en: "NEW VALUE" },
+  "kpi.metricPlaceholder": { tr: "Metrik adı (örn. Haftalık gelir)", en: "Metric name (e.g. Weekly revenue)" },
+  "kpi.observedAtAria": { tr: "Gözlem zamanı", en: "Observation time" },
+  "kpi.valuePlaceholder": { tr: "Değer", en: "Value" },
+  "kpi.saving": { tr: "Kaydediliyor…", en: "Saving…" },
+  "kpi.save": { tr: "Kaydet", en: "Save" },
+  "kpi.bulkSummary": { tr: "Toplu yapıştırma (tarih,değer)", en: "Bulk paste (date,value)" },
+  "kpi.bulkSave": { tr: "Toplu kaydet", en: "Save batch" },
+  "kpi.metricsHeading": { tr: "METRİKLER", en: "METRICS" },
+  "kpi.goForecast": { tr: "tahmine git →", en: "go to forecast →" },
+  "kpi.forecast": { tr: "tahmin", en: "forecast" },
+  "kpi.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "kpi.emptyLabels": { tr: "Henüz KPI noktası yok. Yukarıdan ilk metriği ekleyin.", en: "No KPI points yet. Add the first metric above." },
+  "kpi.pointCounts": { tr: "{numeric} sayısal / {total} toplam", en: "{numeric} numeric / {total} total" },
+  "kpi.latestPoints": { tr: "{label} — SON NOKTALAR", en: "{label} — LATEST POINTS" },
+  "kpi.emptyPoints": { tr: "Bu metrik için henüz nokta yok.", en: "No points for this metric yet." },
+  "kpi.colTime": { tr: "Zaman", en: "Time" },
+  "kpi.colValue": { tr: "Değer", en: "Value" },
+  "kpi.delete": { tr: "Sil", en: "Delete" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

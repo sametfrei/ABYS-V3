@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 interface LabelRow {
   label: string;
@@ -17,6 +25,21 @@ interface Point {
   observedAt: string;
 }
 
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
 function todayLocal(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -24,6 +47,7 @@ function todayLocal(): string {
 }
 
 export default function KpiDataPage() {
+  const locale = useLocale();
   const [labels, setLabels] = useState<LabelRow[] | null>(null);
   const [definitions, setDefinitions] = useState<string[]>([]);
   const [metric, setMetric] = useState("");
@@ -43,6 +67,7 @@ export default function KpiDataPage() {
   }
 
   useEffect(() => {
+    const effectLocale = readLocale();
     let cancelled = false;
     (async () => {
       try {
@@ -51,7 +76,7 @@ export default function KpiDataPage() {
           fetch("/api/kpi-definitions", { cache: "no-store" }),
         ]);
         if (!labelsRes.ok) {
-          if (!cancelled) setError("KPI verisi yüklenemedi.");
+          if (!cancelled) setError(t(effectLocale, "kpi.loadFailed"));
           return;
         }
         const labelsBody = (await labelsRes.json()) as { labels: LabelRow[] };
@@ -61,7 +86,7 @@ export default function KpiDataPage() {
           if (!cancelled) setDefinitions(defsBody.definitions.map((d) => d.name));
         }
       } catch {
-        if (!cancelled) setError("KPI verisi yüklenemedi.");
+        if (!cancelled) setError(t(effectLocale, "kpi.loadFailed"));
       }
     })();
     return () => {
@@ -84,9 +109,10 @@ export default function KpiDataPage() {
   }
 
   async function save(entries: { value: number; observedAt: string }[]) {
+    const activeLocale = readLocale();
     const label = metric.trim();
     if (!label || entries.length === 0) {
-      setError("Metrik adı ve en az bir değer gerekir.");
+      setError(t(activeLocale, "kpi.needMetricAndValue"));
       return;
     }
     setBusy(true);
@@ -99,14 +125,18 @@ export default function KpiDataPage() {
         body: JSON.stringify({ label, entries }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? `Kaydetme başarısız (HTTP ${res.status}).`);
-      setMessage(`${body.written} nokta kaydedildi: ${label}`);
+      if (!res.ok)
+        throw new Error(
+          body.error ??
+            formatMessage(activeLocale, "kpi.saveFailedHttp", { status: res.status })
+        );
+      setMessage(formatMessage(activeLocale, "kpi.savedPoints", { count: body.written, label }));
       setValue("");
       setBulk("");
       await reloadLabels();
       await loadPoints(label);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kaydetme başarısız.");
+      setError(err instanceof Error ? err.message : t(activeLocale, "kpi.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -127,6 +157,7 @@ export default function KpiDataPage() {
   }
 
   async function removePoint(id: string) {
+    const activeLocale = readLocale();
     setBusy(true);
     setError("");
     try {
@@ -136,11 +167,12 @@ export default function KpiDataPage() {
         body: JSON.stringify({ id }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? "Silme başarısız.");
+      if (!res.ok)
+        throw new Error(body.error ?? t(activeLocale, "kpi.deleteFailed"));
       await loadPoints(metric.trim());
       await reloadLabels();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Silme başarısız.");
+      setError(err instanceof Error ? err.message : t(activeLocale, "kpi.deleteFailed"));
     } finally {
       setBusy(false);
     }
@@ -149,10 +181,10 @@ export default function KpiDataPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="KPI VERİSİ"
-        title="Ne ölçüyorsunuz,"
-        accent="hangi geçmişle?"
-        desc="Tahmin ve erken uyarı, kurumun gerçek zaman serisinden beslenir. Metriği tanımlayın, geçmiş değerleri tek tek veya toplu yapıştırarak ekleyin. Buradaki her nokta denetim kaydına ve veri soyuna bağlanır."
+        eyebrow={t(locale, "kpi.eyebrow")}
+        title={t(locale, "kpi.title")}
+        accent={t(locale, "kpi.titleAccent")}
+        desc={t(locale, "kpi.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-4xl space-y-6">
@@ -168,7 +200,7 @@ export default function KpiDataPage() {
         )}
 
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 space-y-3">
-          <p className="text-xs tracking-widest text-abys-muted font-semibold">YENİ DEĞER</p>
+          <p className="text-xs tracking-widest text-abys-muted font-semibold">{t(locale, "kpi.newValue")}</p>
           <div className="flex flex-wrap gap-2">
             <input
               list="kpi-names"
@@ -177,7 +209,7 @@ export default function KpiDataPage() {
                 setMetric(e.target.value);
                 void loadPoints(e.target.value);
               }}
-              placeholder="Metrik adı (örn. Haftalık gelir)"
+              placeholder={t(locale, "kpi.metricPlaceholder")}
               className="flex-1 min-w-[220px] text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
             />
             <datalist id="kpi-names">
@@ -190,12 +222,12 @@ export default function KpiDataPage() {
               value={observedAt}
               onChange={(e) => setObservedAt(e.target.value)}
               className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
-              aria-label="Gözlem zamanı"
+              aria-label={t(locale, "kpi.observedAtAria")}
             />
             <input
               value={value}
               onChange={(e) => setValue(e.target.value)}
-              placeholder="Değer"
+              placeholder={t(locale, "kpi.valuePlaceholder")}
               inputMode="decimal"
               className="w-32 text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
             />
@@ -203,12 +235,12 @@ export default function KpiDataPage() {
               onClick={() => {
                 const n = Number(value.replace(",", "."));
                 if (!Number.isFinite(n)) {
-                  setError("Değer sayısal olmalı.");
+                  setError(t(locale, "kpi.numericValue"));
                   return;
                 }
                 const at = Date.parse(observedAt);
                 if (!Number.isFinite(at)) {
-                  setError("Geçerli bir tarih seçin.");
+                  setError(t(locale, "kpi.invalidDate"));
                   return;
                 }
                 void save([{ value: n, observedAt: new Date(at).toISOString() }]);
@@ -216,12 +248,12 @@ export default function KpiDataPage() {
               disabled={busy}
               className="text-sm rounded-full bg-abys-navy text-white px-5 py-2 hover:opacity-90 disabled:opacity-40"
             >
-              {busy ? "Kaydediliyor…" : "Kaydet"}
+              {busy ? t(locale, "kpi.saving") : t(locale, "kpi.save")}
             </button>
           </div>
 
           <details className="pt-1">
-            <summary className="text-xs text-abys-muted cursor-pointer">Toplu yapıştırma (tarih,değer)</summary>
+            <summary className="text-xs text-abys-muted cursor-pointer">{t(locale, "kpi.bulkSummary")}</summary>
             <textarea
               value={bulk}
               onChange={(e) => setBulk(e.target.value)}
@@ -233,7 +265,7 @@ export default function KpiDataPage() {
               onClick={() => {
                 const entries = parseBulk();
                 if (entries.length === 0) {
-                  setError("Yapıştırılan satırlarda geçerli tarih,değer bulunamadı.");
+                  setError(t(locale, "kpi.bulkNoValidRows"));
                   return;
                 }
                 void save(entries);
@@ -241,22 +273,22 @@ export default function KpiDataPage() {
               disabled={busy}
               className="mt-2 text-xs rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft disabled:opacity-40"
             >
-              Toplu kaydet
+              {t(locale, "kpi.bulkSave")}
             </button>
           </details>
         </div>
 
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs tracking-widest text-abys-muted font-semibold">METRİKLER</p>
+            <p className="text-xs tracking-widest text-abys-muted font-semibold">{t(locale, "kpi.metricsHeading")}</p>
             <Link href="/dashboard/forecast" className="text-[11px] text-abys-accent hover:underline">
-              tahmine git →
+              {t(locale, "kpi.goForecast")}
             </Link>
           </div>
           {labels === null ? (
-            <p className="text-sm text-abys-muted">Yükleniyor…</p>
+            <p className="text-sm text-abys-muted">{t(locale, "kpi.loading")}</p>
           ) : labels.length === 0 ? (
-            <p className="text-sm text-abys-muted">Henüz KPI noktası yok. Yukarıdan ilk metriği ekleyin.</p>
+            <p className="text-sm text-abys-muted">{t(locale, "kpi.emptyLabels")}</p>
           ) : (
             <ul className="space-y-1 list-none p-0 m-0">
               {labels.map((l) => (
@@ -271,9 +303,13 @@ export default function KpiDataPage() {
                     {l.label}
                   </button>
                   <span className="text-xs text-abys-muted">
-                    {l.numericPoints} sayısal / {l.totalPoints} toplam ·{" "}
+                    {formatMessage(locale, "kpi.pointCounts", {
+                      numeric: l.numericPoints.toLocaleString(locale),
+                      total: l.totalPoints.toLocaleString(locale),
+                    })}{" "}
+                    ·{" "}
                     <Link href={`/dashboard/forecast`} className="text-abys-accent hover:underline">
-                      tahmin
+                      {t(locale, "kpi.forecast")}
                     </Link>
                   </span>
                 </li>
@@ -285,31 +321,31 @@ export default function KpiDataPage() {
         {metric.trim() && points && (
           <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
             <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
-              {metric.trim()} — SON NOKTALAR
+              {formatMessage(locale, "kpi.latestPoints", { label: metric.trim() })}
             </p>
             {points.length === 0 ? (
-              <p className="text-sm text-abys-muted">Bu metrik için henüz nokta yok.</p>
+              <p className="text-sm text-abys-muted">{t(locale, "kpi.emptyPoints")}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-left text-xs text-abys-muted">
-                    <th className="py-1 font-medium">Zaman</th>
-                    <th className="py-1 font-medium">Değer</th>
+                    <th className="py-1 font-medium">{t(locale, "kpi.colTime")}</th>
+                    <th className="py-1 font-medium">{t(locale, "kpi.colValue")}</th>
                     <th className="py-1 font-medium" />
                   </tr>
                 </thead>
                 <tbody>
                   {points.slice(-25).reverse().map((p) => (
                     <tr key={p.id} className="text-abys-ink">
-                      <td className="py-1">{new Date(p.observedAt).toLocaleString("tr-TR")}</td>
-                      <td className="py-1 font-mono">{p.value.toLocaleString("tr-TR")}</td>
+                      <td className="py-1">{new Date(p.observedAt).toLocaleString(locale)}</td>
+                      <td className="py-1 font-mono">{p.value.toLocaleString(locale)}</td>
                       <td className="py-1 text-right">
                         <button
                           onClick={() => removePoint(p.id)}
                           disabled={busy}
                           className="text-xs text-abys-muted hover:text-abys-critical disabled:opacity-30"
                         >
-                          Sil
+                          {t(locale, "kpi.delete")}
                         </button>
                       </td>
                     </tr>
