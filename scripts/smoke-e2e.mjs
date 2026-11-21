@@ -220,6 +220,38 @@ async function main() {
     bad("tahmin CSV başlığı", `content-type=${snapshotCsvType || "yok"}`);
   }
 
+  // 7c) CSV dışa aktarma sözleşmesi: tam başlık satırı, indirme başlığı,
+  // anonim erişim reddi ve limit doğrulaması.
+  const ledgerHeader =
+    "decision_id,case_id,title,severity,confidence,business_impact,choice,decided_by,decided_at," +
+    "decision_state,action_id,action_title,action_owner,action_status,action_due_at,expected_value," +
+    "expected_currency,actual_value,actual_currency,variance_value,variance_pct,outcome,outcome_note," +
+    "lesson,recorded_by,recorded_at";
+  const auditHeader = "id,created_at,actor,type,summary,detail,prev_hash,entry_hash";
+  const snapshotHeader =
+    "snapshot_id,label,model,horizon,series_points,p10,p50,p90,last_observed_at,created_by," +
+    "created_at,evaluation_status,actual,inside_range,abs_error,range_width";
+
+  for (const [name, path, response, header] of [
+    ["karar defteri", "/api/decision-ledger/export", ledgerCsv, ledgerHeader],
+    ["denetim", "/api/audit/export?limit=5", auditCsv, auditHeader],
+    ["tahmin", "/api/forecast/snapshots/export", snapshotCsv, snapshotHeader],
+  ]) {
+    const firstLine = String(response.text ?? "").split("\r\n")[0];
+    if (firstLine === header) ok(`${name} CSV tam başlığı`);
+    else bad(`${name} CSV tam başlığı`, `gelen=${firstLine.slice(0, 60)}`);
+
+    const disposition = response.headers?.get?.("content-disposition") ?? "";
+    if (disposition.includes("attachment")) ok(`${name} CSV indirme başlığı`);
+    else bad(`${name} CSV indirme başlığı`, `content-disposition=${disposition || "yok"}`);
+
+    const anon = await req(path);
+    expectStatus(`${name} CSV anonim erişim -> 401`, anon.status, 401);
+  }
+
+  const auditOversize = await req("/api/audit/export?limit=999999", { cookie });
+  expectStatus("denetim CSV aşırı limit -> 400", auditOversize.status, 400);
+
   // 8) Oturum kapatma
   const logout = await req("/api/auth/logout", { method: "POST", cookie });
   if (logout.status === 200 || logout.status === 204) ok("oturum kapatma", `HTTP ${logout.status}`);
