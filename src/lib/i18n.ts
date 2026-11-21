@@ -1511,7 +1511,67 @@ export type ShellKey =
   | "commandCenter.severityInfo"
   | "commandCenter.outcomeImproved"
   | "commandCenter.outcomeUnchanged"
-  | "commandCenter.outcomeWorsened";
+  | "commandCenter.outcomeWorsened"
+  | "tais.heading"
+  | "tais.dataModeLabel"
+  | "tais.lastUpdated"
+  | "tais.period"
+  | "tais.health"
+  | "tais.rangeToday"
+  | "tais.range7d"
+  | "tais.range30d"
+  | "tais.allServiceTypes"
+  | "tais.allCustomers"
+  | "tais.allLocations"
+  | "tais.briefHeading"
+  | "tais.kpiOpsHealth"
+  | "tais.kpiSla"
+  | "tais.kpiCriticalRisks"
+  | "tais.kpiDecisionsToday"
+  | "tais.kpiActiveTasks"
+  | "tais.kpiOverdueTasks"
+  | "tais.kpiOpenComplaints"
+  | "tais.kpiUpcomingRenewals"
+  | "tais.serviceAreas"
+  | "tais.viewAll"
+  | "tais.areaMeta"
+  | "tais.topRisks"
+  | "tais.noRisks"
+  | "tais.mainDecision"
+  | "tais.noMain"
+  | "tais.recommendedActions"
+  | "tais.noActions"
+  | "tais.due"
+  | "tais.inProgress"
+  | "tais.open"
+  | "tais.riskMeta"
+  | "tais.recommended"
+  | "tais.why"
+  | "tais.rule"
+  | "tais.serviceType"
+  | "tais.rootCause"
+  | "tais.expectedImpact"
+  | "tais.evidence"
+  | "tais.noEvidence"
+  | "tais.dataAsOf"
+  | "tais.affected"
+  | "tais.feasible"
+  | "tais.infeasible"
+  | "tais.decisionMeta"
+  | "tais.approve"
+  | "tais.review"
+  | "tais.postpone"
+  | "tais.confidenceRationale"
+  | "tais.evidenceCount"
+  | "tais.ifNoAction"
+  | "tais.projectedImpact"
+  | "tais.status.normal"
+  | "tais.status.attention"
+  | "tais.status.critical"
+  | "tais.severity.critical"
+  | "tais.severity.warning"
+  | "tais.severity.info"
+  | "tais.severity.healthy";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -3697,6 +3757,66 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "commandCenter.outcomeImproved": { tr: "İyileşti", en: "Improved" },
   "commandCenter.outcomeUnchanged": { tr: "Değişmedi", en: "Unchanged" },
   "commandCenter.outcomeWorsened": { tr: "Kötüleşti", en: "Worsened" },
+  "tais.heading": { tr: "TAIS IKF MMC — YÖNETİCİ OPERASYON ÖZETİ", en: "TAIS IKF MMC — EXECUTIVE OPERATIONS SUMMARY" },
+  "tais.dataModeLabel": { tr: "Veri modu:", en: "Data mode:" },
+  "tais.lastUpdated": { tr: "Son güncelleme: {time}", en: "Last updated: {time}" },
+  "tais.period": { tr: "İncelenen dönem: {period}", en: "Period: {period}" },
+  "tais.health": { tr: "Genel durum: {status}", en: "Overall status: {status}" },
+  "tais.rangeToday": { tr: "Bugün", en: "Today" },
+  "tais.range7d": { tr: "Son 7 gün", en: "Last 7 days" },
+  "tais.range30d": { tr: "Son 30 gün", en: "Last 30 days" },
+  "tais.allServiceTypes": { tr: "Tüm hizmet türleri", en: "All service types" },
+  "tais.allCustomers": { tr: "Tüm müşteriler", en: "All customers" },
+  "tais.allLocations": { tr: "Tüm lokasyonlar", en: "All locations" },
+  "tais.briefHeading": { tr: "YÖNETİCİ BRİFİNGİ", en: "EXECUTIVE BRIEFING" },
+  "tais.kpiOpsHealth": { tr: "Operasyon sağlık skoru", en: "Operations health score" },
+  "tais.kpiSla": { tr: "SLA uyum oranı", en: "SLA compliance rate" },
+  "tais.kpiCriticalRisks": { tr: "Kritik risk sayısı", en: "Critical risk count" },
+  "tais.kpiDecisionsToday": { tr: "Bugün karar gerektiren konu", en: "Items requiring a decision today" },
+  "tais.kpiActiveTasks": { tr: "Aktif görev", en: "Active tasks" },
+  "tais.kpiOverdueTasks": { tr: "Geciken görev", en: "Overdue tasks" },
+  "tais.kpiOpenComplaints": { tr: "Açık şikâyet", en: "Open complaints" },
+  "tais.kpiUpcomingRenewals": { tr: "Yaklaşan yenileme", en: "Upcoming renewals" },
+  "tais.serviceAreas": { tr: "Hizmet alanları", en: "Service areas" },
+  "tais.viewAll": { tr: "tümü →", en: "all →" },
+  "tais.areaMeta": { tr: "sağlık %{health} · {open} açık · {overdue} geciken", en: "health {health}% · {open} open · {overdue} overdue" },
+  "tais.topRisks": { tr: "Bugünün en kritik riskleri", en: "Today's most critical risks" },
+  "tais.noRisks": { tr: "Bu kapsamda risk kaydı yok.", en: "No risk records in this scope." },
+  "tais.mainDecision": { tr: "Bugün Yönetimin Vermesi Gereken Karar", en: "The Decision Leadership Must Make Today" },
+  "tais.noMain": { tr: "Bu filtre kapsamında öncelikli bir yönetici kararı yok.", en: "No priority executive decision in this filter scope." },
+  "tais.recommendedActions": { tr: "Önerilen aksiyonlar", en: "Recommended actions" },
+  "tais.noActions": { tr: "Bu kapsamda açık önerilen aksiyon yok.", en: "No open recommended actions in this scope." },
+  "tais.due": { tr: "son tarih {date}", en: "due {date}" },
+  "tais.inProgress": { tr: "yürütülüyor", en: "in progress" },
+  "tais.open": { tr: "açık", en: "open" },
+  "tais.riskMeta": { tr: "güven %{confidence} · {count} kanıt kaydı", en: "confidence {confidence}% · {count} evidence records" },
+  "tais.recommended": { tr: "Önerilen: {action}", en: "Recommended: {action}" },
+  "tais.why": { tr: "Neden?", en: "Why?" },
+  "tais.rule": { tr: "Kural: {rule}", en: "Rule: {rule}" },
+  "tais.serviceType": { tr: "Hizmet türü: {type}", en: "Service type: {type}" },
+  "tais.rootCause": { tr: "Kök neden: {cause}", en: "Root cause: {cause}" },
+  "tais.expectedImpact": { tr: "Beklenen etki: {impact}", en: "Expected impact: {impact}" },
+  "tais.evidence": { tr: "Kanıt: {evidence}", en: "Evidence: {evidence}" },
+  "tais.noEvidence": { tr: "Kayıt yok", en: "No records" },
+  "tais.dataAsOf": { tr: "Veri anlık görüntüsü: {time}", en: "Data snapshot: {time}" },
+  "tais.affected": { tr: "Etkilenen kayıt sayısı: {count}", en: "Affected record count: {count}" },
+  "tais.feasible": { tr: "uygulanabilir", en: "feasible" },
+  "tais.infeasible": { tr: "uygulanamaz", en: "not feasible" },
+  "tais.decisionMeta": { tr: "Güven %{confidence} · durum: {state} · {count} bağlı risk", en: "Confidence {confidence}% · state: {state} · {count} linked risks" },
+  "tais.approve": { tr: "Onayla", en: "Approve" },
+  "tais.review": { tr: "İncele", en: "Review" },
+  "tais.postpone": { tr: "Ertele", en: "Postpone" },
+  "tais.confidenceRationale": { tr: "Güven gerekçesi: {text}", en: "Confidence rationale: {text}" },
+  "tais.evidenceCount": { tr: "Kanıt kaydı sayısı: {count}", en: "Evidence record count: {count}" },
+  "tais.ifNoAction": { tr: "Aksiyon alınmazsa: {text}", en: "If no action is taken: {text}" },
+  "tais.projectedImpact": { tr: "Beklenen etki: {impact}", en: "Projected impact: {impact}" },
+  "tais.status.normal": { tr: "NORMAL", en: "NORMAL" },
+  "tais.status.attention": { tr: "DİKKAT", en: "ATTENTION" },
+  "tais.status.critical": { tr: "KRİTİK", en: "CRITICAL" },
+  "tais.severity.critical": { tr: "KRİTİK", en: "CRITICAL" },
+  "tais.severity.warning": { tr: "DİKKAT", en: "WARNING" },
+  "tais.severity.info": { tr: "BİLGİ", en: "INFO" },
+  "tais.severity.healthy": { tr: "SAĞLIKLI", en: "HEALTHY" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { SEVERITY_META } from "@/lib/signals";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 /**
  * TAIS "30 saniyelik yönetici ekranı" — Yönetim Merkezi'nin TAIS demo
@@ -116,10 +124,10 @@ interface TaisExecSummary {
   };
 }
 
-const RANGE_OPTIONS: { id: Range; label: string }[] = [
-  { id: "today", label: "Bugün" },
-  { id: "7d", label: "Son 7 gün" },
-  { id: "30d", label: "Son 30 gün" },
+const RANGE_OPTIONS: { id: Range; labelKey: ShellKey }[] = [
+  { id: "today", labelKey: "tais.rangeToday" },
+  { id: "7d", labelKey: "tais.range7d" },
+  { id: "30d", labelKey: "tais.range30d" },
 ];
 
 const CATEGORY_OPTIONS: { id: string; label: string }[] = [
@@ -131,13 +139,41 @@ const CATEGORY_OPTIONS: { id: string; label: string }[] = [
   { id: "office_mgmt", label: "Office Management" },
 ];
 
-const STATUS_META: Record<string, { label: string; color: string; soft: string }> = {
-  normal: { label: "NORMAL", color: "var(--abys-healthy)", soft: "var(--abys-healthy-soft)" },
-  attention: { label: "DİKKAT", color: "var(--abys-warning)", soft: "var(--abys-warning-soft)" },
-  critical: { label: "KRİTİK", color: "var(--abys-critical)", soft: "var(--abys-critical-soft)" },
+const STATUS_META: Record<string, { labelKey: ShellKey; color: string; soft: string }> = {
+  normal: { labelKey: "tais.status.normal", color: "var(--abys-healthy)", soft: "var(--abys-healthy-soft)" },
+  attention: { labelKey: "tais.status.attention", color: "var(--abys-warning)", soft: "var(--abys-warning-soft)" },
+  critical: { labelKey: "tais.status.critical", color: "var(--abys-critical)", soft: "var(--abys-critical-soft)" },
 };
 
+const SEVERITY_KEY: Record<string, ShellKey> = {
+  critical: "tais.severity.critical",
+  warning: "tais.severity.warning",
+  info: "tais.severity.info",
+  healthy: "tais.severity.healthy",
+};
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function severityLabel(locale: Locale, severity: string): string {
+  const key = SEVERITY_KEY[severity];
+  return key ? t(locale, key) : severity;
+}
+
 export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: boolean) => void }) {
+  const locale = useLocale();
   const [range, setRange] = useState<Range>("today");
   const [category, setCategory] = useState<string>("");
   const [customerId, setCustomerId] = useState<string>("");
@@ -205,25 +241,33 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
       <div className="flex items-center justify-between mb-1 gap-3 flex-wrap">
         <div>
           <p className="text-xs tracking-widest text-abys-muted font-semibold">
-            TAIS IKF MMC — YÖNETİCİ OPERASYON ÖZETİ
+            {t(locale, "tais.heading")}
           </p>
           <p className="text-[11px] text-abys-muted mt-0.5">
-            Veri modu: <span className="font-medium text-abys-ink">{data.dataMode}</span>
+            {t(locale, "tais.dataModeLabel")}
+            <span className="font-medium text-abys-ink">{data.dataMode}</span>
             {data.lastUpdatedAt && (
               <>
                 {" "}
-                · Son güncelleme:{" "}
-                {new Date(data.lastUpdatedAt).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                ·{" "}
+                {formatMessage(locale, "tais.lastUpdated", {
+                  time: new Date(data.lastUpdatedAt).toLocaleString(locale, {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                })}
               </>
             )}
-            {" "}· İncelenen dönem: {data.periodLabel}
+            {" "}· {formatMessage(locale, "tais.period", { period: data.periodLabel })}
           </p>
         </div>
         <span
           className="text-[10px] font-semibold tracking-wide rounded-full px-2.5 py-1 shrink-0"
           style={{ color: statusMeta.color, background: statusMeta.soft }}
         >
-          Genel durum: {statusMeta.label}
+          {formatMessage(locale, "tais.health", { status: t(locale, statusMeta.labelKey) })}
         </span>
       </div>
 
@@ -238,7 +282,7 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
                 range === r.id ? "bg-abys-navy text-white" : "text-abys-muted hover:text-abys-ink"
               }`}
             >
-              {r.label}
+              {t(locale, r.labelKey)}
             </button>
           ))}
         </div>
@@ -250,7 +294,7 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
           }}
           className="text-xs rounded-lg border border-abys-cream-border bg-white/60 px-2.5 py-1.5"
         >
-          <option value="">Tüm hizmet türleri</option>
+          <option value="">{t(locale, "tais.allServiceTypes")}</option>
           {CATEGORY_OPTIONS.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
@@ -265,7 +309,7 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
           }}
           className="text-xs rounded-lg border border-abys-cream-border bg-white/60 px-2.5 py-1.5 max-w-[200px]"
         >
-          <option value="">Tüm müşteriler</option>
+          <option value="">{t(locale, "tais.allCustomers")}</option>
           {data.dimensions.customers.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -277,7 +321,7 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
           onChange={(e) => setLocationId(e.target.value)}
           className="text-xs rounded-lg border border-abys-cream-border bg-white/60 px-2.5 py-1.5 max-w-[200px]"
         >
-          <option value="">Tüm lokasyonlar</option>
+          <option value="">{t(locale, "tais.allLocations")}</option>
           {locationOptions.map((l) => (
             <option key={l.id} value={l.id}>
               {l.name}
@@ -288,20 +332,20 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
 
       {/* F: Yönetici brifingi */}
       <div className="mb-6 rounded-xl border border-abys-accent/25 bg-white/70 p-4">
-        <p className="text-[11px] tracking-widest text-abys-accent font-semibold mb-2">YÖNETİCİ BRİFİNGİ</p>
+        <p className="text-[11px] tracking-widest text-abys-accent font-semibold mb-2">{t(locale, "tais.briefHeading")}</p>
         <p className="text-sm text-abys-ink leading-relaxed">{data.brief}</p>
       </div>
 
       {/* A: Ana + destek göstergeler (toplam 8 KPI kartı) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <Kpi label="Operasyon sağlık skoru" value={`%${kpis.management.operationsHealthScore}`} />
-        <Kpi label="SLA uyum oranı" value={`%${kpis.management.slaComplianceRatePct}`} />
-         <Kpi label="Kritik risk sayısı" value={data.criticalRiskCount} />
-        <Kpi label="Bugün karar gerektiren konu" value={data.main ? 1 : 0} />
-        <Kpi label="Aktif görev" value={kpis.operations.activeTaskCount} />
-        <Kpi label="Geciken görev" value={kpis.operations.overdueTaskCount} />
-        <Kpi label="Açık şikâyet" value={kpis.operations.openComplaintCount} />
-        <Kpi label="Yaklaşan yenileme" value={kpis.commercial.upcomingRenewalCount} />
+        <Kpi label={t(locale, "tais.kpiOpsHealth")} value={`%${kpis.management.operationsHealthScore}`} />
+        <Kpi label={t(locale, "tais.kpiSla")} value={`%${kpis.management.slaComplianceRatePct}`} />
+         <Kpi label={t(locale, "tais.kpiCriticalRisks")} value={data.criticalRiskCount} />
+        <Kpi label={t(locale, "tais.kpiDecisionsToday")} value={data.main ? 1 : 0} />
+        <Kpi label={t(locale, "tais.kpiActiveTasks")} value={kpis.operations.activeTaskCount} />
+        <Kpi label={t(locale, "tais.kpiOverdueTasks")} value={kpis.operations.overdueTaskCount} />
+        <Kpi label={t(locale, "tais.kpiOpenComplaints")} value={kpis.operations.openComplaintCount} />
+        <Kpi label={t(locale, "tais.kpiUpcomingRenewals")} value={kpis.commercial.upcomingRenewalCount} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -309,9 +353,9 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
           {/* B: 6 hizmet alanının kompakt durumu */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-abys-navy">Hizmet alanları</p>
+              <p className="text-xs font-semibold text-abys-navy">{t(locale, "tais.serviceAreas")}</p>
               <Link href="/dashboard/analysis" className="text-[11px] text-abys-accent hover:underline">
-                tümü →
+                {t(locale, "tais.viewAll")}
               </Link>
             </div>
             <ul className="space-y-1.5">
@@ -326,11 +370,15 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
                       className="text-[9px] font-semibold tracking-wide rounded-full px-1.5 py-0.5 shrink-0"
                       style={{ color: meta.color, background: meta.soft }}
                     >
-                      {meta.label}
+                      {t(locale, meta.labelKey)}
                     </span>
                     <span className="flex-1 text-abys-ink truncate">{a.label}</span>
                     <span className="text-xs text-abys-muted shrink-0">
-                       sağlık %{a.healthScore} · {a.openTaskCount} açık · {a.overdueTaskCount} geciken
+                      {formatMessage(locale, "tais.areaMeta", {
+                        health: a.healthScore,
+                        open: a.openTaskCount,
+                        overdue: a.overdueTaskCount,
+                      })}
                     </span>
                   </li>
                 );
@@ -341,17 +389,17 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
           {/* C: bugünün en kritik 3 riski */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-abys-navy">Bugünün en kritik riskleri</p>
+              <p className="text-xs font-semibold text-abys-navy">{t(locale, "tais.topRisks")}</p>
               <Link href="/dashboard/alerts" className="text-[11px] text-abys-accent hover:underline">
-                tümü →
+                {t(locale, "tais.viewAll")}
               </Link>
             </div>
             {data.topRisks.length === 0 ? (
-              <p className="text-sm text-abys-muted">Bu kapsamda risk kaydı yok.</p>
+              <p className="text-sm text-abys-muted">{t(locale, "tais.noRisks")}</p>
             ) : (
               <div className="space-y-2.5">
                 {data.topRisks.map((r) => (
-                  <RiskCard key={r.id} risk={r} />
+                  <RiskCard key={r.id} risk={r} locale={locale} />
                 ))}
               </div>
             )}
@@ -361,9 +409,10 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
         <div className="space-y-6">
           {/* D: tek ana yönetici kararı */}
           <div>
-            <p className="text-xs font-semibold text-abys-navy mb-2">Bugün Yönetimin Vermesi Gereken Karar</p>
+            <p className="text-xs font-semibold text-abys-navy mb-2">{t(locale, "tais.mainDecision")}</p>
             {data.main ? (
               <MainDecisionCard
+                locale={locale}
                 decision={data.main}
                 pending={actionPending}
                 onApprove={() => patchDecisionState("in_execution")}
@@ -371,7 +420,7 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
               />
             ) : (
               <p className="text-sm text-abys-muted rounded-xl border border-abys-cream-border bg-white/60 px-3 py-2.5">
-                Bu filtre kapsamında öncelikli bir yönetici kararı yok.
+                {t(locale, "tais.noMain")}
               </p>
             )}
           </div>
@@ -379,13 +428,13 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
           {/* E: en fazla 3 önerilen aksiyon */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-semibold text-abys-navy">Önerilen aksiyonlar</p>
+              <p className="text-xs font-semibold text-abys-navy">{t(locale, "tais.recommendedActions")}</p>
               <Link href="/dashboard/actions" className="text-[11px] text-abys-accent hover:underline">
-                tümü →
+                {t(locale, "tais.viewAll")}
               </Link>
             </div>
             {data.topActions.length === 0 ? (
-              <p className="text-sm text-abys-muted">Bu kapsamda açık önerilen aksiyon yok.</p>
+              <p className="text-sm text-abys-muted">{t(locale, "tais.noActions")}</p>
             ) : (
               <ul className="space-y-1.5">
                 {data.topActions.map((a) => (
@@ -393,8 +442,11 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
                     <p className="text-abys-ink">{a.title}</p>
                     <p className="text-xs text-abys-muted mt-0.5">
                       {a.owner}
-                      {a.dueAt && ` · son tarih ${new Date(a.dueAt).toLocaleDateString("tr-TR", { day: "numeric", month: "short" })}`}
-                      {` · ${a.status === "in_progress" ? "yürütülüyor" : "açık"}`}
+                      {a.dueAt &&
+                        ` · ${formatMessage(locale, "tais.due", {
+                          date: new Date(a.dueAt).toLocaleDateString(locale, { day: "numeric", month: "short" }),
+                        })}`}
+                      {` · ${t(locale, a.status === "in_progress" ? "tais.inProgress" : "tais.open")}`}
                     </p>
                   </li>
                 ))}
@@ -418,7 +470,7 @@ function Kpi({ label, value }: { label: string; value: string | number }) {
   );
 }
 
-function RiskCard({ risk }: { risk: TaisRiskView }) {
+function RiskCard({ risk, locale }: { risk: TaisRiskView; locale: Locale }) {
   const meta = SEVERITY_META[risk.severity];
   return (
     <div className="rounded-xl border border-abys-cream-border bg-white/60 p-3.5">
@@ -427,27 +479,35 @@ function RiskCard({ risk }: { risk: TaisRiskView }) {
           className="text-[9px] font-semibold tracking-wide rounded-full px-1.5 py-0.5 mt-0.5 shrink-0"
           style={{ color: meta.color, background: meta.soft }}
         >
-          {meta.label}
+          {severityLabel(locale, risk.severity)}
         </span>
         <div className="min-w-0 flex-1">
           <p className="text-sm text-abys-ink font-medium">{risk.title}</p>
           <p className="text-xs text-abys-muted mt-0.5">
-            {risk.customerName ?? "—"} {risk.locationName ? `· ${risk.locationName}` : ""} · güven %{risk.confidence} ·{" "}
-            {risk.evidence.length} kanıt kaydı
+            {risk.customerName ?? "—"} {risk.locationName ? `· ${risk.locationName}` : ""} ·{" "}
+            {formatMessage(locale, "tais.riskMeta", {
+              confidence: risk.confidence,
+              count: risk.evidence.length,
+            })}
           </p>
         </div>
       </div>
-       <p className="text-xs text-abys-muted mb-1">Önerilen: {risk.recommendedAction}</p>
+       <p className="text-xs text-abys-muted mb-1">{formatMessage(locale, "tais.recommended", { action: risk.recommendedAction })}</p>
       <details className="text-xs">
-        <summary className="cursor-pointer text-abys-accent">Neden?</summary>
+        <summary className="cursor-pointer text-abys-accent">{t(locale, "tais.why")}</summary>
         <div className="mt-1.5 space-y-1 text-abys-ink">
-           <p>Kural: {risk.ruleId}</p>
-           <p>Hizmet türü: {risk.category ?? "—"}</p>
-           <p>Kök neden: {risk.rootCause}</p>
-           <p>Beklenen etki: {risk.expectedImpact}</p>
-           <p>Kanıt: {risk.evidence.length > 0 ? risk.evidence.map((e) => `${e.type}:${e.id}`).join(", ") : "Kayıt yok"}</p>
-          <p>Veri anlık görüntüsü: {new Date(risk.dataAsOf).toLocaleString("tr-TR")}</p>
-          <p>Etkilenen kayıt sayısı: {risk.affectedCount}</p>
+           <p>{formatMessage(locale, "tais.rule", { rule: risk.ruleId })}</p>
+           <p>{formatMessage(locale, "tais.serviceType", { type: risk.category ?? "—" })}</p>
+           <p>{formatMessage(locale, "tais.rootCause", { cause: risk.rootCause })}</p>
+           <p>{formatMessage(locale, "tais.expectedImpact", { impact: risk.expectedImpact })}</p>
+           <p>{formatMessage(locale, "tais.evidence", {
+            evidence:
+              risk.evidence.length > 0
+                ? risk.evidence.map((e) => `${e.type}:${e.id}`).join(", ")
+                : t(locale, "tais.noEvidence"),
+          })}</p>
+          <p>{formatMessage(locale, "tais.dataAsOf", { time: new Date(risk.dataAsOf).toLocaleString(locale) })}</p>
+          <p>{formatMessage(locale, "tais.affected", { count: risk.affectedCount })}</p>
         </div>
       </details>
     </div>
@@ -455,11 +515,13 @@ function RiskCard({ risk }: { risk: TaisRiskView }) {
 }
 
 function MainDecisionCard({
+  locale,
   decision,
   pending,
   onApprove,
   onPostpone,
 }: {
+  locale: Locale;
   decision: TaisMainDecisionView;
   pending: boolean;
   onApprove: () => void;
@@ -485,12 +547,16 @@ function MainDecisionCard({
                 : "bg-abys-cream text-abys-muted"
             }`}
           >
-            {String.fromCharCode(64 + o.rank)}) {o.feasible ? "uygulanabilir" : "uygulanamaz"}
+            {String.fromCharCode(64 + o.rank)}) {t(locale, o.feasible ? "tais.feasible" : "tais.infeasible")}
           </span>
         ))}
       </div>
       <p className="text-xs text-abys-muted mb-3">
-        Güven %{decision.confidence} · durum: {decision.state} · {decision.matchedRiskCount} bağlı risk
+        {formatMessage(locale, "tais.decisionMeta", {
+          confidence: decision.confidence,
+          state: decision.state,
+          count: decision.matchedRiskCount,
+        })}
       </p>
       <div className="flex items-center gap-2 mb-2">
         <button
@@ -498,29 +564,29 @@ function MainDecisionCard({
           disabled={pending}
           className="text-xs rounded-lg bg-abys-navy text-white px-3 py-1.5 disabled:opacity-50"
         >
-          Onayla
+          {t(locale, "tais.approve")}
         </button>
         <Link
           href="/dashboard/decisions"
           className="text-xs rounded-lg border border-abys-cream-border px-3 py-1.5 text-abys-ink hover:bg-abys-cream"
         >
-          İncele
+          {t(locale, "tais.review")}
         </Link>
         <button
           onClick={onPostpone}
           disabled={pending}
           className="text-xs rounded-lg border border-abys-cream-border px-3 py-1.5 text-abys-muted hover:bg-abys-cream disabled:opacity-50"
         >
-          Ertele
+          {t(locale, "tais.postpone")}
         </button>
       </div>
       <details className="text-xs">
-        <summary className="cursor-pointer text-abys-accent">Neden?</summary>
+        <summary className="cursor-pointer text-abys-accent">{t(locale, "tais.why")}</summary>
         <div className="mt-1.5 space-y-1 text-abys-ink">
-          <p>Güven gerekçesi: {decision.confidenceRationale}</p>
-          <p>Kanıt kaydı sayısı: {decision.evidenceCount}</p>
-          <p>Aksiyon alınmazsa: {decision.counterfactual.narrative}</p>
-          <p>Beklenen etki: {decision.counterfactual.projectedImpact}</p>
+          <p>{formatMessage(locale, "tais.confidenceRationale", { text: decision.confidenceRationale })}</p>
+          <p>{formatMessage(locale, "tais.evidenceCount", { count: decision.evidenceCount })}</p>
+          <p>{formatMessage(locale, "tais.ifNoAction", { text: decision.counterfactual.narrative })}</p>
+          <p>{formatMessage(locale, "tais.projectedImpact", { impact: decision.counterfactual.projectedImpact })}</p>
         </div>
       </details>
     </div>

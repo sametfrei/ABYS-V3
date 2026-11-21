@@ -229,6 +229,18 @@ describe("i18n kabuk sözlüğü", () => {
     expect(t("tr", "commandCenter.blockActionsOverdue")).toContain("{count}");
   });
 
+  it("TAIS yönetici ekranı anahtarları iki dilde dolu", () => {
+    const keys = shellKeys().filter((key) => key.startsWith("tais."));
+    expect(keys.length).toBeGreaterThan(55);
+    for (const key of keys) {
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+    expect(t("tr", "tais.approve")).toBe("Onayla");
+    expect(t("en", "tais.approve")).toBe("Approve");
+    expect(t("en", "tais.status.attention")).toBe("ATTENTION");
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });
