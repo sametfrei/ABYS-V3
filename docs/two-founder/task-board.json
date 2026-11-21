@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T21:18:09.777Z",
+  "updatedAt": "2026-11-21T21:25:27.747Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1469,6 +1469,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "A single command proves which commit a running instance serves, supports short SHA and origin comparison, and returns distinct exit codes for match, mismatch, unhealthy and usage errors.",
       "evidence": "Specialist Mendel wrote the gate; Founder B rebuilt and ran it against :3102 with --expect=origin: build.commit 9fe8764 matched, exit 0; usage path exit 3; eslint clean."
+    },
+    {
+      "id": "TB-074",
+      "commit": "41b7dee",
+      "title": "Organization screen TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/organization/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Organization tree, consolidated totals, priority decisions and severity/kind labels render in TR and EN.",
+      "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 92 files/822 tests (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
