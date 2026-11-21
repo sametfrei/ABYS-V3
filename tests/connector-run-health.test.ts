@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { connectorHealthNote, summarizeConnectorRuns } from "../src/lib/connector-run-health";
+import {
+  classifyConnectorError,
+  connectorHealthNote,
+  retryAdvice,
+  summarizeConnectorRuns,
+} from "../src/lib/connector-run-health";
 
 function run(id: string, status: string, startedAt: string, error: string | null = null) {
   return { id, status, startedAt, error };
@@ -59,5 +64,24 @@ describe("Konnektör senkron sağlığı", () => {
     expect(health.lastStatus).toBe("success");
     expect(health.consecutiveFailures).toBe(0);
     expect(health.lastErrorMessage).toBeNull();
+  });
+
+  it("hata mesajını operatör adımına göre sınıflandırır", () => {
+    expect(classifyConnectorError("Uzak sunucu hata döndü: 429")).toBe("rate_limit");
+    expect(classifyConnectorError("HTTP 401 Unauthorized")).toBe("auth");
+    expect(classifyConnectorError("Uzak sunucu hata döndü: 503")).toBe("server");
+    expect(classifyConnectorError("TimeoutError: istek zaman aşımı")).toBe("timeout");
+    expect(classifyConnectorError("TypeError: fetch failed")).toBe("network");
+    expect(classifyConnectorError("beceremedim")).toBe("unknown");
+    expect(classifyConnectorError(null)).toBe("unknown");
+  });
+
+  it("yalnızca geçici hatalarda yeniden deneme önerir", () => {
+    expect(retryAdvice("rate_limit")).toBe("backoff");
+    expect(retryAdvice("server")).toBe("backoff");
+    expect(retryAdvice("network")).toBe("backoff");
+    expect(retryAdvice("timeout")).toBe("backoff");
+    expect(retryAdvice("auth")).toBe("fix_config");
+    expect(retryAdvice("unknown")).toBe("manual");
   });
 });

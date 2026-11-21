@@ -81,3 +81,40 @@ export function connectorHealthNote(health: ConnectorRunHealth): string | null {
   const base = `${count} ardışık senkron hatası`;
   return health.lastErrorMessage ? `${base}: ${health.lastErrorMessage}` : base;
 }
+
+/**
+ * Hata mesajını operatörün atacağı adıma göre sınıflandırır. Yeniden deneme
+ * yalnızca geçici olabilecek hatalarda önerilir; kimlik/izin hatalarında
+ * tekrar denemek durumu düzeltmez, yapılandırma düzeltmesi gerekir.
+ */
+export type ConnectorFailureKind =
+  | "rate_limit"
+  | "auth"
+  | "timeout"
+  | "server"
+  | "network"
+  | "unknown";
+
+export function classifyConnectorError(message: string | null | undefined): ConnectorFailureKind {
+  const text = String(message ?? "").toLowerCase();
+  if (!text.trim()) return "unknown";
+  if (/429|too many requests|rate limit/.test(text)) return "rate_limit";
+  if (/401|403|unauthori[sz]ed|forbidden|kimlik|yetki/.test(text)) return "auth";
+  if (/timeout|zaman aşımı|timed out|etimedout/.test(text)) return "timeout";
+  if (/\b5\d\d\b|internal server|bad gateway|service unavailable|gateway timeout/.test(text)) {
+    return "server";
+  }
+  if (/fetch failed|econnreset|enotfound|eai_again|network|ağ/.test(text)) return "network";
+  return "unknown";
+}
+
+/** Sınıflandırmaya göre güvenli yeniden deneme kipi. */
+export function retryAdvice(
+  kind: ConnectorFailureKind
+): "backoff" | "fix_config" | "manual" {
+  if (kind === "auth") return "fix_config";
+  if (kind === "rate_limit" || kind === "timeout" || kind === "server" || kind === "network") {
+    return "backoff";
+  }
+  return "manual";
+}
