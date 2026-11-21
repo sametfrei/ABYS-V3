@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T23:45:29Z",
+  "updatedAt": "2026-11-21T23:51:25Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1689,6 +1689,22 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Migration 36 adds normalized user_agent and last_seen_at; login and OIDC record the user agent (max 300 chars); getSession refreshes last_seen_at at most every 5 minutes; the sessions API returns device/last-seen only to the owner; the settings screen shows device and last-seen in TR/EN. No IP or extra personal data is stored.",
       "evidence": "Gates: tsc clean, eslint clean, sessions API 8/8 (device echo + stale last-seen refresh + cross-user exclusion), full suite 829 passed (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-086",
+      "commit": "df0fef5",
+      "title": "Smoke coverage for every dashboard screen and new APIs",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer"
+      ],
+      "files": [
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Smoke run logs in with an identifying user agent, asserts the session-owner device/last-seen response, checks the data-quality score label filter, and requests all 20 dashboard routes with an authenticated session.",
+      "evidence": "Live run against 127.0.0.1:3100: 69 geçti, 0 başarısız; oturum cihazı ABYS-Smoke/1.0; etiket filtresi 0 satır."
     }
   ]
 }
