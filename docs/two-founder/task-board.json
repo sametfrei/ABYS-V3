@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T22:59:35Z",
+  "updatedAt": "2026-11-21T23:29:43Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1646,6 +1646,24 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Filtering the quality score by a label that exists only in another organization returns zero rows and echoes the label, proving the repository keeps org_id scoping with the new filter.",
       "evidence": "Gates: tsc clean, eslint clean, score API test 5/5 (includes cross-org filter assertion)."
+    },
+    {
+      "id": "TB-084",
+      "commit": "e8162d5",
+      "title": "TAIS executive screen chrome TR/EN",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/components/TaisExecutiveScreen.tsx",
+        "src/lib/i18n.ts",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Range filters, all-entity selects, KPI labels, service-area status labels, risk cards, main decision card, recommended actions, evidence details and all empty states render in TR and EN with locale-aware dates. Turkish server-provided content remains unchanged.",
+      "evidence": "Gates: tsc clean, eslint clean, i18n 23/23, full suite 827 passed (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
