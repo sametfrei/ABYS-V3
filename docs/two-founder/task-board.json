@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T19:25:00Z",
+  "updatedAt": "2026-11-21T20:05:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1195,6 +1195,47 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The shared limit parser has generic naming and returns Turkish validation messages instead of zod's English defaults for non-numeric input.",
       "evidence": "New test file 10 cases (defaults, bounds, malformed inputs); related suites 37/37; tsc/eslint/build clean; smoke 41/41."
+    },
+    {
+      "id": "TB-059",
+      "commit": "850bd68",
+      "title": "Data sources screen TR/EN",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "integration-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/integrations/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Integrations tabs, import/CSV/OAuth/webhook/API-key copy and Bitrix24 statuses resolve via the dictionary; technical scopes stay verbatim.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 91 files/816 tests (9 skipped), eslint/tsc/build clean, smoke 43/43."
+    },
+    {
+      "id": "TB-060",
+      "commit": "f30dfb2",
+      "title": "Data quality scoring engine",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-integration-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/data-quality-score.ts",
+        "src/lib/db/repos/kpi-values.ts",
+        "src/app/api/data-quality/score/route.ts",
+        "tests/data-quality-score.test.ts",
+        "tests/data-quality-score-api.test.ts",
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Completeness, validity, uniqueness and freshness are derived only from stored KPI rows, each with its sample size; no score is invented when data is absent.",
+      "evidence": "9 unit tests + 4 API tests; smoke 43/43 with the new endpoint returning 4 dimensions; build lists the route; tsc/eslint clean."
     }
   ]
 }
