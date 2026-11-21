@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T21:25:27.747Z",
+  "updatedAt": "2026-11-21T21:38:15.662Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1486,6 +1486,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Organization tree, consolidated totals, priority decisions and severity/kind labels render in TR and EN.",
       "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 92 files/822 tests (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-075",
+      "commit": "dd0d7b3",
+      "title": "Business discovery TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/discovery/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Classification, business context, KPI framework, observed schema, semantic graph, golden-record policy and digital-twin sections render in TR and EN.",
+      "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 822 tests (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
