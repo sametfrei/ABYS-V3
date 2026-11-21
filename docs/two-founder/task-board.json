@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T18:45:00Z",
+  "updatedAt": "2026-11-21T19:25:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1159,6 +1159,42 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Alert cards, severity/status labels, rule/evidence/service labels and War Room copy resolve via the dictionary; unknown codes fall back to the raw code.",
       "evidence": "Founder A implemented; Founder B ran gates: full suite 88 files/794 tests (9 skipped), eslint/tsc/build clean, smoke 41/41."
+    },
+    {
+      "id": "TB-057",
+      "commit": "e5bf4ec",
+      "title": "Process intelligence screen TR/EN",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "synchronization-event-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/process/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Process screen copy, bottleneck/transition tables, units and known event-type labels resolve via the dictionary; unknown codes show raw codes.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 89 files/805 tests (9 skipped), eslint/tsc/build clean, smoke 41/41."
+    },
+    {
+      "id": "TB-058",
+      "commit": "80296d8",
+      "title": "List limit parser cleanup",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer"
+      ],
+      "files": [
+        "src/lib/data/route-schemas.ts",
+        "tests/list-limit-validation.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The shared limit parser has generic naming and returns Turkish validation messages instead of zod's English defaults for non-numeric input.",
+      "evidence": "New test file 10 cases (defaults, bounds, malformed inputs); related suites 37/37; tsc/eslint/build clean; smoke 41/41."
     }
   ]
 }
