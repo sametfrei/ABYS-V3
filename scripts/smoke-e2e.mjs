@@ -191,6 +191,15 @@ async function main() {
     bad("saklama planı (salt okunur)", "dryRun/archiveIds eksik");
   }
 
+  const snapshotCsv = await req("/api/forecast/snapshots/export", { cookie });
+  expectStatus("tahmin anlık görüntüsü CSV", snapshotCsv.status, 200);
+  const snapshotCsvType = snapshotCsv.headers?.get?.("content-type") ?? "";
+  if (snapshotCsvType.startsWith("text/csv") && String(snapshotCsv.text ?? "").startsWith("snapshot_id,")) {
+    ok("tahmin CSV başlığı", String(snapshotCsv.text).split("\r\n").length - 2);
+  } else {
+    bad("tahmin CSV başlığı", `content-type=${snapshotCsvType || "yok"}`);
+  }
+
   // 8) Oturum kapatma
   const logout = await req("/api/auth/logout", { method: "POST", cookie });
   if (logout.status === 200 || logout.status === 204) ok("oturum kapatma", `HTTP ${logout.status}`);
