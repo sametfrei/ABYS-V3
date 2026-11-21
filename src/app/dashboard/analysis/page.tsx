@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { loadProfile, type AbysProfile } from "@/lib/profile";
 import { useStored } from "@/lib/use-stored";
@@ -11,6 +11,29 @@ import { SECTOR_CALCULATORS, type CalculatorDef } from "@/lib/calculators";
 import { upsertEntity, newId } from "@/lib/entities";
 import type { SavedReport } from "@/lib/entities";
 import type { CommercialKpis, ManagementKpis } from "@/lib/demo/tais/kpi";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
 
 type Tab = "ai" | "calculator";
 
@@ -27,6 +50,7 @@ interface TaisAnalysis {
 }
 
 export default function AnalysisPage() {
+  const locale = useLocale();
   const [tab, setTab] = useState<Tab>("ai");
   const [stored] = useStored(() => ({ profile: loadProfile() }));
   const localProfile = stored?.profile ?? null;
@@ -60,14 +84,14 @@ export default function AnalysisPage() {
     return (
       <div>
         <PageHeader
-          eyebrow="ANALYSIS"
-          title="Hizmet türü, ekip ve lokasyon"
-          accent="kırılımları."
-          desc="Operasyon, ticari ve yönetim KPI'ları — kayıtlardan hesaplanır, tüm ekranlarla tutarlıdır."
+          eyebrow={t(locale, "analysis.eyebrow")}
+          title={t(locale, "analysis.tais.title")}
+          accent={t(locale, "analysis.tais.titleAccent")}
+          desc={t(locale, "analysis.tais.subtitle")}
         />
         <div className="px-10 pb-16 max-w-2xl">
           {taisAnalysis === null ? (
-            <p className="text-sm text-abys-muted">Yükleniyor…</p>
+            <p className="text-sm text-abys-muted">{t(locale, "analysis.loading")}</p>
           ) : (
             <TaisAnalysisView data={taisAnalysis} />
           )}
@@ -77,22 +101,29 @@ export default function AnalysisPage() {
   }
 
   if (session && !profile) {
-    return <p className="px-10 py-10 text-sm text-abys-muted">Bu kurum için TAIS analiz verisi bulunmuyor.</p>;
+    return <p className="px-10 py-10 text-sm text-abys-muted">
+        {t(locale, "analysis.tais.noData")}
+      </p>;
   }
 
   return (
     <div>
       <PageHeader
-        eyebrow="ANALYSIS"
-        title="Senaryonuzu"
-        accent="analiz edelim."
-        desc="AI destekli senaryo analizi yapın ya da manuel hesaplayıcıları kullanın."
+        eyebrow={t(locale, "analysis.eyebrow")}
+        title={t(locale, "analysis.title")}
+        accent={t(locale, "analysis.titleAccent")}
+        desc={t(locale, "analysis.subtitle")}
       />
 
       <div className="px-10">
         <div className="flex gap-1 border-b border-abys-ink/10 mb-8">
-          <TabButton id="ai" active={tab} onClick={setTab} label="AI Analiz" />
-          <TabButton id="calculator" active={tab} onClick={setTab} label="Hesaplayıcı" />
+          <TabButton id="ai" active={tab} onClick={setTab} label={t(locale, "analysis.tab.ai")} />
+          <TabButton
+            id="calculator"
+            active={tab}
+            onClick={setTab}
+            label={t(locale, "analysis.tab.calculator")}
+          />
         </div>
 
         <div className="pb-16 max-w-2xl">
@@ -105,16 +136,19 @@ export default function AnalysisPage() {
 }
 
 function TaisAnalysisView({ data }: { data: TaisAnalysis }) {
+  const locale = useLocale();
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">HİZMET TÜRÜNE GÖRE GÖREV</p>
+        <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
+          {t(locale, "analysis.byCategoryHeading")}
+        </p>
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream overflow-hidden">
           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2.5 text-[10px] tracking-wide text-abys-muted font-semibold border-b border-abys-ink/10">
-            <span>HİZMET</span>
-            <span>TOPLAM</span>
-            <span>AÇIK</span>
-            <span>GECİKEN</span>
+            <span>{t(locale, "analysis.colService")}</span>
+            <span>{t(locale, "analysis.colTotal")}</span>
+            <span>{t(locale, "analysis.colOpen")}</span>
+            <span>{t(locale, "analysis.colOverdue")}</span>
           </div>
           {data.operations.tasksByCategory.map((row) => (
             <div key={row.category} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2.5 text-sm border-b border-abys-ink/5 last:border-0">
@@ -128,13 +162,15 @@ function TaisAnalysisView({ data }: { data: TaisAnalysis }) {
       </div>
 
       <div>
-        <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">EKİBE GÖRE İŞ YÜKÜ</p>
+        <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
+          {t(locale, "analysis.byTeamHeading")}
+        </p>
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream overflow-hidden">
           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2.5 text-[10px] tracking-wide text-abys-muted font-semibold border-b border-abys-ink/10">
-            <span>EKİP</span>
-            <span>AÇIK GÖREV</span>
-            <span>KAPASİTE</span>
-            <span>KULLANIM</span>
+            <span>{t(locale, "analysis.colTeam")}</span>
+            <span>{t(locale, "analysis.colOpenTask")}</span>
+            <span>{t(locale, "analysis.colCapacity")}</span>
+            <span>{t(locale, "analysis.colUtilization")}</span>
           </div>
           {data.operations.workloadByTeam.map((row) => (
             <div key={row.teamId} className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2.5 text-sm border-b border-abys-ink/5 last:border-0">
@@ -150,7 +186,9 @@ function TaisAnalysisView({ data }: { data: TaisAnalysis }) {
       </div>
 
       <div>
-        <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">LOKASYONA GÖRE AÇIK İŞ</p>
+        <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
+          {t(locale, "analysis.byLocationHeading")}
+        </p>
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream overflow-hidden">
           {data.operations.openWorkByLocation.slice(0, 10).map((row) => (
             <div key={row.locationId} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm border-b border-abys-ink/5 last:border-0">
@@ -159,18 +197,38 @@ function TaisAnalysisView({ data }: { data: TaisAnalysis }) {
             </div>
           ))}
           {data.operations.openWorkByLocation.length === 0 && (
-            <p className="text-sm text-abys-muted px-4 py-3">Açık iş bulunmuyor.</p>
+            <p className="text-sm text-abys-muted px-4 py-3">
+              {t(locale, "analysis.noOpenWork")}
+            </p>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <KpiTile label="Operasyon Sağlığı" value={`%${data.management.operationsHealthScore}`} />
-        <KpiTile label="SLA Uyum Oranı" value={`%${data.management.slaComplianceRatePct}`} />
-        <KpiTile label="Ekip Kapasite Skoru" value={`%${data.management.teamCapacityScore}`} />
-        <KpiTile label="Müşteri Risk Skoru" value={`%${data.management.customerRiskScore}`} />
-        <KpiTile label="Açık Satış Fırsatı" value={String(data.commercial.openDealCount)} />
-        <KpiTile label="Yaklaşan Yenileme" value={String(data.commercial.upcomingRenewalCount)} />
+        <KpiTile
+          label={t(locale, "analysis.kpi.opsHealth")}
+          value={`%${data.management.operationsHealthScore}`}
+        />
+        <KpiTile
+          label={t(locale, "analysis.kpi.sla")}
+          value={`%${data.management.slaComplianceRatePct}`}
+        />
+        <KpiTile
+          label={t(locale, "analysis.kpi.teamCapacity")}
+          value={`%${data.management.teamCapacityScore}`}
+        />
+        <KpiTile
+          label={t(locale, "analysis.kpi.customerRisk")}
+          value={`%${data.management.customerRiskScore}`}
+        />
+        <KpiTile
+          label={t(locale, "analysis.kpi.openDeals")}
+          value={String(data.commercial.openDealCount)}
+        />
+        <KpiTile
+          label={t(locale, "analysis.kpi.upcomingRenewal")}
+          value={String(data.commercial.upcomingRenewalCount)}
+        />
       </div>
     </div>
   );
@@ -209,6 +267,7 @@ function TabButton({
 }
 
 function AiAnalysisTab({ profile }: { profile: AbysProfile | null }) {
+  const locale = useLocale();
   const [scenario, setScenario] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -230,10 +289,10 @@ function AiAnalysisTab({ profile }: { profile: AbysProfile | null }) {
         body: JSON.stringify({ roleId: profile.roleId, scenario }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Bilinmeyen hata.");
+      if (!res.ok) throw new Error(data.error ?? t(locale, "analysis.unknownError"));
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bilinmeyen hata.");
+      setError(err instanceof Error ? err.message : t(locale, "analysis.unknownError"));
     } finally {
       setLoading(false);
     }
@@ -275,7 +334,7 @@ function AiAnalysisTab({ profile }: { profile: AbysProfile | null }) {
         disabled={loading || !scenario.trim()}
         className="rounded-full bg-abys-navy text-white text-sm font-medium px-5 py-2.5 hover:bg-abys-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {loading ? "Analiz ediliyor…" : "Analiz et →"}
+        {loading ? t(locale, "analysis.analyzing") : t(locale, "analysis.analyze")}
       </button>
 
       {error && (
@@ -284,16 +343,16 @@ function AiAnalysisTab({ profile }: { profile: AbysProfile | null }) {
 
       {result && (
         <div className="mt-6 space-y-3">
-          <ResultRow label="Status" value={result.status} />
-          <ResultRow label="Problem" value={result.problem} />
-          <ResultRow label="Action" value={result.action} accent />
+          <ResultRow label={t(locale, "analysis.result.status")} value={result.status} />
+          <ResultRow label={t(locale, "analysis.result.problem")} value={result.problem} />
+          <ResultRow label={t(locale, "analysis.result.action")} value={result.action} accent />
 
           <button
             onClick={saveAsReport}
             disabled={saved}
             className="text-sm rounded-full border border-abys-ink/15 px-4 py-2 hover:bg-white/60 transition-colors disabled:opacity-50"
           >
-            {saved ? "Rapor olarak kaydedildi ✓" : "Rapor olarak kaydet"}
+            {saved ? t(locale, "analysis.savedReport") : t(locale, "analysis.saveReport")}
           </button>
         </div>
       )}
@@ -311,6 +370,7 @@ function ResultRow({ label, value, accent }: { label: string; value: string; acc
 }
 
 function CalculatorTab({ profile }: { profile: AbysProfile | null }) {
+  const locale = useLocale();
   const sector = profile ? getSector(profile.sectorId) : null;
   if (!sector) return null;
   const defs = SECTOR_CALCULATORS[sector.id];
@@ -318,7 +378,7 @@ function CalculatorTab({ profile }: { profile: AbysProfile | null }) {
   return (
     <div className="space-y-8">
       <p className="text-xs text-abys-muted">
-        {sector.label} için hazırlanmış hesaplayıcılar.
+        {formatMessage(locale, "analysis.calculator.intro", { sector: sector.label })}
       </p>
       {defs.map((def) => (
         <SectorCalculator key={def.id} def={def} />

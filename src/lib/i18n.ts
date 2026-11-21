@@ -909,6 +909,44 @@ export type ShellKey =
   | "ledger.exportCsv"
   | "audit.exportCsv"
   | "forecast.exportCsv"
+  | "analysis.eyebrow"
+  | "analysis.title"
+  | "analysis.titleAccent"
+  | "analysis.subtitle"
+  | "analysis.loading"
+  | "analysis.unknownError"
+  | "analysis.analyzing"
+  | "analysis.analyze"
+  | "analysis.saveReport"
+  | "analysis.savedReport"
+  | "analysis.result.status"
+  | "analysis.result.problem"
+  | "analysis.result.action"
+  | "analysis.tab.ai"
+  | "analysis.tab.calculator"
+  | "analysis.calculator.intro"
+  | "analysis.tais.title"
+  | "analysis.tais.titleAccent"
+  | "analysis.tais.subtitle"
+  | "analysis.tais.noData"
+  | "analysis.byCategoryHeading"
+  | "analysis.colService"
+  | "analysis.colTotal"
+  | "analysis.colOpen"
+  | "analysis.colOverdue"
+  | "analysis.byTeamHeading"
+  | "analysis.colTeam"
+  | "analysis.colOpenTask"
+  | "analysis.colCapacity"
+  | "analysis.colUtilization"
+  | "analysis.byLocationHeading"
+  | "analysis.noOpenWork"
+  | "analysis.kpi.opsHealth"
+  | "analysis.kpi.sla"
+  | "analysis.kpi.teamCapacity"
+  | "analysis.kpi.customerRisk"
+  | "analysis.kpi.openDeals"
+  | "analysis.kpi.upcomingRenewal"
   | "memory.eyebrow"
   | "memory.title"
   | "memory.titleAccent"
@@ -2554,6 +2592,44 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
+  "analysis.eyebrow": { tr: "ANALYSIS", en: "ANALYSIS" },
+  "analysis.title": { tr: "Senaryonuzu", en: "Let us analyze" },
+  "analysis.titleAccent": { tr: "analiz edelim.", en: "your scenario." },
+  "analysis.subtitle": { tr: "AI destekli senaryo analizi yapın ya da manuel hesaplayıcıları kullanın.", en: "Run an AI-assisted scenario analysis or use the manual calculators." },
+  "analysis.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "analysis.unknownError": { tr: "Bilinmeyen hata.", en: "Unknown error." },
+  "analysis.analyzing": { tr: "Analiz ediliyor…", en: "Analyzing…" },
+  "analysis.analyze": { tr: "Analiz et →", en: "Analyze →" },
+  "analysis.saveReport": { tr: "Rapor olarak kaydet", en: "Save as report" },
+  "analysis.savedReport": { tr: "Rapor olarak kaydedildi ✓", en: "Saved as report ✓" },
+  "analysis.result.status": { tr: "Durum", en: "Status" },
+  "analysis.result.problem": { tr: "Sorun", en: "Problem" },
+  "analysis.result.action": { tr: "Aksiyon", en: "Action" },
+  "analysis.tab.ai": { tr: "AI Analiz", en: "AI Analysis" },
+  "analysis.tab.calculator": { tr: "Hesaplayıcı", en: "Calculator" },
+  "analysis.calculator.intro": { tr: "{sector} için hazırlanmış hesaplayıcılar.", en: "Calculators prepared for {sector}." },
+  "analysis.tais.title": { tr: "Hizmet türü, ekip ve lokasyon", en: "Service type, team and location" },
+  "analysis.tais.titleAccent": { tr: "kırılımları.", en: "breakdowns." },
+  "analysis.tais.subtitle": { tr: "Operasyon, ticari ve yönetim KPI'ları — kayıtlardan hesaplanır, tüm ekranlarla tutarlıdır.", en: "Operational, commercial and management KPIs — computed from records, consistent with every screen." },
+  "analysis.tais.noData": { tr: "Bu kurum için TAIS analiz verisi bulunmuyor.", en: "No TAIS analysis data exists for this organization." },
+  "analysis.byCategoryHeading": { tr: "HİZMET TÜRÜNE GÖRE GÖREV", en: "TASKS BY SERVICE TYPE" },
+  "analysis.colService": { tr: "HİZMET", en: "SERVICE" },
+  "analysis.colTotal": { tr: "TOPLAM", en: "TOTAL" },
+  "analysis.colOpen": { tr: "AÇIK", en: "OPEN" },
+  "analysis.colOverdue": { tr: "GECİKEN", en: "OVERDUE" },
+  "analysis.byTeamHeading": { tr: "EKİBE GÖRE İŞ YÜKÜ", en: "WORKLOAD BY TEAM" },
+  "analysis.colTeam": { tr: "EKİP", en: "TEAM" },
+  "analysis.colOpenTask": { tr: "AÇIK GÖREV", en: "OPEN TASKS" },
+  "analysis.colCapacity": { tr: "KAPASİTE", en: "CAPACITY" },
+  "analysis.colUtilization": { tr: "KULLANIM", en: "UTILIZATION" },
+  "analysis.byLocationHeading": { tr: "LOKASYONA GÖRE AÇIK İŞ", en: "OPEN WORK BY LOCATION" },
+  "analysis.noOpenWork": { tr: "Açık iş bulunmuyor.", en: "No open work." },
+  "analysis.kpi.opsHealth": { tr: "Operasyon Sağlığı", en: "Operations health" },
+  "analysis.kpi.sla": { tr: "SLA Uyum Oranı", en: "SLA compliance" },
+  "analysis.kpi.teamCapacity": { tr: "Ekip Kapasite Skoru", en: "Team capacity score" },
+  "analysis.kpi.customerRisk": { tr: "Müşteri Risk Skoru", en: "Customer risk score" },
+  "analysis.kpi.openDeals": { tr: "Açık Satış Fırsatı", en: "Open deals" },
+  "analysis.kpi.upcomingRenewal": { tr: "Yaklaşan Yenileme", en: "Upcoming renewals" },
   "memory.eyebrow": { tr: "KURUMSAL HAFIZA", en: "INSTITUTIONAL MEMORY" },
   "memory.title": { tr: "Karar geçmişi ve", en: "Decision history and" },
   "memory.titleAccent": { tr: "denetim günlüğü.", en: "the audit trail." },
