@@ -706,7 +706,48 @@ export type ShellKey =
   | "alerts.serviceType.pest_control"
   | "alerts.serviceType.horeca"
   | "alerts.serviceType.property_mgmt"
-  | "alerts.serviceType.office_mgmt";
+  | "alerts.serviceType.office_mgmt"
+  | "process.eyebrow"
+  | "process.title"
+  | "process.titleAccent"
+  | "process.subtitle"
+  | "process.loading"
+  | "process.errorHttp"
+  | "process.errorLoadFailed"
+  | "process.cardSubjects"
+  | "process.cardEvents"
+  | "process.cardTransitionTypes"
+  | "process.cardMedianCase"
+  | "process.bottlenecksHeading"
+  | "process.bottlenecksEmpty"
+  | "process.bottleneckRow"
+  | "process.transitionsHeading"
+  | "process.colTransition"
+  | "process.colCount"
+  | "process.colMedian"
+  | "process.colP90"
+  | "process.coverageHeading"
+  | "process.window"
+  | "process.provenance"
+  | "process.evidence.high"
+  | "process.evidence.medium"
+  | "process.evidence.low"
+  | "process.duration.hours"
+  | "process.duration.minutes"
+  | "process.duration.seconds"
+  | "process.event.lead.created"
+  | "process.event.lead.opened"
+  | "process.event.lead.assigned"
+  | "process.event.lead.updated"
+  | "process.event.lead.synced"
+  | "process.event.call.started"
+  | "process.event.call.completed"
+  | "process.event.call.finished"
+  | "process.event.session.started"
+  | "process.event.session.ended"
+  | "process.event.sale.started"
+  | "process.event.sale.completed"
+  | "process.event.department.snapshot";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -1943,6 +1984,62 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "alerts.serviceType.horeca": { tr: "HORECA Çözümleri", en: "HORECA Solutions" },
   "alerts.serviceType.property_mgmt": { tr: "Tesis Yönetimi", en: "Property Management" },
   "alerts.serviceType.office_mgmt": { tr: "Ofis Yönetimi", en: "Office Management" },
+  "process.eyebrow": { tr: "SÜREÇ ZEKÂSI", en: "PROCESS INTELLIGENCE" },
+  "process.title": { tr: "Süreç gerçekte", en: "How the process" },
+  "process.titleAccent": { tr: "nasıl işliyor?", en: "actually runs" },
+  "process.subtitle": {
+    tr: "Entegrasyon olay günlüğünden gözlenen akış: geçiş hacimleri, medyan/P90 süreler ve darboğazlar. Hedef model karşılaştırması yapılmadığı için sapma iddiası içermez.",
+    en: "Observed flow from the integration event log: transition volumes, median/P90 durations and bottlenecks. It makes no deviation claim because no target model comparison is performed.",
+  },
+  "process.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "process.errorHttp": {
+    tr: "Süreç verisi yüklenemedi (HTTP {status}).",
+    en: "Process data could not be loaded (HTTP {status}).",
+  },
+  "process.errorLoadFailed": { tr: "Yükleme başarısız.", en: "Loading failed." },
+  "process.cardSubjects": { tr: "Özne", en: "Subjects" },
+  "process.cardEvents": { tr: "Olay", en: "Events" },
+  "process.cardTransitionTypes": { tr: "Geçiş türü", en: "Transition types" },
+  "process.cardMedianCase": { tr: "Medyan vaka", en: "Median case" },
+  "process.bottlenecksHeading": { tr: "DARBOĞAZLAR (P90)", en: "BOTTLENECKS (P90)" },
+  "process.bottlenecksEmpty": {
+    tr: "Darboğaz için yeterli geçiş verisi yok.",
+    en: "Not enough transition data for a bottleneck.",
+  },
+  "process.bottleneckRow": {
+    tr: "medyan {median} · P90 {p90} · {count} kez",
+    en: "median {median} · P90 {p90} · {count} times",
+  },
+  "process.transitionsHeading": { tr: "GEÇİŞLER", en: "TRANSITIONS" },
+  "process.colTransition": { tr: "Geçiş", en: "Transition" },
+  "process.colCount": { tr: "Adet", en: "Count" },
+  "process.colMedian": { tr: "Medyan", en: "Median" },
+  "process.colP90": { tr: "P90", en: "P90" },
+  "process.coverageHeading": { tr: "KAPSAM VE KAYNAK", en: "COVERAGE AND SOURCE" },
+  "process.window": {
+    tr: "Pencere: son {days} gün · okunan {read} olay · kullanılan {used} · öznesiz (dışlanan) {withoutSubject}",
+    en: "Window: last {days} days · read {read} events · used {used} · without subject (excluded) {withoutSubject}",
+  },
+  "process.provenance": { tr: "Motor: {engine} · Kaynak: {source}", en: "Engine: {engine} · Source: {source}" },
+  "process.evidence.high": { tr: "Yüksek kanıt", en: "High evidence" },
+  "process.evidence.medium": { tr: "Orta kanıt", en: "Medium evidence" },
+  "process.evidence.low": { tr: "Düşük kanıt", en: "Low evidence" },
+  "process.duration.hours": { tr: "{value} sa", en: "{value} h" },
+  "process.duration.minutes": { tr: "{value} dk", en: "{value} min" },
+  "process.duration.seconds": { tr: "{value} sn", en: "{value} s" },
+  "process.event.lead.created": { tr: "Potansiyel müşteri oluşturuldu", en: "Lead created" },
+  "process.event.lead.opened": { tr: "Potansiyel müşteri açıldı", en: "Lead opened" },
+  "process.event.lead.assigned": { tr: "Potansiyel müşteri atandı", en: "Lead assigned" },
+  "process.event.lead.updated": { tr: "Potansiyel müşteri güncellendi", en: "Lead updated" },
+  "process.event.lead.synced": { tr: "Potansiyel müşteri eşitlendi", en: "Lead synced" },
+  "process.event.call.started": { tr: "Arama başladı", en: "Call started" },
+  "process.event.call.completed": { tr: "Arama tamamlandı", en: "Call completed" },
+  "process.event.call.finished": { tr: "Arama bitti", en: "Call finished" },
+  "process.event.session.started": { tr: "Oturum başladı", en: "Session started" },
+  "process.event.session.ended": { tr: "Oturum bitti", en: "Session ended" },
+  "process.event.sale.started": { tr: "Satış başladı", en: "Sale started" },
+  "process.event.sale.completed": { tr: "Satış tamamlandı", en: "Sale completed" },
+  "process.event.department.snapshot": { tr: "Departman anlık görüntüsü", en: "Department snapshot" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
