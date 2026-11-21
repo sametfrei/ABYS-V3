@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T16:25:00Z",
+  "updatedAt": "2026-11-21T16:55:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -970,6 +970,42 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Each successful export appends a hash-chained audit event with actor, row count and limit, scoped to the caller's organization.",
       "evidence": "Export tests 7/7 including a new assertion that the audit row exists with a non-null prev_hash and that no audit row appears for another org; build and smoke 37/37 clean."
+    },
+    {
+      "id": "TB-047",
+      "commit": "50414f2",
+      "title": "Audit log TR/EN localization",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "security-auditor"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/audit/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Audit screen headings, filters, chain verification status, table headers and empty states resolve via the dictionary; event type codes stay technical with optional human labels.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 86 files/779 tests (9 skipped), eslint/tsc/build clean, smoke 39/39."
+    },
+    {
+      "id": "TB-048",
+      "commit": "57cd558",
+      "title": "Audit API returns chain hashes",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-auditor"
+      ],
+      "files": [
+        "src/app/api/audit/route.ts",
+        "tests/data-route-validation.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "GET /api/audit includes prev_hash and entry_hash so the UI hash column is populated and operators can spot chain breaks.",
+      "evidence": "New test writes an audit event and asserts a 64-hex entry_hash and non-null prev_hash in the API response; data-route-validation 18/18; full suite and smoke green."
     }
   ]
 }
