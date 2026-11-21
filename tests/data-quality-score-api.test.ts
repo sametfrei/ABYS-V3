@@ -148,6 +148,14 @@ describe("veri kalitesi skoru API", () => {
 
     const unfiltered = (await (await scoreRoute(get("?maxAgeDays=30"))).json()) as { total: number };
     expect(unfiltered.total).toBe(8);
+
+    nextHeaders.__setTestCookie(SESSION_COOKIE, emptySession);
+    const otherOrg = (await (await scoreRoute(get("?label=Gider&maxAgeDays=30"))).json()) as {
+      total: number;
+      label: string | null;
+    };
+    expect(otherOrg.total).toBe(0);
+    expect(otherOrg.label).toBe("Gider");
   });
 
   it("geçersiz maxAgeDays 400 döner", async () => {
