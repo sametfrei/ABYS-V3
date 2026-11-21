@@ -90,7 +90,7 @@ Durum ölçeği:
 | Denetim hash zinciri | E2E (test) | Mevcut çözüm korunuyor; seq yaması uygulanmadı |
 | Kontrollü migration yürütme | E2E (test) | Onay gerektiren migration 18 uygulanmadan bekletilir; sonraki migration'lar bağımsız uygulanır; `GET /api/health` bekleyen onayı raporlar |
 | Çoklu şirket/şube hiyerarşisi + konsolidasyon | E2E (test) | `/api/organizations*` |
-| TR/EN i18n | Kısmi | Uygulama kabuğu (gezinme, oturum, çıkış), giriş, aksiyon ve bağlantı ekranları TR/EN; sunucu çerezden dili okur (`curl -H 'Cookie: abys_lang=en' /login` → EN); seçim çerez + localStorage ile kalıcı (`abys_lang`); `src/lib/i18n.ts`, `src/lib/navigation.ts`, `tests/i18n.test.ts`. İçerik ekranları henüz Türkçe — kalan çeviri ayrı iş |
+| TR/EN i18n | Kısmi | Uygulama kabuğu (gezinme, oturum, çıkış), giriş, aksiyon, bağlantı ve tahmin ekranları TR/EN; sunucu çerezden dili okur (`curl -H 'Cookie: abys_lang=en' /login` → EN); seçim çerez + localStorage ile kalıcı (`abys_lang`); `src/lib/i18n.ts`, `src/lib/navigation.ts`, `tests/i18n.test.ts`. İçerik ekranları henüz Türkçe — kalan çeviri ayrı iş |
 | Production build | E2E (test) | `npm run build` başarılı: TypeScript, 94 route/sayfa derlemesi ve statik üretim tamamlandı |
 | Tarayıcı E2E | Tarayıcı bekliyor | Otomatik browser doğrulaması bu oturumda yapılmadı |
 
@@ -101,7 +101,7 @@ Durum ölçeği:
 
 ## Sıradaki mühendislik sırası
 
-Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024), aralık kapsama ölçeklemesi (TB-025), Infor/IFS/Sage adaptör bağlantısı (TB-026), kabuk i18n temeli (TB-028), giriş ekranı yerelleştirmesi (TB-029), zamanlanmış tahmin yakalama (TB-030), geciken aksiyon görünürlüğü (TB-031), tahmin anlık görüntüsü denetim kaydı (TB-032), konnektör senkron hatası/yeniden deneme görünürlüğü (TB-033), tahmin saklama planı (TB-034), saklama smoke kapsamı (TB-035) tahmin panelinde saklama durumu (TB-036) aksiyon ekranı TR/EN yerelleştirmesi (TB-037) konnektör hata sınıflandırması (TB-038), bağlantı ekranı TR/EN yerelleştirmesi (TB-039) ve çalıştırma sağlığının API'de açılması (TB-040).
+Son tamamlanan dilimler: karar güveni kalibrasyonu (TB-020), kök neden kanıt üst verisi (TB-022), tahmin–gerçekleşen kalibrasyonu (TB-024), aralık kapsama ölçeklemesi (TB-025), Infor/IFS/Sage adaptör bağlantısı (TB-026), kabuk i18n temeli (TB-028), giriş ekranı yerelleştirmesi (TB-029), zamanlanmış tahmin yakalama (TB-030), geciken aksiyon görünürlüğü (TB-031), tahmin anlık görüntüsü denetim kaydı (TB-032), konnektör senkron hatası/yeniden deneme görünürlüğü (TB-033), tahmin saklama planı (TB-034), saklama smoke kapsamı (TB-035) tahmin panelinde saklama durumu (TB-036) aksiyon ekranı TR/EN yerelleştirmesi (TB-037) konnektör hata sınıflandırması (TB-038), bağlantı ekranı TR/EN yerelleştirmesi (TB-039) ve çalıştırma sağlığının API'de açılması (TB-040), karar defteri CSV dışa aktarımı (TB-041), tahmin ekranı TR/EN yerelleştirmesi (TB-042), hata sınıfına göre retry rehberliği (TB-043) ve CSV dışa aktarım güvenlik testleri (TB-044).
 
 1. **Yürütme hazırlığı:** aksiyon planı, sahiplik/due-date, dış adaptör öncesi idempotent execution intent kaydı.
 2. **Gerçek vendor doğrulaması:** müşteri uç noktası ve kimlik bilgisi sağlandığında SAP/Oracle/Dynamics/Salesforce/HubSpot adaptör sözleşme testleri.

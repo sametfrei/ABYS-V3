@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T15:05:00Z",
+  "updatedAt": "2026-11-21T15:50:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -879,6 +879,60 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Authorized roles can download a tenant-scoped CSV of up to 500 ledger rows with a fixed column order and RFC 4180 escaping; unauthorized roles get 401/403.",
       "evidence": "Unit tests 5/5 (escaping, header, null handling, empty ledger); smoke 37/37 including a live export returning text/csv with a decision_id header and 6 rows; build lists the new route; tsc/eslint clean."
+    },
+    {
+      "id": "TB-042",
+      "commit": "0610456",
+      "title": "Forecast screen TR/EN localization",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/forecast/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Forecast screen copy (evidence panel, calibration cards, retention note, empty states) resolves via the dictionary with locale-aware dates.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 84 files/765 tests (9 skipped), eslint/tsc/build clean, smoke 37/37."
+    },
+    {
+      "id": "TB-043",
+      "commit": "c7e511f",
+      "title": "Failure-aware retry guidance",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer",
+        "synchronization-event-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/connectors/page.tsx"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The sync banner explains the failure class and only shows the retry button for transient classes; auth failures tell the operator to fix configuration instead.",
+      "evidence": "i18n tests 9/9 (new keys covered by the connectors.* sweep); tsc/eslint clean; build clean; smoke 37/37."
+    },
+    {
+      "id": "TB-044",
+      "commit": "f0ebad7",
+      "title": "CSV export security tests",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "security-auditor",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "tests/decision-ledger-export.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Export endpoint rejects unauthenticated and unauthorized callers and never leaks another organization's ledger rows.",
+      "evidence": "6 tests pass covering 401, 403 (verified via hasPermission), CSV headers, exact header row, CRLF-only line endings, empty ledger and tenant isolation; tsc/eslint clean."
     }
   ]
 }
