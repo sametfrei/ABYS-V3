@@ -524,7 +524,39 @@ export type ShellKey =
   | "audit.type.tais_decisions_seed"
   | "audit.type.tais_seed"
   | "audit.type.tais_seed_reset"
-  | "audit.type.webhook_secret_rotated";
+  | "audit.type.webhook_secret_rotated"
+  | "settings.eyebrow"
+  | "settings.sessionTitle"
+  | "settings.sessionAccent"
+  | "settings.sessionSubtitle"
+  | "settings.organization"
+  | "settings.user"
+  | "settings.role"
+  | "settings.roleLabel"
+  | "settings.dataMode"
+  | "settings.demoData"
+  | "settings.profileTitle"
+  | "settings.profileAccent"
+  | "settings.profileSubtitle"
+  | "settings.companyName"
+  | "settings.sector"
+  | "settings.saved"
+  | "settings.sector.aviation"
+  | "settings.sector.customerops"
+  | "settings.sector.agri"
+  | "settings.sector.manufacturing"
+  | "settings.sector.retail"
+  | "settings.sector.logistics"
+  | "settings.sector.finance"
+  | "settings.sector.health"
+  | "settings.sector.energy"
+  | "settings.sector.other"
+  | "settings.role.ceo"
+  | "settings.role.finance"
+  | "settings.role.hr"
+  | "settings.role.operations"
+  | "settings.role.bizdev"
+  | "settings.role.product";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -1465,6 +1497,47 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "audit.type.tais_seed": { tr: "TAIS verisi yüklendi", en: "TAIS fixture seeded" },
   "audit.type.tais_seed_reset": { tr: "TAIS verisi sıfırlandı", en: "TAIS fixture reset" },
   "audit.type.webhook_secret_rotated": { tr: "Webhook sırrı yenilendi", en: "Webhook secret rotated" },
+  "settings.eyebrow": { tr: "AYARLAR", en: "SETTINGS" },
+  "settings.sessionTitle": { tr: "Kurum", en: "Organization" },
+  "settings.sessionAccent": { tr: "bilgileri.", en: "details." },
+  "settings.sessionSubtitle": {
+    tr: "Kurumsal oturum bilgileri sunucu oturumundan okunur; kurum ve rol bu ekrandan değiştirilemez.",
+    en: "Enterprise session details are read from the server session; organization and role cannot be changed here.",
+  },
+  "settings.organization": { tr: "Kurum:", en: "Organization:" },
+  "settings.user": { tr: "Kullanıcı:", en: "User:" },
+  "settings.role": { tr: "Rol:", en: "Role:" },
+  "settings.roleLabel": { tr: "ROL", en: "ROLE" },
+  "settings.dataMode": { tr: "Veri modu:", en: "Data mode:" },
+  "settings.demoData": {
+    tr: "Bitrix24 uyumlu demo verisi",
+    en: "Bitrix24-compatible demo data",
+  },
+  "settings.profileTitle": { tr: "Profilinizi", en: "Manage your" },
+  "settings.profileAccent": { tr: "yönetin.", en: "profile." },
+  "settings.profileSubtitle": {
+    tr: "Şirket, sektör ve rol bilgilerinizi buradan güncelleyebilirsiniz.",
+    en: "You can update your company, sector, and role details here.",
+  },
+  "settings.companyName": { tr: "ŞİRKET ADI", en: "COMPANY NAME" },
+  "settings.sector": { tr: "SEKTÖR", en: "SECTOR" },
+  "settings.saved": { tr: "Kaydedildi.", en: "Saved." },
+  "settings.sector.aviation": { tr: "Havacılık", en: "Aviation" },
+  "settings.sector.customerops": { tr: "Müşteri Operasyonları", en: "Customer Operations" },
+  "settings.sector.agri": { tr: "Tarım & Gıda", en: "Agriculture & Food" },
+  "settings.sector.manufacturing": { tr: "Üretim & Sanayi", en: "Manufacturing & Industry" },
+  "settings.sector.retail": { tr: "Perakende & Ticaret", en: "Retail & Commerce" },
+  "settings.sector.logistics": { tr: "Lojistik & Ulaşım", en: "Logistics & Transport" },
+  "settings.sector.finance": { tr: "Finans & Bankacılık", en: "Finance & Banking" },
+  "settings.sector.health": { tr: "Sağlık", en: "Healthcare" },
+  "settings.sector.energy": { tr: "Enerji", en: "Energy" },
+  "settings.sector.other": { tr: "Diğer", en: "Other" },
+  "settings.role.ceo": { tr: "CEO", en: "CEO" },
+  "settings.role.finance": { tr: "Finans", en: "Finance" },
+  "settings.role.hr": { tr: "İnsan Kaynakları", en: "Human Resources" },
+  "settings.role.operations": { tr: "Operasyon", en: "Operations" },
+  "settings.role.bizdev": { tr: "İş Geliştirme", en: "Business Development" },
+  "settings.role.product": { tr: "Ürün / Teknoloji", en: "Product / Tech" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

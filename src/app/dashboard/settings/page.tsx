@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { UserManagement } from "@/components/UserManagement";
 import { ChangePassword } from "@/components/ChangePassword";
@@ -10,8 +10,27 @@ import { ROLES, type RoleId } from "@/lib/roles";
 import { loadProfile, saveProfile, type AbysProfile } from "@/lib/profile";
 import { useStored } from "@/lib/use-stored";
 import { useSession } from "@/lib/use-session";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function optionLabel(locale: Locale, prefix: string, id: string, fallback: string): string {
+  const key = `${prefix}.${id}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? fallback : label;
+}
 
 export default function SettingsPage() {
+  const locale = useLocale();
   const session = useSession();
   const [stored] = useStored(() => ({ profile: loadProfile() }));
   const [draft, setDraft] = useState<AbysProfile | null>(null);
@@ -22,12 +41,17 @@ export default function SettingsPage() {
   if (session) {
     return (
       <div>
-        <PageHeader eyebrow="AYARLAR" title="Kurum" accent="bilgileri." desc="Kurumsal oturum bilgileri sunucu oturumundan okunur; kurum ve rol bu ekrandan değiştirilemez." />
+        <PageHeader
+          eyebrow={t(locale, "settings.eyebrow")}
+          title={t(locale, "settings.sessionTitle")}
+          accent={t(locale, "settings.sessionAccent")}
+          desc={t(locale, "settings.sessionSubtitle")}
+        />
         <div className="px-10 pb-16 max-w-2xl space-y-3 text-sm text-abys-ink">
-          <p><span className="text-abys-muted">Kurum: </span>{session.orgName}</p>
-          <p><span className="text-abys-muted">Kullanıcı: </span>{session.displayName}</p>
-          <p><span className="text-abys-muted">Rol: </span>{session.role}</p>
-          <p><span className="text-abys-muted">Veri modu: </span>Bitrix24 uyumlu demo verisi</p>
+          <p><span className="text-abys-muted">{t(locale, "settings.organization")} </span>{session.orgName}</p>
+          <p><span className="text-abys-muted">{t(locale, "settings.user")} </span>{session.displayName}</p>
+          <p><span className="text-abys-muted">{t(locale, "settings.role")} </span>{session.role}</p>
+          <p><span className="text-abys-muted">{t(locale, "settings.dataMode")} </span>{t(locale, "settings.demoData")}</p>
         </div>
         {/* Oturumlu her rol kendi parolasını değiştirebilir; yetki sunucudadır. */}
         <ChangePassword />
@@ -52,16 +76,16 @@ export default function SettingsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="SETTINGS"
-        title="Profilinizi"
-        accent="yönetin."
-        desc="Şirket, sektör ve rol bilgilerinizi buradan güncelleyebilirsiniz."
+        eyebrow={t(locale, "settings.eyebrow")}
+        title={t(locale, "settings.profileTitle")}
+        accent={t(locale, "settings.profileAccent")}
+        desc={t(locale, "settings.profileSubtitle")}
       />
 
       <div className="px-10 pb-16 max-w-2xl space-y-8">
         <div>
           <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
-            ŞİRKET ADI
+            {t(locale, "settings.companyName")}
           </label>
           <input
             value={profile.companyName}
@@ -72,7 +96,7 @@ export default function SettingsPage() {
 
         <div>
           <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
-            SEKTÖR
+            {t(locale, "settings.sector")}
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {SECTORS.map((s) => (
@@ -86,7 +110,7 @@ export default function SettingsPage() {
                 }`}
               >
                 <span className="mr-1.5">{s.icon}</span>
-                {s.label}
+                {optionLabel(locale, "settings.sector", s.id, s.label)}
               </button>
             ))}
           </div>
@@ -94,7 +118,7 @@ export default function SettingsPage() {
 
         <div>
           <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
-            ROL
+            {t(locale, "settings.roleLabel")}
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {ROLES.map((r) => (
@@ -107,13 +131,13 @@ export default function SettingsPage() {
                     : "border-abys-cream-border bg-abys-cream hover:border-abys-accent/50"
                 }`}
               >
-                {r.label}
+                {optionLabel(locale, "settings.role", r.id, r.label)}
               </button>
             ))}
           </div>
         </div>
 
-        {saved && <p className="text-xs text-abys-healthy">Kaydedildi.</p>}
+        {saved && <p className="text-xs text-abys-healthy">{t(locale, "settings.saved")}</p>}
       </div>
     </div>
   );
