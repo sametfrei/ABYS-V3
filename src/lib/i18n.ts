@@ -909,6 +909,32 @@ export type ShellKey =
   | "ledger.exportCsv"
   | "audit.exportCsv"
   | "forecast.exportCsv"
+  | "advisors.eyebrow"
+  | "advisors.title"
+  | "advisors.titleAccent"
+  | "advisors.subtitle"
+  | "advisors.loadFailed"
+  | "advisors.timelineFailed"
+  | "advisors.sessionRequired"
+  | "advisors.loading"
+  | "advisors.empty"
+  | "advisors.openTimeline"
+  | "advisors.active"
+  | "advisors.gap"
+  | "advisors.unknownNoSession"
+  | "advisors.unknownOffSession"
+  | "advisors.metric.firstResponse"
+  | "advisors.metric.noteAfterCall"
+  | "advisors.metric.saleCycle"
+  | "advisors.metric.abandoned"
+  | "advisors.footer"
+  | "advisors.note"
+  | "advisors.modalTitle"
+  | "advisors.close"
+  | "advisors.modalEmpty"
+  | "advisors.gapLine"
+  | "advisors.minutes"
+  | "advisors.hoursMinutes"
   | "analysis.eyebrow"
   | "analysis.title"
   | "analysis.titleAccent"
@@ -2592,6 +2618,32 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
+  "advisors.eyebrow": { tr: "ADVISOR ANALYTICS", en: "ADVISOR ANALYTICS" },
+  "advisors.title": { tr: "Danışman", en: "Advisor" },
+  "advisors.titleAccent": { tr: "performans metrikleri.", en: "performance metrics." },
+  "advisors.subtitle": { tr: "Portal iş olaylarından deterministik hesaplanan aktif/boşta süreleri, müdahale hızı ve satış döngüsü.", en: "Active/idle time, response speed and sales cycle computed deterministically from portal work events." },
+  "advisors.loadFailed": { tr: "Danışman verileri alınamadı.", en: "Advisor data could not be loaded." },
+  "advisors.timelineFailed": { tr: "Zaman çizelgesi alınamadı.", en: "Timeline could not be loaded." },
+  "advisors.sessionRequired": { tr: "Bu sayfa kurumsal oturum gerektirir.", en: "This page requires an enterprise session." },
+  "advisors.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "advisors.empty": { tr: "Portal entegrasyonu bağlandığında burada danışman metrikleri görünecek.", en: "Advisor metrics appear here once the portal integration is connected." },
+  "advisors.openTimeline": { tr: "Zaman çizelgesi →", en: "Timeline →" },
+  "advisors.active": { tr: "Aktif {pct}%", en: "Active {pct}%" },
+  "advisors.gap": { tr: "Olay boşluğu {pct}%", en: "Event gap {pct}%" },
+  "advisors.unknownNoSession": { tr: "Bilinmeyen süre: bu danışman için oturum verisi yok, ayrım yapılamıyor.", en: "Unknown time: no session data for this advisor, so the split cannot be made." },
+  "advisors.unknownOffSession": { tr: "Bilinmeyen süre (oturum dışı): {duration}", en: "Unknown time (off session): {duration}" },
+  "advisors.metric.firstResponse": { tr: "İlk müdahale", en: "First response" },
+  "advisors.metric.noteAfterCall": { tr: "Not girme süresi", en: "Time to note" },
+  "advisors.metric.saleCycle": { tr: "Satış döngüsü", en: "Sales cycle" },
+  "advisors.metric.abandoned": { tr: "Yarım bırakılan", en: "Abandoned" },
+  "advisors.footer": { tr: "{events} olay · olay boşluğu eşiği {threshold} dk", en: "{events} events · event gap threshold {threshold} min" },
+  "advisors.note": { tr: "Bu metrikler iş olayı zaman damgalarından türetilir; portal dışı çalışmayı ölçmez.", en: "These metrics derive from work-event timestamps; they do not measure work outside the portal." },
+  "advisors.modalTitle": { tr: "{advisor} — zaman çizelgesi", en: "{advisor} — timeline" },
+  "advisors.close": { tr: "kapat ✕", en: "close ✕" },
+  "advisors.modalEmpty": { tr: "Bu aralıkta olay bulunamadı.", en: "No events in this range." },
+  "advisors.gapLine": { tr: "⋯ {minutes} dk olay boşluğu", en: "⋯ {minutes} min event gap" },
+  "advisors.minutes": { tr: "{value} dk", en: "{value} min" },
+  "advisors.hoursMinutes": { tr: "{hours} sa {minutes} dk", en: "{hours} h {minutes} min" },
   "analysis.eyebrow": { tr: "ANALYSIS", en: "ANALYSIS" },
   "analysis.title": { tr: "Senaryonuzu", en: "Let us analyze" },
   "analysis.titleAccent": { tr: "analiz edelim.", en: "your scenario." },

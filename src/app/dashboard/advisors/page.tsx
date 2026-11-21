@@ -1,8 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { useSession } from "@/lib/use-session";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
 
 interface AdvisorMetrics {
   advisorRef: string;
@@ -31,16 +54,16 @@ interface TimelineEntry {
   isIdleGap: boolean;
 }
 
-function formatMinutes(m: number | null): string {
+function formatMinutes(locale: Locale, m: number | null): string {
   if (m === null) return "—";
-  if (m < 60) return `${m} dk`;
+  if (m < 60) return formatMessage(locale, "advisors.minutes", { value: m });
   const h = Math.floor(m / 60);
   const rem = Math.round(m % 60);
-  return `${h} sa ${rem} dk`;
+  return formatMessage(locale, "advisors.hoursMinutes", { hours: h, minutes: rem });
 }
 
-function formatTime(iso: string): string {
-  return new Date(iso).toLocaleString("tr-TR", {
+function formatTime(locale: Locale, iso: string): string {
+  return new Date(iso).toLocaleString(locale, {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -49,6 +72,7 @@ function formatTime(iso: string): string {
 }
 
 export default function AdvisorsPage() {
+  const locale = useLocale();
   const session = useSession();
   const [advisors, setAdvisors] = useState<AdvisorMetrics[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -65,14 +89,14 @@ export default function AdvisorsPage() {
         if (cancelled) return;
         const j = await r.json();
         if (!r.ok) {
-          setError(j.error ?? "Danışman verileri alınamadı.");
+          setError(j.error ?? t(readLocale(), "advisors.loadFailed"));
           return;
         }
         setError(null);
         setAdvisors(j.advisors ?? []);
       })
       .catch(() => {
-        if (!cancelled) setError("Danışman verileri alınamadı.");
+        if (!cancelled) setError(t(readLocale(), "advisors.loadFailed"));
       });
     return () => {
       cancelled = true;
@@ -88,28 +112,28 @@ export default function AdvisorsPage() {
       .then(async (r) => {
         const j = await r.json();
         if (!r.ok) {
-          setTimelineError(j.error ?? "Zaman çizelgesi alınamadı.");
+          setTimelineError(j.error ?? t(readLocale(), "advisors.timelineFailed"));
           return;
         }
         setTimeline(j.timeline ?? []);
       })
-      .catch(() => setTimelineError("Zaman çizelgesi alınamadı."))
+      .catch(() => setTimelineError(t(readLocale(), "advisors.timelineFailed")))
       .finally(() => setTimelineLoading(false));
   }
 
   return (
     <div>
       <PageHeader
-        eyebrow="ADVISOR ANALYTICS"
-        title="Danışman"
-        accent="performans metrikleri."
-        desc="Portal iş olaylarından deterministik hesaplanan aktif/boşta süreleri, müdahale hızı ve satış döngüsü."
+        eyebrow={t(locale, "advisors.eyebrow")}
+        title={t(locale, "advisors.title")}
+        accent={t(locale, "advisors.titleAccent")}
+        desc={t(locale, "advisors.subtitle")}
       />
 
       <div className="px-10 pb-16">
         {session === null && (
           <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3 mb-6 max-w-xl">
-            Bu sayfa kurumsal oturum gerektirir.
+            {t(locale, "advisors.sessionRequired")}
           </p>
         )}
 
@@ -119,11 +143,13 @@ export default function AdvisorsPage() {
           </p>
         )}
 
-        {session && !error && advisors === null && <p className="text-sm text-abys-muted">Yükleniyor…</p>}
+        {session && !error && advisors === null && (
+          <p className="text-sm text-abys-muted">{t(locale, "advisors.loading")}</p>
+        )}
 
         {session && !error && advisors !== null && advisors.length === 0 && (
           <p className="text-sm text-abys-muted max-w-xl">
-            Portal entegrasyonu bağlandığında burada danışman metrikleri görünecek.
+            {t(locale, "advisors.empty")}
           </p>
         )}
 
@@ -154,6 +180,7 @@ export default function AdvisorsPage() {
 }
 
 function AdvisorCard({ metrics, onOpenTimeline }: { metrics: AdvisorMetrics; onOpenTimeline: () => void }) {
+  const locale = useLocale();
   const known = metrics.activeMinutes + metrics.gapMinutes;
   const activePct = known > 0 ? Math.round((metrics.activeMinutes / known) * 100) : 0;
 
@@ -165,14 +192,14 @@ function AdvisorCard({ metrics, onOpenTimeline }: { metrics: AdvisorMetrics; onO
           onClick={onOpenTimeline}
           className="text-xs rounded-full border border-abys-ink/15 px-3 py-1.5 hover:bg-white/60 transition-colors"
         >
-          Zaman çizelgesi →
+          {t(locale, "advisors.openTimeline")}
         </button>
       </div>
 
       <div className="mb-1">
         <div className="flex justify-between text-[11px] text-abys-muted mb-1">
-          <span>Aktif {activePct}%</span>
-          <span>Olay boşluğu {100 - activePct}%</span>
+          <span>{formatMessage(locale, "advisors.active", { pct: activePct })}</span>
+          <span>{formatMessage(locale, "advisors.gap", { pct: 100 - activePct })}</span>
         </div>
         <div className="h-2 rounded-full bg-abys-ink/10 overflow-hidden flex">
           <div className="h-full bg-abys-healthy" style={{ width: `${activePct}%` }} />
@@ -181,26 +208,40 @@ function AdvisorCard({ metrics, onOpenTimeline }: { metrics: AdvisorMetrics; onO
       </div>
       <p className="text-[11px] text-abys-muted/70 mb-3">
         {metrics.unknownMinutes === null
-          ? "Bilinmeyen süre: bu danışman için oturum verisi yok, ayrım yapılamıyor."
-          : `Bilinmeyen süre (oturum dışı): ${formatMinutes(metrics.unknownMinutes)}`}
+          ? t(locale, "advisors.unknownNoSession")
+          : formatMessage(locale, "advisors.unknownOffSession", {
+              duration: formatMinutes(locale, metrics.unknownMinutes),
+            })}
       </p>
 
       <div className="grid grid-cols-2 gap-3 text-sm">
-        <Metric label="İlk müdahale" value={formatMinutes(metrics.avgFirstResponseMinutes)} />
-        <Metric label="Not girme süresi" value={formatMinutes(metrics.avgNoteAfterCallMinutes)} />
-        <Metric label="Satış döngüsü" value={formatMinutes(metrics.avgSaleCycleMinutes)} />
         <Metric
-          label="Yarım bırakılan"
+          label={t(locale, "advisors.metric.firstResponse")}
+          value={formatMinutes(locale, metrics.avgFirstResponseMinutes)}
+        />
+        <Metric
+          label={t(locale, "advisors.metric.noteAfterCall")}
+          value={formatMinutes(locale, metrics.avgNoteAfterCallMinutes)}
+        />
+        <Metric
+          label={t(locale, "advisors.metric.saleCycle")}
+          value={formatMinutes(locale, metrics.avgSaleCycleMinutes)}
+        />
+        <Metric
+          label={t(locale, "advisors.metric.abandoned")}
           value={String(metrics.abandonedCount)}
           warn={metrics.abandonedCount > 0}
         />
       </div>
 
       <p className="text-[11px] text-abys-muted mt-3">
-        {metrics.eventCount} olay · olay boşluğu eşiği {metrics.idleThresholdMinutes} dk
+        {formatMessage(locale, "advisors.footer", {
+          events: metrics.eventCount,
+          threshold: metrics.idleThresholdMinutes,
+        })}
       </p>
       <p className="text-[11px] text-abys-muted/70 mt-1">
-        Bu metrikler iş olayı zaman damgalarından türetilir; portal dışı çalışmayı ölçmez.
+        {t(locale, "advisors.note")}
       </p>
     </div>
   );
@@ -228,6 +269,7 @@ function TimelineModal({
   error: string | null;
   onClose: () => void;
 }) {
+  const locale = useLocale();
   return (
     <div className="fixed inset-0 bg-abys-ink/40 flex items-center justify-center z-50 p-6" onClick={onClose}>
       <div
@@ -235,16 +277,18 @@ function TimelineModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-abys-navy">{advisorRef} — zaman çizelgesi</p>
+          <p className="text-sm font-semibold text-abys-navy">
+            {formatMessage(locale, "advisors.modalTitle", { advisor: advisorRef })}
+          </p>
           <button onClick={onClose} className="text-xs text-abys-muted hover:text-abys-ink">
-            kapat ✕
+            {t(locale, "advisors.close")}
           </button>
         </div>
 
-        {loading && <p className="text-sm text-abys-muted">Yükleniyor…</p>}
+        {loading && <p className="text-sm text-abys-muted">{t(locale, "advisors.loading")}</p>}
         {error && <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3">{error}</p>}
         {!loading && !error && entries !== null && entries.length === 0 && (
-          <p className="text-sm text-abys-muted">Bu aralıkta olay bulunamadı.</p>
+          <p className="text-sm text-abys-muted">{t(locale, "advisors.modalEmpty")}</p>
         )}
         {!loading && !error && entries !== null && entries.length > 0 && (
           <div className="space-y-1.5">
@@ -252,11 +296,13 @@ function TimelineModal({
               <div key={i}>
                 {e.isIdleGap && e.gapMinutesBefore !== null && (
                   <div className="text-[11px] text-abys-muted bg-abys-ink/5 rounded-lg px-3 py-1.5 my-1.5">
-                    ⋯ {e.gapMinutesBefore} dk olay boşluğu
+                    {formatMessage(locale, "advisors.gapLine", { minutes: e.gapMinutesBefore })}
                   </div>
                 )}
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="text-abys-muted text-xs font-mono w-24 shrink-0">{formatTime(e.at)}</span>
+                  <span className="text-abys-muted text-xs font-mono w-24 shrink-0">
+                    {formatTime(locale, e.at)}
+                  </span>
                   <span className="text-abys-navy font-medium">{e.eventType}</span>
                   {e.subjectRef && <span className="text-abys-muted text-xs">· {e.subjectRef}</span>}
                 </div>
