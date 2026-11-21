@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T22:57:27Z",
+  "updatedAt": "2026-11-21T22:59:35Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1629,6 +1629,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Command center heading, activity line, 30-second focus panel, focus CTAs, development list, summary stats, four blocks, executive brief labels, evidence lines, reliability/severity/outcome labels and calibration notes render in TR and EN with locale-aware dates and percentages.",
       "evidence": "Gates: tsc clean, eslint clean, i18n 22/22, full suite 826 passed (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-083",
+      "commit": "c9e2bc3",
+      "title": "Org-scoped proof for quality score label filter",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "tests/data-quality-score-api.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Filtering the quality score by a label that exists only in another organization returns zero rows and echoes the label, proving the repository keeps org_id scoping with the new filter.",
+      "evidence": "Gates: tsc clean, eslint clean, score API test 5/5 (includes cross-org filter assertion)."
     }
   ]
 }
