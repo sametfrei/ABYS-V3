@@ -92,6 +92,15 @@ describe("i18n kabuk sözlüğü", () => {
     }
   });
 
+  it("tahmin ekranı anahtarları iki dilde dolu", () => {
+    const forecastKeys = shellKeys().filter((key) => key.startsWith("forecast."));
+    expect(forecastKeys.length).toBeGreaterThan(20);
+    for (const key of forecastKeys) {
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });

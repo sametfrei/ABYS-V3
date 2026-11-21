@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 interface LabelRow {
   label: string;
@@ -66,74 +74,114 @@ interface ForecastData {
   };
 }
 
-const EVIDENCE_LABEL: Record<string, string> = {
-  high: "Yüksek kanıt",
-  medium: "Orta kanıt",
-  low: "Düşük kanıt",
+const EVIDENCE_LABEL: Record<string, ShellKey> = {
+  high: "forecast.evidenceHigh",
+  medium: "forecast.evidenceMedium",
+  low: "forecast.evidenceLow",
 };
 
-const MODEL_LABEL: Record<string, string> = {
-  naive: "Naif (son değer)",
-  ses: "Üstel düzeltme (SES)",
-  "linear-trend": "Doğrusal trend",
+const MODEL_LABEL: Record<string, ShellKey> = {
+  naive: "forecast.modelNaive",
+  ses: "forecast.modelSes",
+  "linear-trend": "forecast.modelLinearTrend",
 };
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
 
 function fmt(n: number): string {
   return n.toLocaleString("tr-TR", { maximumFractionDigits: 2 });
 }
 
-function formatObservationTime(value: string | null): string | null {
+function formatObservationTime(value: string | null, locale: Locale): string | null {
   if (!value) return null;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toLocaleString("tr-TR");
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString(locale);
 }
 
 function ForecastEvidencePanel({ data }: { data: ForecastData }) {
+  const locale = useLocale();
   const forecast = data.forecast;
   const firstPoint = forecast?.points[0];
-  const evidenceLabel = forecast ? EVIDENCE_LABEL[forecast.evidence] ?? "Kanıt düzeyi belirtilmedi" : null;
+  const evidenceLabel = forecast
+    ? EVIDENCE_LABEL[forecast.evidence]
+      ? t(locale, EVIDENCE_LABEL[forecast.evidence])
+      : t(locale, "forecast.evidenceUnknown")
+    : null;
   const hasMae = forecast !== null && Number.isFinite(forecast.selectedMae);
-  const observationTime = formatObservationTime(data.provenance.lastAt);
+  const observationTime = formatObservationTime(data.provenance.lastAt, locale);
   const hasRange = Boolean(firstPoint && Number.isFinite(firstPoint.p10) && Number.isFinite(firstPoint.p90));
   const assumptions = data.provenance.assumptions ?? [];
 
   return (
     <section aria-labelledby="forecast-evidence-heading" className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
       <h2 id="forecast-evidence-heading" className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
-        TAHMİN KANITI VE SINIRLARI
+        {t(locale, "forecast.evidenceHeading").toLocaleUpperCase(locale)}
       </h2>
       <dl className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="rounded-lg bg-white/70 px-3 py-2">
-          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">Kanıt düzeyi</dt>
-          <dd className="mt-0.5 text-sm font-medium text-abys-ink">{evidenceLabel ?? "Bu yanıtta yok"}</dd>
-          <dd className="mt-0.5 text-[11px] text-abys-muted">
-            {forecast && hasMae ? `Geriye dönük test MAE ${fmt(forecast.selectedMae)}` : "MAE bu yanıtta yok."}
-          </dd>
-        </div>
-        <div className="rounded-lg bg-white/70 px-3 py-2">
-          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">Veri tazeliği</dt>
-          <dd className="mt-0.5 text-sm font-medium text-abys-ink">{observationTime ?? "Bu yanıtta yok"}</dd>
-          <dd className="mt-0.5 text-[11px] text-abys-muted">
-            {observationTime ? "Son gözlem zamanı" : "Son gözlem zamanı bu yanıtta yok."}
-          </dd>
-        </div>
-        <div className="rounded-lg bg-white/70 px-3 py-2">
-          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">Belirsizlik aralığı</dt>
+          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">
+            {t(locale, "forecast.evidenceLevel")}
+          </dt>
           <dd className="mt-0.5 text-sm font-medium text-abys-ink">
-            {firstPoint && hasRange ? `${fmt(firstPoint.p10)} – ${fmt(firstPoint.p90)}` : "Bu yanıtta yok"}
+            {evidenceLabel ?? t(locale, "forecast.missingInResponse")}
           </dd>
           <dd className="mt-0.5 text-[11px] text-abys-muted">
-            {firstPoint && hasRange ? "İlk dönem, P10–P90" : "P10–P90 aralığı üretilmedi."}
+            {forecast && hasMae
+              ? formatMessage(locale, "forecast.backtestMae", { mae: fmt(forecast.selectedMae) })
+              : t(locale, "forecast.maeMissing")}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-white/70 px-3 py-2">
+          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">
+            {t(locale, "forecast.dataFreshness")}
+          </dt>
+          <dd className="mt-0.5 text-sm font-medium text-abys-ink">
+            {observationTime ?? t(locale, "forecast.missingInResponse")}
+          </dd>
+          <dd className="mt-0.5 text-[11px] text-abys-muted">
+            {observationTime
+              ? t(locale, "forecast.lastObservationTime")
+              : t(locale, "forecast.lastObservationMissing")}
+          </dd>
+        </div>
+        <div className="rounded-lg bg-white/70 px-3 py-2">
+          <dt className="text-[10px] tracking-wide text-abys-muted uppercase">
+            {t(locale, "forecast.uncertaintyRange")}
+          </dt>
+          <dd className="mt-0.5 text-sm font-medium text-abys-ink">
+            {firstPoint && hasRange
+              ? `${fmt(firstPoint.p10)} – ${fmt(firstPoint.p90)}`
+              : t(locale, "forecast.missingInResponse")}
+          </dd>
+          <dd className="mt-0.5 text-[11px] text-abys-muted">
+            {firstPoint && hasRange
+              ? t(locale, "forecast.firstPeriodP10P90")
+              : t(locale, "forecast.p10P90Missing")}
           </dd>
         </div>
       </dl>
       {!forecast && (
         <p className="mt-3 rounded-lg bg-white/60 px-3 py-2 text-xs text-abys-muted">
-          Yeterli veri olmadığı için kanıt düzeyi, geriye dönük MAE ve P10–P90 belirsizlik aralığı bu yanıtta yok.
+          {t(locale, "forecast.insufficientEvidenceBody")}
         </p>
       )}
       <div className="mt-4 pt-3 border-t border-abys-cream-border">
-        <p className="text-[10px] tracking-wide text-abys-muted font-semibold uppercase mb-1">Varsayımlar ve sınırlar</p>
+        <p className="text-[10px] tracking-wide text-abys-muted font-semibold uppercase mb-1">
+          {t(locale, "forecast.assumptionsHeading")}
+        </p>
         {assumptions.length > 0 ? (
           <ul className="space-y-0.5 text-xs text-abys-muted">
             {assumptions.map((assumption, index) => (
@@ -141,7 +189,7 @@ function ForecastEvidencePanel({ data }: { data: ForecastData }) {
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-abys-muted">Bu yanıtta varsayım veya sınırlama metni yok.</p>
+          <p className="text-xs text-abys-muted">{t(locale, "forecast.noAssumptions")}</p>
         )}
       </div>
     </section>
@@ -150,6 +198,7 @@ function ForecastEvidencePanel({ data }: { data: ForecastData }) {
 
 /** Basit tarih serisi grafiği — geçmiş + tahmin aralığı. */
 function SeriesChart({ history, points }: { history: number[]; points: ForecastPoint[] }) {
+  const locale = useLocale();
   const all = [
     ...history,
     ...points.flatMap((p) => [p.p10, p.p90]),
@@ -177,7 +226,7 @@ function SeriesChart({ history, points }: { history: number[]; points: ForecastP
       : "";
 
   return (
-    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-40" role="img" aria-label="Geçmiş ve tahmin grafiği">
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-40" role="img" aria-label={t(locale, "forecast.chartAria")}>
       {band && <path d={band} className="fill-abys-accent/15" />}
       <path d={histPath} fill="none" className="stroke-abys-navy" strokeWidth={2} />
       {points.length > 0 && (
@@ -188,6 +237,7 @@ function SeriesChart({ history, points }: { history: number[]; points: ForecastP
 }
 
 export default function ForecastPage() {
+  const locale = useLocale();
   const [labels, setLabels] = useState<LabelRow[] | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [data, setData] = useState<ForecastData | null>(null);
@@ -196,15 +246,28 @@ export default function ForecastPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const effectLocale = readLocale();
     let cancelled = false;
     fetch("/api/forecast", { cache: "no-store" })
       .then(async (res) => {
-        if (!res.ok) throw new Error(res.status === 403 ? "Bu sayfayı görme yetkiniz yok." : `KPI listesi yüklenemedi (HTTP ${res.status}).`);
+        if (!res.ok) {
+          throw new Error(
+            res.status === 403
+              ? t(effectLocale, "forecast.forbidden")
+              : formatMessage(effectLocale, "forecast.kpiListLoadFailedHttp", {
+                  status: res.status,
+                })
+          );
+        }
         const body = (await res.json()) as { labels: LabelRow[] };
         if (!cancelled) setLabels(body.labels);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Yükleme başarısız.");
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : t(effectLocale, "forecast.loadFailed")
+          );
+        }
       });
     return () => {
       cancelled = true;
@@ -237,10 +300,15 @@ export default function ForecastPage() {
         cache: "no-store",
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? `Tahmin yüklenemedi (HTTP ${res.status}).`);
+      if (!res.ok) {
+        throw new Error(
+          body.error ??
+            formatMessage(locale, "forecast.forecastLoadFailedHttp", { status: res.status })
+        );
+      }
       setData(body as ForecastData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Tahmin yüklenemedi.");
+      setError(err instanceof Error ? err.message : t(locale, "forecast.forecastLoadFailed"));
       setData(null);
     } finally {
       setLoading(false);
@@ -250,10 +318,10 @@ export default function ForecastPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="TAHMİN"
-        title="Gelecek tek bir sayı"
-        accent="değildir"
-        desc="KPI geçmişinden geriye dönük test edilmiş tahminler. Model karşılaştırması, hata metrikleri ve olasılık aralığı birlikte sunulur; yetersiz veride tahmin üretilmez."
+        eyebrow={t(locale, "nav.forecast").toLocaleUpperCase(locale)}
+        title={t(locale, "forecast.title")}
+        accent={t(locale, "forecast.titleAccent")}
+        desc={t(locale, "forecast.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-4xl space-y-6">
@@ -263,15 +331,17 @@ export default function ForecastPage() {
           </p>
         )}
 
-        {labels === null && !error && <p className="text-sm text-abys-muted">Yükleniyor…</p>}
+        {labels === null && !error && (
+          <p className="text-sm text-abys-muted">{t(locale, "forecast.loading")}</p>
+        )}
 
         {labels && labels.length === 0 && (
           <p className="text-sm text-abys-muted">
-            Henüz KPI serisi bulunmuyor.{" "}
+            {t(locale, "forecast.noSeries")}{" "}
             <Link href="/dashboard/kpi" className="text-abys-accent hover:underline">
-              KPI Verisi
+              {t(locale, "forecast.kpiDataLink")}
             </Link>{" "}
-            ekranından metriği ve geçmiş değerleri ekleyin; tahmin burada otomatik görünür.
+            {t(locale, "forecast.noSeriesHelp")}
           </p>
         )}
 
@@ -288,7 +358,9 @@ export default function ForecastPage() {
                 }`}
               >
                 {l.label}
-                <span className="ml-2 text-[11px] opacity-70">{l.numericPoints} sayısal</span>
+                <span className="ml-2 text-[11px] opacity-70">
+                  {formatMessage(locale, "forecast.seriesNumeric", { count: l.numericPoints })}
+                </span>
               </button>
             ))}
           </div>
@@ -297,27 +369,36 @@ export default function ForecastPage() {
         {alerts && alerts.length > 0 && (
           <div className="rounded-xl border border-abys-critical/30 bg-abys-critical-soft px-4 py-3">
             <p className="text-xs tracking-widest text-abys-critical font-semibold mb-1">
-              ERKEN UYARI — {alerts.length} SERİDE SAPMA
+              {t(locale, "forecast.earlyWarning")
+                .replace("{count}", String(alerts.length))
+                .toLocaleUpperCase(locale)}
             </p>
             <ul className="space-y-0.5">
               {alerts.map((a) => {
                 const last = a.anomalies[a.anomalies.length - 1];
                 return (
                   <li key={a.label} className="text-xs text-abys-ink">
-                    <span className="font-medium">{a.label}</span> · skor {last.score} (
-                    {last.direction === "above" ? "üst" : "alt"}) ·{" "}
-                    {last.timestamp ? new Date(last.timestamp).toLocaleDateString("tr-TR") : "—"}
+                    <span className="font-medium">{a.label}</span> ·{" "}
+                    {formatMessage(locale, "forecast.anomalyScore", { score: last.score })} (
+                    {last.direction === "above"
+                      ? t(locale, "forecast.above")
+                      : t(locale, "forecast.below")}) ·{" "}
+                    {last.timestamp ? new Date(last.timestamp).toLocaleDateString(locale) : "—"}
                   </li>
                 );
               })}
             </ul>
             <p className="text-[11px] text-abys-muted mt-1">
-              Median/MAD tabanlı istatistiksel sinyal; nedensellik iddiası değildir.
+              {t(locale, "forecast.medianMadNote")}
             </p>
           </div>
         )}
 
-        {loading && <p className="text-sm text-abys-muted" role="status">Hesaplanıyor…</p>}
+        {loading && (
+          <p className="text-sm text-abys-muted" role="status">
+            {t(locale, "forecast.calculating")}
+          </p>
+        )}
 
         {data && !loading && (
           <div className="space-y-4">
@@ -328,17 +409,24 @@ export default function ForecastPage() {
                 <p className="text-sm font-medium text-abys-ink">{data.label}</p>
                 {data.forecast && (
                   <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-abys-muted">
-                    {EVIDENCE_LABEL[data.forecast.evidence]} · MAE {fmt(data.forecast.selectedMae)}
+                    {formatMessage(locale, "forecast.evidenceMae", {
+                      evidence: EVIDENCE_LABEL[data.forecast.evidence]
+                        ? t(locale, EVIDENCE_LABEL[data.forecast.evidence])
+                        : t(locale, "forecast.evidenceUnknown"),
+                      mae: fmt(data.forecast.selectedMae),
+                    })}
                   </span>
                 )}
               </div>
 
               {data.insufficientData || !data.forecast ? (
                 <p className="text-sm text-abys-muted">
-                  Tahmin için en az {data.minRequired} sayısal gözlem gerekir. Mevcut:{" "}
-                  {data.provenance.numericPoints}.{" "}
+                  {formatMessage(locale, "forecast.insufficientData", {
+                    min: data.minRequired,
+                    current: data.provenance.numericPoints,
+                  })}{" "}
                   <Link href="/dashboard/kpi" className="text-abys-accent hover:underline">
-                    Eksik geçmişi ekle →
+                    {t(locale, "forecast.addMissingHistory")}
                   </Link>
                 </p>
               ) : (
@@ -349,19 +437,24 @@ export default function ForecastPage() {
                   />
                   {data.intervalAdjustment?.status === "applied" && (
                     <p className="text-[11px] text-abys-warning mt-1" data-testid="interval-adjustment">
-                      Aralıklar geçmiş kapsamaya göre ölçeklendi ({data.intervalAdjustment.factor}×).{" "}
+                      {formatMessage(locale, "forecast.intervalAdjusted", {
+                        factor: data.intervalAdjustment.factor,
+                      })}{" "}
                       {data.intervalAdjustment.note}
                     </p>
                   )}
                   <p className="text-xs text-abys-muted mt-1">
-                    Seçilen model: <span className="text-abys-ink">{MODEL_LABEL[data.forecast.model] ?? data.forecast.model}</span>
+                    {t(locale, "forecast.selectedModel")}:{" "}
+                    <span className="text-abys-ink">{MODEL_LABEL[data.forecast.model] ? t(locale, MODEL_LABEL[data.forecast.model]) : data.forecast.model}</span>
                     {data.forecast.model === "ses" && ` (α=${data.forecast.backtest.find((b) => b.model === "ses")?.params.alpha ?? "-"})`}
                   </p>
 
                   <div className="grid grid-cols-3 gap-3 mt-4">
                     {(data.adjustedPoints ?? data.forecast.points).map((p) => (
                       <div key={p.step} className="rounded-lg bg-white/70 px-3 py-2">
-                        <p className="text-[11px] text-abys-muted">+{p.step} dönem</p>
+                        <p className="text-[11px] text-abys-muted">
+                          {formatMessage(locale, "forecast.period", { step: p.step })}
+                        </p>
                         <p className="font-mono text-lg text-abys-navy">{fmt(p.value)}</p>
                         <p className="text-[11px] text-abys-muted">
                           P10–P90: {fmt(p.p10)} – {fmt(p.p90)}
@@ -377,21 +470,25 @@ export default function ForecastPage() {
 
             {data.forecast && (
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
-                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">MODEL KARŞILAŞTIRMASI — GERİYE DÖNÜK TEST</p>
+                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2 uppercase">
+                  {t(locale, "forecast.modelComparisonHeading")}
+                </p>
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-abys-muted">
-                      <th className="py-1 font-medium">Model</th>
-                      <th className="py-1 font-medium">MAE</th>
-                      <th className="py-1 font-medium">RMSE</th>
-                      <th className="py-1 font-medium">MAPE</th>
-                      <th className="py-1 font-medium">Nokta</th>
+                      <th className="py-1 font-medium">{t(locale, "forecast.tableModel")}</th>
+                      <th className="py-1 font-medium">{t(locale, "forecast.tableMae")}</th>
+                      <th className="py-1 font-medium">{t(locale, "forecast.tableRmse")}</th>
+                      <th className="py-1 font-medium">{t(locale, "forecast.tableMape")}</th>
+                      <th className="py-1 font-medium">{t(locale, "forecast.tablePoints")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {data.forecast.backtest.map((b) => (
                       <tr key={b.model} className={b.model === data.forecast?.model ? "text-abys-navy font-medium" : "text-abys-ink"}>
-                        <td className="py-1">{MODEL_LABEL[b.model] ?? b.model}</td>
+                        <td className="py-1">
+                          {MODEL_LABEL[b.model] ? t(locale, MODEL_LABEL[b.model]) : b.model}
+                        </td>
                         <td className="py-1 font-mono">{fmt(b.mae)}</td>
                         <td className="py-1 font-mono">{fmt(b.rmse)}</td>
                         <td className="py-1 font-mono">{b.mape === null ? "—" : `${Math.round(b.mape * 100)}%`}</td>
@@ -405,10 +502,15 @@ export default function ForecastPage() {
             )}
 
             <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 text-xs text-abys-muted space-y-1">
-              <p className="text-[11px] tracking-widest font-semibold">HESAP KAYNAĞI</p>
-              <p>Motor: {data.provenance.engine}</p>
+              <p className="text-[11px] tracking-widest font-semibold uppercase">
+                {t(locale, "forecast.provenanceHeading")}
+              </p>
+              <p>{formatMessage(locale, "forecast.engine", { engine: data.provenance.engine })}</p>
               <p>
-                Kullanılan gözlem: {data.provenance.numericPoints} · dışlanan (sayısal olmayan): {data.provenance.excludedPoints}
+                {formatMessage(locale, "forecast.observations", {
+                  used: data.provenance.numericPoints,
+                  excluded: data.provenance.excludedPoints,
+                })}
               </p>
             </div>
           </div>
@@ -445,6 +547,7 @@ interface SnapshotSummary {
 }
 
 function ForecastSnapshotPanel({ label }: { label: string }) {
+  const locale = useLocale();
   const [snapshots, setSnapshots] = useState<SnapshotRow[]>([]);
   const [summary, setSummary] = useState<SnapshotSummary | null>(null);
   const [retention, setRetention] = useState<{
@@ -520,12 +623,12 @@ function ForecastSnapshotPanel({ label }: { label: string }) {
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(body?.error ?? "Tahmin kaydedilemedi.");
+        throw new Error(body?.error ?? t(locale, "forecast.snapshotSaveFailed"));
       }
-      setNote("Tahmin kaydedildi. Sonraki gözlem geldiğinde otomatik ölçülecek.");
+      setNote(t(locale, "forecast.snapshotSaved"));
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Tahmin kaydedilemedi.");
+      setError(err instanceof Error ? err.message : t(locale, "forecast.snapshotSaveFailed"));
     } finally {
       setBusy(false);
     }
@@ -534,49 +637,55 @@ function ForecastSnapshotPanel({ label }: { label: string }) {
   return (
     <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <p className="text-xs tracking-widest text-abys-muted font-semibold">TAHMİN KALİBRASYONU — GERÇEKLEŞEN</p>
+        <p className="text-xs tracking-widest text-abys-muted font-semibold uppercase">
+          {t(locale, "forecast.calibrationHeading")}
+        </p>
         <button
           onClick={save}
           disabled={busy}
           className="text-xs rounded-full border border-abys-navy/25 text-abys-navy px-3 py-1.5 hover:bg-white/60 disabled:opacity-50"
         >
-          {busy ? "Kaydediliyor…" : "Bu tahmini ölçüm için kaydet"}
+          {busy ? t(locale, "forecast.saving") : t(locale, "forecast.saveSnapshot")}
         </button>
       </div>
       <p className="text-[11px] text-abys-muted">
-        Kaydedilen ilk adım (P10–P90), sonraki gerçek KPI gözlemiyle karşılaştırılır. Sonuç bir garanti değil,
-        kendi geçmiş isabetimizdir.
+        {t(locale, "forecast.calibrationDescription")}
       </p>
       {error && <p className="mt-2 text-xs text-abys-critical">{error}</p>}
       {note && <p className="mt-2 text-xs text-abys-healthy">{note}</p>}
       {summary && summary.total > 0 && (
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
           <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-            <p className="text-abys-muted">Ölçülen</p>
+            <p className="text-abys-muted">{t(locale, "forecast.measured")}</p>
             <p className="mt-1 font-semibold text-abys-ink">
               {summary.evaluated}/{summary.total}
             </p>
-            <p className="text-[11px] text-abys-muted">{summary.pending} bekliyor</p>
+            <p className="text-[11px] text-abys-muted">
+              {formatMessage(locale, "forecast.pendingCount", { count: summary.pending })}
+            </p>
           </div>
           <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-            <p className="text-abys-muted">Aralık isabeti</p>
+            <p className="text-abys-muted">{t(locale, "forecast.rangeHit")}</p>
             <p className="mt-1 font-semibold text-abys-ink">
               {summary.hitRate === null ? "—" : `%${Math.round(summary.hitRate * 100)}`}
             </p>
             <p className="text-[11px] text-abys-muted">
-              {summary.hits} isabet · {summary.misses} ıska
+              {formatMessage(locale, "forecast.hitsMisses", {
+                hits: summary.hits,
+                misses: summary.misses,
+              })}
             </p>
           </div>
           <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-            <p className="text-abys-muted">Ortalama |hata|</p>
+            <p className="text-abys-muted">{t(locale, "forecast.meanAbsError")}</p>
             <p className="mt-1 font-semibold text-abys-ink">
               {summary.meanAbsError === null ? "—" : fmt(summary.meanAbsError)}
             </p>
           </div>
           <div className="rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2">
-            <p className="text-abys-muted">Son kayıt</p>
+            <p className="text-abys-muted">{t(locale, "forecast.lastRecord")}</p>
             <p className="mt-1 font-semibold text-abys-ink">
-              {snapshots[0] ? new Date(snapshots[0].createdAt).toLocaleDateString("tr-TR") : "—"}
+              {snapshots[0] ? new Date(snapshots[0].createdAt).toLocaleDateString(locale) : "—"}
             </p>
           </div>
         </div>
@@ -585,32 +694,49 @@ function ForecastSnapshotPanel({ label }: { label: string }) {
         <ul className="mt-3 space-y-1 text-[11px] list-none p-0 m-0">
           {snapshots.slice(0, 5).map((snap) => (
             <li key={snap.id} className="flex flex-wrap items-center gap-2 text-abys-muted">
-              <span className="text-abys-ink">{new Date(snap.createdAt).toLocaleDateString("tr-TR")}</span>
+              <span className="text-abys-ink">
+                {new Date(snap.createdAt).toLocaleDateString(locale)}
+              </span>
               <span>
                 P10–P90 {fmt(snap.p10)} – {fmt(snap.p90)}
               </span>
               {snap.evaluation.status === "evaluated" ? (
                 <span className={snap.evaluation.insideRange ? "text-abys-healthy" : "text-abys-critical"}>
-                  gerçek {fmt(snap.evaluation.actual ?? 0)} · {snap.evaluation.insideRange ? "aralıkta" : "aralık dışında"}
-                  {snap.evaluation.absError !== null && ` · |hata| ${fmt(snap.evaluation.absError)}`}
+                  {formatMessage(locale, "forecast.actual", {
+                    value: fmt(snap.evaluation.actual ?? 0),
+                  })}{" "}
+                  ·{" "}
+                  {snap.evaluation.insideRange
+                    ? t(locale, "forecast.insideRange")
+                    : t(locale, "forecast.outsideRange")}
+                  {snap.evaluation.absError !== null &&
+                    ` · ${formatMessage(locale, "forecast.absError", {
+                      value: fmt(snap.evaluation.absError),
+                    })}`}
                 </span>
               ) : (
-                <span>ölçüm bekliyor</span>
+                <span>{t(locale, "forecast.evaluationPending")}</span>
               )}
             </li>
           ))}
         </ul>
       )}
       {summary && summary.total === 0 && (
-        <p className="mt-2 text-xs text-abys-muted">Henüz kaydedilmiş tahmin yok.</p>
+        <p className="mt-2 text-xs text-abys-muted">{t(locale, "forecast.noSnapshots")}</p>
       )}
       {retention && (
         <p className="mt-2 text-[11px] text-abys-muted">
-          Saklama politikası: {retention.policy.maxAgeDays} gün / etiket başına{" "}
-          {retention.policy.maxPerLabel} kayıt · kurumda {retention.total} anlık görüntü ·{" "}
-          {retention.archiveCount === 0
-            ? "arşiv adayı yok."
-            : `${retention.archiveCount} arşiv adayı (silme yapılmaz, yalnızca rapor).`}
+          {formatMessage(locale, "forecast.retentionPolicy", {
+            maxAgeDays: retention.policy.maxAgeDays,
+            maxPerLabel: retention.policy.maxPerLabel,
+            total: retention.total,
+            archive:
+              retention.archiveCount === 0
+                ? t(locale, "forecast.noArchiveCandidates")
+                : formatMessage(locale, "forecast.archiveCandidates", {
+                    count: retention.archiveCount,
+                  }),
+          })}
         </p>
       )}
     </div>

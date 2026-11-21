@@ -278,7 +278,84 @@ export type ShellKey =
   | "connectors.approving"
   | "connectors.approveNewVersion"
   | "connectors.mappingVersionHistory"
-  | "connectors.footnote";
+  | "connectors.footnote"
+  | "forecast.title"
+  | "forecast.titleAccent"
+  | "forecast.subtitle"
+  | "forecast.loading"
+  | "forecast.forbidden"
+  | "forecast.kpiListLoadFailedHttp"
+  | "forecast.loadFailed"
+  | "forecast.noSeries"
+  | "forecast.kpiDataLink"
+  | "forecast.noSeriesHelp"
+  | "forecast.seriesNumeric"
+  | "forecast.earlyWarning"
+  | "forecast.anomalyScore"
+  | "forecast.above"
+  | "forecast.below"
+  | "forecast.medianMadNote"
+  | "forecast.calculating"
+  | "forecast.forecastLoadFailed"
+  | "forecast.forecastLoadFailedHttp"
+  | "forecast.evidenceHeading"
+  | "forecast.evidenceLevel"
+  | "forecast.missingInResponse"
+  | "forecast.evidenceUnknown"
+  | "forecast.evidenceHigh"
+  | "forecast.evidenceMedium"
+  | "forecast.evidenceLow"
+  | "forecast.backtestMae"
+  | "forecast.maeMissing"
+  | "forecast.dataFreshness"
+  | "forecast.lastObservationTime"
+  | "forecast.lastObservationMissing"
+  | "forecast.uncertaintyRange"
+  | "forecast.firstPeriodP10P90"
+  | "forecast.p10P90Missing"
+  | "forecast.insufficientEvidenceBody"
+  | "forecast.assumptionsHeading"
+  | "forecast.noAssumptions"
+  | "forecast.modelNaive"
+  | "forecast.modelSes"
+  | "forecast.modelLinearTrend"
+  | "forecast.chartAria"
+  | "forecast.insufficientData"
+  | "forecast.addMissingHistory"
+  | "forecast.intervalAdjusted"
+  | "forecast.selectedModel"
+  | "forecast.period"
+  | "forecast.modelComparisonHeading"
+  | "forecast.tableModel"
+  | "forecast.tableMae"
+  | "forecast.tableRmse"
+  | "forecast.tableMape"
+  | "forecast.tablePoints"
+  | "forecast.provenanceHeading"
+  | "forecast.engine"
+  | "forecast.observations"
+  | "forecast.evidenceMae"
+  | "forecast.calibrationHeading"
+  | "forecast.saving"
+  | "forecast.saveSnapshot"
+  | "forecast.calibrationDescription"
+  | "forecast.snapshotSaveFailed"
+  | "forecast.snapshotSaved"
+  | "forecast.measured"
+  | "forecast.pendingCount"
+  | "forecast.rangeHit"
+  | "forecast.hitsMisses"
+  | "forecast.meanAbsError"
+  | "forecast.lastRecord"
+  | "forecast.actual"
+  | "forecast.insideRange"
+  | "forecast.outsideRange"
+  | "forecast.absError"
+  | "forecast.evaluationPending"
+  | "forecast.noSnapshots"
+  | "forecast.retentionPolicy"
+  | "forecast.noArchiveCandidates"
+  | "forecast.archiveCandidates";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -771,6 +848,167 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "connectors.footnote": {
     tr: "Not: Katalogda “Kimlik bilgisi gerekir” işaretli sistemler aynı REST adaptörünü kullanır; canlı bağlantı müşteri uç noktası ve anahtarı sağlanana kadar doğrulanmış sayılmaz.",
     en: "Note: Systems marked “Requires credentials” use the same REST adapter; a live connection is not considered verified until the customer endpoint and key are provided.",
+  },
+  "forecast.title": { tr: "Gelecek tek bir sayı", en: "The future is not" },
+  "forecast.titleAccent": { tr: "değildir", en: "a single number" },
+  "forecast.subtitle": {
+    tr: "KPI geçmişinden geriye dönük test edilmiş tahminler. Model karşılaştırması, hata metrikleri ve olasılık aralığı birlikte sunulur; yetersiz veride tahmin üretilmez.",
+    en: "Backtested forecasts from KPI history. Model comparison, error metrics and probability intervals are shown together; no forecast is produced when data is insufficient.",
+  },
+  "forecast.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "forecast.forbidden": {
+    tr: "Bu sayfayı görme yetkiniz yok.",
+    en: "You do not have permission to view this page.",
+  },
+  "forecast.kpiListLoadFailedHttp": {
+    tr: "KPI listesi yüklenemedi (HTTP {status}).",
+    en: "KPI list could not be loaded (HTTP {status}).",
+  },
+  "forecast.loadFailed": { tr: "Yükleme başarısız.", en: "Loading failed." },
+  "forecast.noSeries": { tr: "Henüz KPI serisi bulunmuyor.", en: "No KPI series yet." },
+  "forecast.kpiDataLink": { tr: "KPI Verisi", en: "KPI Data" },
+  "forecast.noSeriesHelp": {
+    tr: "ekranından metriği ve geçmiş değerleri ekleyin; tahmin burada otomatik görünür.",
+    en: "add the metric and historical values there; the forecast will appear here automatically.",
+  },
+  "forecast.seriesNumeric": { tr: "{count} sayısal", en: "{count} numeric" },
+  "forecast.earlyWarning": {
+    tr: "Erken uyarı — {count} seride sapma",
+    en: "Early warning — deviation in {count} series",
+  },
+  "forecast.anomalyScore": { tr: "skor {score}", en: "score {score}" },
+  "forecast.above": { tr: "üst", en: "above" },
+  "forecast.below": { tr: "alt", en: "below" },
+  "forecast.medianMadNote": {
+    tr: "Median/MAD tabanlı istatistiksel sinyal; nedensellik iddiası değildir.",
+    en: "A median/MAD-based statistical signal; not a claim of causality.",
+  },
+  "forecast.calculating": { tr: "Hesaplanıyor…", en: "Calculating…" },
+  "forecast.forecastLoadFailed": {
+    tr: "Tahmin yüklenemedi.",
+    en: "Forecast could not be loaded.",
+  },
+  "forecast.forecastLoadFailedHttp": {
+    tr: "Tahmin yüklenemedi (HTTP {status}).",
+    en: "Forecast could not be loaded (HTTP {status}).",
+  },
+  "forecast.evidenceHeading": {
+    tr: "Tahmin kanıtı ve sınırları",
+    en: "Forecast evidence and limits",
+  },
+  "forecast.evidenceLevel": { tr: "Kanıt düzeyi", en: "Evidence level" },
+  "forecast.missingInResponse": { tr: "Bu yanıtta yok", en: "Not in this response" },
+  "forecast.evidenceUnknown": {
+    tr: "Kanıt düzeyi belirtilmedi",
+    en: "Evidence level not specified",
+  },
+  "forecast.evidenceHigh": { tr: "Yüksek kanıt", en: "High evidence" },
+  "forecast.evidenceMedium": { tr: "Orta kanıt", en: "Medium evidence" },
+  "forecast.evidenceLow": { tr: "Düşük kanıt", en: "Low evidence" },
+  "forecast.backtestMae": {
+    tr: "Geriye dönük test MAE {mae}",
+    en: "Backtest MAE {mae}",
+  },
+  "forecast.maeMissing": { tr: "MAE bu yanıtta yok.", en: "MAE is not in this response." },
+  "forecast.dataFreshness": { tr: "Veri tazeliği", en: "Data freshness" },
+  "forecast.lastObservationTime": {
+    tr: "Son gözlem zamanı",
+    en: "Last observation time",
+  },
+  "forecast.lastObservationMissing": {
+    tr: "Son gözlem zamanı bu yanıtta yok.",
+    en: "Last observation time is not in this response.",
+  },
+  "forecast.uncertaintyRange": { tr: "Belirsizlik aralığı", en: "Uncertainty interval" },
+  "forecast.firstPeriodP10P90": { tr: "İlk dönem, P10–P90", en: "First period, P10–P90" },
+  "forecast.p10P90Missing": {
+    tr: "P10–P90 aralığı üretilmedi.",
+    en: "A P10–P90 interval was not produced.",
+  },
+  "forecast.insufficientEvidenceBody": {
+    tr: "Yeterli veri olmadığı için kanıt düzeyi, geriye dönük MAE ve P10–P90 belirsizlik aralığı bu yanıtta yok.",
+    en: "Because data is insufficient, evidence level, backtest MAE and the P10–P90 uncertainty interval are not in this response.",
+  },
+  "forecast.assumptionsHeading": { tr: "Varsayımlar ve sınırlar", en: "Assumptions and limits" },
+  "forecast.noAssumptions": {
+    tr: "Bu yanıtta varsayım veya sınırlama metni yok.",
+    en: "There are no assumption or limitation notes in this response.",
+  },
+  "forecast.modelNaive": { tr: "Naif (son değer)", en: "Naive (last value)" },
+  "forecast.modelSes": { tr: "Üstel düzeltme (SES)", en: "Exponential smoothing (SES)" },
+  "forecast.modelLinearTrend": { tr: "Doğrusal trend", en: "Linear trend" },
+  "forecast.chartAria": { tr: "Geçmiş ve tahmin grafiği", en: "History and forecast chart" },
+  "forecast.insufficientData": {
+    tr: "Tahmin için en az {min} sayısal gözlem gerekir. Mevcut: {current}.",
+    en: "A forecast requires at least {min} numeric observations. Current: {current}.",
+  },
+  "forecast.addMissingHistory": { tr: "Eksik geçmişi ekle →", en: "Add missing history →" },
+  "forecast.intervalAdjusted": {
+    tr: "Aralıklar geçmiş kapsamaya göre ölçeklendi ({factor}×).",
+    en: "Intervals were scaled to historical coverage ({factor}×).",
+  },
+  "forecast.selectedModel": { tr: "Seçilen model", en: "Selected model" },
+  "forecast.period": { tr: "+{step} dönem", en: "+{step} periods" },
+  "forecast.modelComparisonHeading": {
+    tr: "Model karşılaştırması — geriye dönük test",
+    en: "Model comparison — backtest",
+  },
+  "forecast.tableModel": { tr: "Model", en: "Model" },
+  "forecast.tableMae": { tr: "MAE", en: "MAE" },
+  "forecast.tableRmse": { tr: "RMSE", en: "RMSE" },
+  "forecast.tableMape": { tr: "MAPE", en: "MAPE" },
+  "forecast.tablePoints": { tr: "Nokta", en: "Points" },
+  "forecast.provenanceHeading": { tr: "Hesap kaynağı", en: "Calculation provenance" },
+  "forecast.engine": { tr: "Motor: {engine}", en: "Engine: {engine}" },
+  "forecast.observations": {
+    tr: "Kullanılan gözlem: {used} · dışlanan (sayısal olmayan): {excluded}",
+    en: "Observations used: {used} · excluded (non-numeric): {excluded}",
+  },
+  "forecast.evidenceMae": { tr: "{evidence} · MAE {mae}", en: "{evidence} · MAE {mae}" },
+  "forecast.calibrationHeading": {
+    tr: "Tahmin kalibrasyonu — gerçekleşen",
+    en: "Forecast calibration — actual",
+  },
+  "forecast.saving": { tr: "Kaydediliyor…", en: "Saving…" },
+  "forecast.saveSnapshot": {
+    tr: "Bu tahmini ölçüm için kaydet",
+    en: "Save this forecast for measurement",
+  },
+  "forecast.calibrationDescription": {
+    tr: "Kaydedilen ilk adım (P10–P90), sonraki gerçek KPI gözlemiyle karşılaştırılır. Sonuç bir garanti değil, kendi geçmiş isabetimizdir.",
+    en: "The saved first step (P10–P90) is compared with the next actual KPI observation. The result is not a guarantee; it is our own historical hit rate.",
+  },
+  "forecast.snapshotSaveFailed": {
+    tr: "Tahmin kaydedilemedi.",
+    en: "Forecast could not be saved.",
+  },
+  "forecast.snapshotSaved": {
+    tr: "Tahmin kaydedildi. Sonraki gözlem geldiğinde otomatik ölçülecek.",
+    en: "Forecast saved. It will be measured automatically when the next observation arrives.",
+  },
+  "forecast.measured": { tr: "Ölçülen", en: "Measured" },
+  "forecast.pendingCount": { tr: "{count} bekliyor", en: "{count} pending" },
+  "forecast.rangeHit": { tr: "Aralık isabeti", en: "Interval hit rate" },
+  "forecast.hitsMisses": { tr: "{hits} isabet · {misses} ıska", en: "{hits} hits · {misses} misses" },
+  "forecast.meanAbsError": { tr: "Ortalama |hata|", en: "Mean |error|" },
+  "forecast.lastRecord": { tr: "Son kayıt", en: "Last record" },
+  "forecast.actual": { tr: "gerçek {value}", en: "actual {value}" },
+  "forecast.insideRange": { tr: "aralıkta", en: "inside range" },
+  "forecast.outsideRange": { tr: "aralık dışında", en: "outside range" },
+  "forecast.absError": { tr: "|hata| {value}", en: "|error| {value}" },
+  "forecast.evaluationPending": { tr: "ölçüm bekliyor", en: "pending measurement" },
+  "forecast.noSnapshots": {
+    tr: "Henüz kaydedilmiş tahmin yok.",
+    en: "No saved forecasts yet.",
+  },
+  "forecast.retentionPolicy": {
+    tr: "Saklama politikası: {maxAgeDays} gün / etiket başına {maxPerLabel} kayıt · kurumda {total} anlık görüntü · {archive}",
+    en: "Retention policy: {maxAgeDays} days / {maxPerLabel} records per label · {total} snapshots in the organization · {archive}",
+  },
+  "forecast.noArchiveCandidates": { tr: "arşiv adayı yok.", en: "no archive candidates." },
+  "forecast.archiveCandidates": {
+    tr: "{count} arşiv adayı (silme yapılmaz, yalnızca rapor).",
+    en: "{count} archive candidates (nothing is deleted; report only).",
   },
 };
 
