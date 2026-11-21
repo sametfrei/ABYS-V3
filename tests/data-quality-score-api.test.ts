@@ -105,10 +105,14 @@ describe("veri kalitesi skoru API", () => {
       overall: number | null;
       worst: string | null;
       maxAgeDays: number;
+      sampled: boolean;
+      sampleLimit: number;
       dimensions: Array<{ dimension: string; score: number | null; sample: number }>;
     };
     expect(body.total).toBe(6);
     expect(body.maxAgeDays).toBe(30);
+    expect(body.sampled).toBe(false);
+    expect(body.sampleLimit).toBe(1000);
     const byDim = Object.fromEntries(body.dimensions.map((d) => [d.dimension, d]));
     expect(byDim.completeness.score).toBeCloseTo(5 / 6, 4);
     expect(byDim.validity.score).toBeCloseTo(4 / 5, 4);

@@ -118,7 +118,7 @@ async function main() {
   if (Array.isArray(dqScore.json?.dimensions) && dqScore.json.dimensions.length === 4) {
     ok(
       "veri kalitesi boyutları",
-      `${dqScore.json.total} satır · genel ${dqScore.json.overall ?? "—"} · en zayıf ${dqScore.json.worst ?? "—"}`
+      `${dqScore.json.total} satır · genel ${dqScore.json.overall ?? "—"} · en zayıf ${dqScore.json.worst ?? "—"} · örneklem ${dqScore.json.sampled ? "kesildi" : "tam"}`
     );
   } else {
     bad("veri kalitesi boyutları", "dimensions eksik");
