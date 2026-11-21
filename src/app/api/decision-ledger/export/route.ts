@@ -5,6 +5,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { getLedgerEntries } from "@/lib/db/repos/decision-ledger";
 import { toLedgerCsv } from "@/lib/ledger-csv";
+import { recordAuditEvent } from "@/lib/db/repos/audit";
 
 /**
  * GET /api/decision-ledger/export — karar defterini CSV olarak indirir.
@@ -24,6 +25,15 @@ export async function GET() {
   const entries = await getLedgerEntries(session.orgId, MAX_EXPORT_ROWS);
   const csv = toLedgerCsv(entries);
   const stamp = new Date().toISOString().slice(0, 10);
+
+  // Karar verisi dışa aktarımı denetim zincirine yazılır: kim, ne zaman, kaç kayıt.
+  await recordAuditEvent({
+    orgId: session.orgId,
+    actor: session.displayName,
+    type: "decision_ledger_exported",
+    summary: `${entries.length} karar CSV olarak dışa aktarıldı`,
+    detail: `limit=${MAX_EXPORT_ROWS} tarih=${stamp}`,
+  });
 
   return new NextResponse(csv, {
     status: 200,

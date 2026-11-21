@@ -189,4 +189,23 @@ describe("karar defteri CSV dışa aktarımı", () => {
     expect(bodyA).not.toContain(decisionB);
     expect(bodyA).not.toContain(titleB);
   });
+
+  it("her dışa aktarım kurum kapsamlı denetim kaydı bırakır", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    await (await exportLedger()).text();
+
+    const own = await getDb().query<{ summary: string; prev_hash: string | null }>(
+      "SELECT summary, prev_hash FROM audit_events WHERE org_id = $1 AND type = $2 ORDER BY created_at DESC LIMIT 1",
+      [ORG_A, "decision_ledger_exported"]
+    );
+    expect(own.rows).toHaveLength(1);
+    expect(own.rows[0].summary).toContain("CSV");
+    expect(own.rows[0].prev_hash).not.toBeNull();
+
+    const foreign = await getDb().query(
+      "SELECT 1 FROM audit_events WHERE org_id = $1 AND type = $2",
+      [ORG_B, "decision_ledger_exported"]
+    );
+    expect(foreign.rows).toHaveLength(0);
+  });
 });
