@@ -113,6 +113,17 @@ async function main() {
   expectStatus("aktif oturum listesi", sessions.status, 200);
   if (Array.isArray(sessions.json?.sessions)) ok("oturum kayıtları", `${sessions.json.sessions.length} oturum`); else bad("oturum kayıtları");
 
+  const dqScore = await req("/api/data-quality/score?maxAgeDays=30", { cookie });
+  expectStatus("veri kalitesi skoru", dqScore.status, 200);
+  if (Array.isArray(dqScore.json?.dimensions) && dqScore.json.dimensions.length === 4) {
+    ok(
+      "veri kalitesi boyutları",
+      `${dqScore.json.total} satır · genel ${dqScore.json.overall ?? "—"} · en zayıf ${dqScore.json.worst ?? "—"}`
+    );
+  } else {
+    bad("veri kalitesi boyutları", "dimensions eksik");
+  }
+
   // 5) Yetki sınırı: ceo kullanıcı yönetemez
   const users = await req("/api/users", { cookie });
   expectStatus("ceo /api/users -> 403", users.status, 403);

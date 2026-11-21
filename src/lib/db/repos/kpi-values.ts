@@ -109,3 +109,36 @@ export async function deleteKpiPoint(orgId: string, id: string): Promise<boolean
   const r = await getDb().query("DELETE FROM kpi_values WHERE id = $1 AND org_id = $2", [id, orgId]);
   return (r.affectedRows ?? 0) > 0;
 }
+
+export interface KpiObservationRow {
+  label: string;
+  value: string | null;
+  createdAt: string;
+}
+
+/**
+ * Veri kalitesi skoru için ham gözlemler. Sayısal filtre UYGULANMAZ: geçersiz
+ * değerler de dönmeli ki "geçerlilik" boyutu gerçekten ölçülebilsin.
+ * Kurum kapsamlıdır ve üst sınırla korunur.
+ */
+export async function listKpiObservations(
+  orgId: string,
+  options: { label?: string; limit?: number } = {}
+): Promise<KpiObservationRow[]> {
+  await migrate();
+  const limit = Math.min(2000, Math.max(1, options.limit ?? 1000));
+  const r = await getDb().query<{ label: string; value: string | null; created_at: string | Date }>(
+    `SELECT label, value, created_at
+       FROM kpi_values
+      WHERE org_id = $1
+        AND ($2::text IS NULL OR label = $2)
+      ORDER BY created_at DESC, id DESC
+      LIMIT $3`,
+    [orgId, options.label ?? null, limit]
+  );
+  return r.rows.map((row) => ({
+    label: row.label,
+    value: row.value,
+    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+  }));
+}
