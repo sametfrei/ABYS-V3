@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T03:35:00Z",
+  "updatedAt": "2026-11-21T03:20:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -780,6 +780,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Forecast snapshot panel shows the applied retention policy, tenant snapshot count and archive-candidate count, explicitly stating that nothing is deleted.",
       "evidence": "tsc and eslint clean; production build clean; running-server smoke 35/35 with /dashboard/forecast returning 200."
+    },
+    {
+      "id": "TB-037",
+      "commit": "bf85a1d",
+      "title": "Actions screen TR/EN localization",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/actions/page.tsx",
+        "src/components/ExecutionAttemptStatus.tsx",
+        "tests/i18n.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Every user-facing string on the actions screen and execution-attempt component resolves through the i18n dictionary, switching between TR and EN without hydration mismatches.",
+      "evidence": "Founder A implemented; Founder B reviewed the diff and ran the gates: full suite 83 files/756 tests (9 skipped); eslint, tsc and production build clean; smoke 35/35. i18n tests assert both locales are non-empty and differ for key labels."
     }
   ]
 }
