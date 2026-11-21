@@ -747,7 +747,97 @@ export type ShellKey =
   | "process.event.session.ended"
   | "process.event.sale.started"
   | "process.event.sale.completed"
-  | "process.event.department.snapshot";
+  | "process.event.department.snapshot"
+  | "integrations.eyebrow"
+  | "integrations.title"
+  | "integrations.titleAccent"
+  | "integrations.subtitle"
+  | "integrations.tab.ingestion"
+  | "integrations.tab.csv"
+  | "integrations.tab.oauth"
+  | "integrations.tab.webhook"
+  | "integrations.tab.apiKeys"
+  | "integrations.taisNote"
+  | "integrations.errorUnknown"
+  | "integrations.ingestion.description"
+  | "integrations.ingestion.selectedFile"
+  | "integrations.ingestion.placeholder"
+  | "integrations.ingestion.submit"
+  | "integrations.ingestion.submitting"
+  | "integrations.ingestion.noFields"
+  | "integrations.csv.description"
+  | "integrations.csv.sectorFallback"
+  | "integrations.csv.reportTitle"
+  | "integrations.csv.templatePeriodHeader"
+  | "integrations.csv.downloadTemplate"
+  | "integrations.csv.periodLabel"
+  | "integrations.csv.periodPlaceholder"
+  | "integrations.csv.periodStart"
+  | "integrations.csv.periodEnd"
+  | "integrations.csv.preview"
+  | "integrations.csv.assess"
+  | "integrations.csv.assessing"
+  | "integrations.csv.kpiSavedSuffix"
+  | "integrations.csv.recommendation"
+  | "integrations.csv.savedPrefix"
+  | "integrations.csv.savedLink"
+  | "integrations.csv.savedSuffix"
+  | "integrations.bitrix24.demoBadge"
+  | "integrations.bitrix24.connectedBadge"
+  | "integrations.bitrix24.unconfiguredBadge"
+  | "integrations.bitrix24.modeLine"
+  | "integrations.bitrix24.modeDemo"
+  | "integrations.bitrix24.modeLive"
+  | "integrations.bitrix24.notSynced"
+  | "integrations.bitrix24.companies"
+  | "integrations.bitrix24.deals"
+  | "integrations.bitrix24.tasks"
+  | "integrations.bitrix24.activities"
+  | "integrations.bitrix24.users"
+  | "integrations.bitrix24.serviceRequests"
+  | "integrations.bitrix24.complaints"
+  | "integrations.bitrix24.qualityRecords"
+  | "integrations.oauth.description"
+  | "integrations.oauth.soon"
+  | "integrations.oauth.connect"
+  | "integrations.webhook.sessionRequired"
+  | "integrations.webhook.configUnavailable"
+  | "integrations.webhook.loading"
+  | "integrations.webhook.descriptionPrefix"
+  | "integrations.webhook.descriptionLive"
+  | "integrations.webhook.descriptionSuffix"
+  | "integrations.webhook.delivery"
+  | "integrations.webhook.endpointActive"
+  | "integrations.webhook.urlLabel"
+  | "integrations.webhook.secretLabel"
+  | "integrations.webhook.show"
+  | "integrations.webhook.hide"
+  | "integrations.webhook.rotate"
+  | "integrations.webhook.headersLabel"
+  | "integrations.webhook.exampleLabel"
+  | "integrations.apiKeys.loadFailed"
+  | "integrations.apiKeys.loading"
+  | "integrations.apiKeys.description"
+  | "integrations.apiKeys.currentKeys"
+  | "integrations.apiKeys.empty"
+  | "integrations.apiKeys.colName"
+  | "integrations.apiKeys.colPrefix"
+  | "integrations.apiKeys.colScopes"
+  | "integrations.apiKeys.colLastUsed"
+  | "integrations.apiKeys.colStatus"
+  | "integrations.apiKeys.neverUsed"
+  | "integrations.apiKeys.revoked"
+  | "integrations.apiKeys.active"
+  | "integrations.apiKeys.revoking"
+  | "integrations.apiKeys.revoke"
+  | "integrations.apiKeys.newKey"
+  | "integrations.apiKeys.namePlaceholder"
+  | "integrations.apiKeys.create"
+  | "integrations.apiKeys.creating"
+  | "integrations.apiKeys.createFailed"
+  | "integrations.apiKeys.scope.events_write"
+  | "integrations.apiKeys.scope.read_advisors"
+  | "integrations.apiKeys.scope.read_all";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -2040,6 +2130,144 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "process.event.sale.started": { tr: "Satış başladı", en: "Sale started" },
   "process.event.sale.completed": { tr: "Satış tamamlandı", en: "Sale completed" },
   "process.event.department.snapshot": { tr: "Departman anlık görüntüsü", en: "Department snapshot" },
+  "integrations.eyebrow": { tr: "ENTEGRASYONLAR", en: "INTEGRATIONS" },
+  "integrations.title": { tr: "Veri", en: "Connect your" },
+  "integrations.titleAccent": { tr: "kaynaklarınızı bağlayın.", en: "data sources." },
+  "integrations.subtitle": {
+    tr: "Sektörünüze uygun veri kaynaklarını buradan içeri aktarın veya bağlayın.",
+    en: "Import or connect data sources suited to your sector here.",
+  },
+  "integrations.tab.ingestion": { tr: "Evrensel İçe Aktarma", en: "Universal Ingestion" },
+  "integrations.tab.csv": { tr: "CSV İçe Aktarma", en: "CSV Import" },
+  "integrations.tab.oauth": { tr: "OAuth", en: "OAuth" },
+  "integrations.tab.webhook": { tr: "Webhook", en: "Webhook" },
+  "integrations.tab.apiKeys": { tr: "API Anahtarları", en: "API Keys" },
+  "integrations.taisNote": {
+    tr: "Bu demo Bitrix24 uyumlu sentetik verilerle çalışmaktadır. Gerçek Bitrix24 portalı, salt-okunur webhook ve alan eşleme bilgileri sağlandığında mevcut connector üzerinden veri bağlantısı yapılandırılacaktır.",
+    en: "This demo runs on synthetic Bitrix24-compatible data. Once a real Bitrix24 portal, a read-only webhook and field mappings are provided, the data connection will be configured through the existing connector.",
+  },
+  "integrations.errorUnknown": { tr: "Bilinmeyen hata.", en: "Unknown error." },
+  "integrations.ingestion.description": {
+    tr: "Rapor, e-posta veya tutanak metnini yapıştırın ya da bir metin/CSV/XLSX dosyası yükleyin — AI içindeki yapılandırılmış alanları çıkarsın. (PDF/görsel çıkarımı sonraki adım.)",
+    en: "Paste a report, email or minutes text, or upload a text/CSV/XLSX file — let AI extract the structured fields inside. (PDF/image extraction comes next.)",
+  },
+  "integrations.ingestion.selectedFile": {
+    tr: "Seçilen dosya: {name} (tablo AI'ya gönderilmeden önce ayrıştırılacak)",
+    en: "Selected file: {name} (the sheet will be parsed before being sent to AI)",
+  },
+  "integrations.ingestion.placeholder": { tr: "Metni buraya yapıştırın...", en: "Paste text here..." },
+  "integrations.ingestion.submit": { tr: "AI ile Çıkar →", en: "Extract with AI →" },
+  "integrations.ingestion.submitting": { tr: "Çıkarılıyor…", en: "Extracting…" },
+  "integrations.ingestion.noFields": {
+    tr: "Yapılandırılmış alan bulunamadı.",
+    en: "No structured fields found.",
+  },
+  "integrations.csv.description": {
+    tr: "CRM/sisteminizden dışa aktardığınız veriyi bu şablona uyarlayıp yükleyin. AI, gerçek verinize dayanarak {sector} risk kategorilerini değerlendirecek.",
+    en: "Adapt the data exported from your CRM/system to this template and upload it. AI will assess {sector} risk categories based on your real data.",
+  },
+  "integrations.csv.sectorFallback": { tr: "sektörünüz", en: "your sector" },
+  "integrations.csv.reportTitle": { tr: "Günlük Analiz — {date} ({count} kritik bulgu)", en: "Daily Analysis — {date} ({count} critical findings)" },
+  "integrations.csv.templatePeriodHeader": { tr: "Dönem", en: "Period" },
+  "integrations.csv.downloadTemplate": { tr: "Şablon indir (.csv) ↓", en: "Download template (.csv) ↓" },
+  "integrations.csv.periodLabel": { tr: "Dönem Etiketi", en: "Period Label" },
+  "integrations.csv.periodPlaceholder": { tr: "Örn: Ocak 2026", en: "e.g. January 2026" },
+  "integrations.csv.periodStart": { tr: "Başlangıç", en: "Start" },
+  "integrations.csv.periodEnd": { tr: "Bitiş", en: "End" },
+  "integrations.csv.preview": { tr: "{name} — önizleme", en: "{name} — preview" },
+  "integrations.csv.assess": { tr: "AI ile Risk Değerlendirmesi Yap →", en: "Run AI Risk Assessment →" },
+  "integrations.csv.assessing": { tr: "Değerlendiriliyor…", en: "Assessing…" },
+  "integrations.csv.kpiSavedSuffix": {
+    tr: " — Yine de verinizdeki {count} KPI kaydedildi ve ana sayfada görüntüleniyor.",
+    en: " — Still, {count} KPIs from your data were saved and are shown on the home page.",
+  },
+  "integrations.csv.recommendation": { tr: "Öneri: {text}", en: "Recommendation: {text}" },
+  "integrations.csv.savedPrefix": { tr: "Bu değerlendirme kaydedildi —", en: "This assessment was saved —" },
+  "integrations.csv.savedLink": { tr: "Alerts sayfasında", en: "on the Alerts page" },
+  "integrations.csv.savedSuffix": { tr: "görüntülenebilir.", en: "you can view it." },
+  "integrations.bitrix24.demoBadge": { tr: "Bitrix24 uyumlu demo verisi", en: "Bitrix24-compatible demo data" },
+  "integrations.bitrix24.connectedBadge": { tr: "Bitrix24 bağlantısı doğrulandı", en: "Bitrix24 connection verified" },
+  "integrations.bitrix24.unconfiguredBadge": {
+    tr: "Bitrix24 bağlantısı yapılandırılmamış",
+    en: "Bitrix24 connection not configured",
+  },
+  "integrations.bitrix24.modeLine": { tr: "Mod: {mode} · Son senkron: {sync}", en: "Mode: {mode} · Last sync: {sync}" },
+  "integrations.bitrix24.modeDemo": { tr: "Demo", en: "Demo" },
+  "integrations.bitrix24.modeLive": { tr: "Yapılandırılmış", en: "Configured" },
+  "integrations.bitrix24.notSynced": { tr: "Henüz senkronize edilmedi", en: "Not synced yet" },
+  "integrations.bitrix24.companies": { tr: "Müşteriler", en: "Companies" },
+  "integrations.bitrix24.deals": { tr: "Fırsatlar", en: "Deals" },
+  "integrations.bitrix24.tasks": { tr: "Görevler", en: "Tasks" },
+  "integrations.bitrix24.activities": { tr: "Aktiviteler", en: "Activities" },
+  "integrations.bitrix24.users": { tr: "Kullanıcılar", en: "Users" },
+  "integrations.bitrix24.serviceRequests": { tr: "Hizmet talepleri", en: "Service requests" },
+  "integrations.bitrix24.complaints": { tr: "Şikâyetler", en: "Complaints" },
+  "integrations.bitrix24.qualityRecords": { tr: "Kalite kayıtları", en: "Quality records" },
+  "integrations.oauth.description": {
+    tr: "{sector} için önerilen sistem bağlantıları. OAuth entegrasyonları henüz aktif değil — bağlantı kurulduğunda burada listelenecek.",
+    en: "Recommended system connections for {sector}. OAuth integrations are not active yet — they will be listed here once connected.",
+  },
+  "integrations.oauth.soon": { tr: "YAKINDA", en: "SOON" },
+  "integrations.oauth.connect": { tr: "Bağlan", en: "Connect" },
+  "integrations.webhook.sessionRequired": {
+    tr: "Webhook yapılandırması kurumsal oturum gerektirir.",
+    en: "Webhook configuration requires an organization session.",
+  },
+  "integrations.webhook.configUnavailable": {
+    tr: "Yapılandırma alınamadı.",
+    en: "Configuration could not be loaded.",
+  },
+  "integrations.webhook.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "integrations.webhook.descriptionPrefix": {
+    tr: "Bu uç",
+    en: "This endpoint is",
+  },
+  "integrations.webhook.descriptionLive": { tr: "canlıdır", en: "live" },
+  "integrations.webhook.descriptionSuffix": {
+    tr: ": imzalı POST istekleri gerçek veri olarak kaydedilir, KPI'lar ayıklanır ve denetim günlüğüne işlenir. Güvenlik HMAC imzası, ±5 dakika zaman penceresi (replay koruması), idempotency anahtarı ve hız sınırı ile sağlanır.",
+    en: ": signed POST requests are recorded as real data, KPIs are extracted and written to the audit log. Security is provided by an HMAC signature, a ±5 minute time window (replay protection), an idempotency key and rate limiting.",
+  },
+  "integrations.webhook.delivery": {
+    tr: "Teslimat: {accepted} kabul / {total} deneme",
+    en: "Delivery: {accepted} accepted / {total} attempts",
+  },
+  "integrations.webhook.endpointActive": { tr: "● uç aktif", en: "● endpoint active" },
+  "integrations.webhook.urlLabel": { tr: "WEBHOOK URL", en: "WEBHOOK URL" },
+  "integrations.webhook.secretLabel": { tr: "GİZLİ ANAHTAR", en: "SECRET KEY" },
+  "integrations.webhook.show": { tr: "göster", en: "show" },
+  "integrations.webhook.hide": { tr: "gizle", en: "hide" },
+  "integrations.webhook.rotate": { tr: "yenile", en: "rotate" },
+  "integrations.webhook.headersLabel": { tr: "ZORUNLU BAŞLIKLAR", en: "REQUIRED HEADERS" },
+  "integrations.webhook.exampleLabel": { tr: "ÖRNEK (Node.js)", en: "EXAMPLE (Node.js)" },
+  "integrations.apiKeys.loadFailed": { tr: "Anahtarlar alınamadı.", en: "Keys could not be loaded." },
+  "integrations.apiKeys.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "integrations.apiKeys.description": {
+    tr: "Portal entegrasyonlarınızın kullanacağı API anahtarlarını buradan yönetin. Anahtar yalnızca oluşturulduğu anda tam olarak gösterilir.",
+    en: "Manage the API keys your portal integrations will use here. A key is shown in full only at the moment it is created.",
+  },
+  "integrations.apiKeys.currentKeys": { tr: "MEVCUT ANAHTARLAR", en: "EXISTING KEYS" },
+  "integrations.apiKeys.empty": { tr: "Henüz API anahtarı oluşturulmadı.", en: "No API key has been created yet." },
+  "integrations.apiKeys.colName": { tr: "Ad", en: "Name" },
+  "integrations.apiKeys.colPrefix": { tr: "Önek", en: "Prefix" },
+  "integrations.apiKeys.colScopes": { tr: "Kapsam", en: "Scopes" },
+  "integrations.apiKeys.colLastUsed": { tr: "Son kullanım", en: "Last used" },
+  "integrations.apiKeys.colStatus": { tr: "Durum", en: "Status" },
+  "integrations.apiKeys.neverUsed": { tr: "Hiç kullanılmadı", en: "Never used" },
+  "integrations.apiKeys.revoked": { tr: "İPTAL EDİLDİ", en: "REVOKED" },
+  "integrations.apiKeys.active": { tr: "AKTİF", en: "ACTIVE" },
+  "integrations.apiKeys.revoking": { tr: "iptal ediliyor…", en: "revoking…" },
+  "integrations.apiKeys.revoke": { tr: "iptal et", en: "revoke" },
+  "integrations.apiKeys.newKey": { tr: "YENİ ANAHTAR", en: "NEW KEY" },
+  "integrations.apiKeys.namePlaceholder": {
+    tr: "Anahtar adı (örn: Portal Entegrasyonu)",
+    en: "Key name (e.g. Portal Integration)",
+  },
+  "integrations.apiKeys.create": { tr: "Anahtar Oluştur →", en: "Create Key →" },
+  "integrations.apiKeys.creating": { tr: "Oluşturuluyor…", en: "Creating…" },
+  "integrations.apiKeys.createFailed": { tr: "Anahtar oluşturulamadı.", en: "Key could not be created." },
+  "integrations.apiKeys.scope.events_write": { tr: "olay gönderimi", en: "event submission" },
+  "integrations.apiKeys.scope.read_advisors": { tr: "danışman verisi okuma", en: "read advisor data" },
+  "integrations.apiKeys.scope.read_all": { tr: "tüm veriyi okuma", en: "read all data" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

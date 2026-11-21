@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useStored } from "@/lib/use-stored";
 import { useSession } from "@/lib/use-session";
@@ -13,18 +13,42 @@ import { parseKpis } from "@/lib/kpi";
 import { SEVERITY_META } from "@/lib/signals";
 import type { RiskAssessment } from "@/lib/ai/provider";
 import { postJsonStreamed, postFormStreamed } from "@/lib/ndjson-client";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 type Tab = "ingestion" | "csv" | "oauth" | "webhook" | "apikeys";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "ingestion", label: "Universal Ingestion" },
-  { id: "csv", label: "CSV Import" },
-  { id: "oauth", label: "OAuth" },
-  { id: "webhook", label: "Webhook" },
-  { id: "apikeys", label: "API Anahtarları" },
+const TABS: { id: Tab; label: ShellKey }[] = [
+  { id: "ingestion", label: "integrations.tab.ingestion" },
+  { id: "csv", label: "integrations.tab.csv" },
+  { id: "oauth", label: "integrations.tab.oauth" },
+  { id: "webhook", label: "integrations.tab.webhook" },
+  { id: "apikeys", label: "integrations.tab.apiKeys" },
 ];
 
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
 export default function IntegrationsPage() {
+  const locale = useLocale();
   const [tab, setTab] = useState<Tab>("oauth");
   const session = useSession();
   const [stored] = useStored(() => {
@@ -45,10 +69,10 @@ export default function IntegrationsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="INTEGRATIONS"
-        title="Veri"
-        accent="kaynaklarınızı bağlayın."
-        desc="Sektörünüze uygun veri kaynaklarını buradan içeri aktarın veya bağlayın."
+        eyebrow={t(locale, "integrations.eyebrow")}
+        title={t(locale, "integrations.title")}
+        accent={t(locale, "integrations.titleAccent")}
+        desc={t(locale, "integrations.subtitle")}
       />
 
       <div className="px-10">
@@ -56,25 +80,23 @@ export default function IntegrationsPage() {
           <div className="pb-16 max-w-3xl">
             <Bitrix24Card />
             <p className="text-sm text-abys-muted leading-relaxed">
-              Bu demo Bitrix24 uyumlu sentetik verilerle çalışmaktadır. Gerçek Bitrix24 portalı,
-              salt-okunur webhook ve alan eşleme bilgileri sağlandığında mevcut connector üzerinden
-              veri bağlantısı yapılandırılacaktır.
+              {t(locale, "integrations.taisNote")}
             </p>
           </div>
         ) : (
         <>
         <div className="flex gap-1 border-b border-abys-ink/10 mb-8">
-          {TABS.map((t) => (
+          {TABS.map((item) => (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={item.id}
+              onClick={() => setTab(item.id)}
               className={`px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === t.id
+                tab === item.id
                   ? "border-abys-accent text-abys-navy"
                   : "border-transparent text-abys-muted hover:text-abys-ink"
               }`}
             >
-              {t.label}
+              {t(locale, item.label)}
             </button>
           ))}
         </div>
@@ -94,6 +116,7 @@ export default function IntegrationsPage() {
 }
 
 function IngestionTab({ sector }: { sector: Sector | null }) {
+  const locale = useLocale();
   const [text, setText] = useState("");
   const [spreadsheetFile, setSpreadsheetFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -137,7 +160,7 @@ function IngestionTab({ sector }: { sector: Sector | null }) {
           );
       setResult(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bilinmeyen hata.");
+      setError(err instanceof Error ? err.message : t(locale, "integrations.errorUnknown"));
     } finally {
       setLoading(false);
     }
@@ -146,15 +169,13 @@ function IngestionTab({ sector }: { sector: Sector | null }) {
   return (
     <div>
       <p className="text-sm text-abys-muted mb-4">
-        Rapor, e-posta veya tutanak metnini yapıştırın ya da bir metin/CSV/XLSX
-        dosyası yükleyin — AI içindeki yapılandırılmış alanları çıkarsın.
-        (PDF/görsel çıkarımı sonraki adım.)
+        {t(locale, "integrations.ingestion.description")}
       </p>
 
       <input type="file" accept=".txt,.csv,.tsv,.xlsx,.xls" onChange={onFile} className="text-sm mb-1 block" />
       {spreadsheetFile && (
         <p className="text-xs text-abys-muted mb-3">
-          Seçilen dosya: {spreadsheetFile.name} (tablo AI&apos;ya gönderilmeden önce ayrıştırılacak)
+          {formatMessage(locale, "integrations.ingestion.selectedFile", { name: spreadsheetFile.name })}
         </p>
       )}
 
@@ -166,7 +187,7 @@ function IngestionTab({ sector }: { sector: Sector | null }) {
         }}
         rows={8}
         maxLength={8000}
-        placeholder="Metni buraya yapıştırın..."
+        placeholder={t(locale, "integrations.ingestion.placeholder")}
         className="w-full rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3.5 text-sm text-abys-ink placeholder:text-abys-muted focus:outline-none focus:ring-2 focus:ring-abys-accent mb-4"
       />
 
@@ -175,7 +196,9 @@ function IngestionTab({ sector }: { sector: Sector | null }) {
         disabled={loading || (!text.trim() && !spreadsheetFile) || !sector}
         className="rounded-full bg-abys-navy text-white text-sm font-medium px-5 py-2.5 hover:bg-abys-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        {loading ? "Çıkarılıyor…" : "AI ile Çıkar →"}
+        {loading
+          ? t(locale, "integrations.ingestion.submitting")
+          : t(locale, "integrations.ingestion.submit")}
       </button>
 
       {error && (
@@ -199,7 +222,7 @@ function IngestionTab({ sector }: { sector: Sector | null }) {
               </tbody>
             </table>
           ) : (
-            <p className="text-xs text-abys-muted">Yapılandırılmış alan bulunamadı.</p>
+            <p className="text-xs text-abys-muted">{t(locale, "integrations.ingestion.noFields")}</p>
           )}
         </div>
       )}
@@ -208,6 +231,7 @@ function IngestionTab({ sector }: { sector: Sector | null }) {
 }
 
 function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
+  const locale = useLocale();
   const [rows, setRows] = useState<string[][] | null>(null);
   const [rawCsv, setRawCsv] = useState<string>("");
   const [fileName, setFileName] = useState<string | null>(null);
@@ -216,7 +240,7 @@ function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
   const [assessments, setAssessments] = useState<RiskAssessment[] | null>(null);
   const todayIso = new Date().toISOString().slice(0, 10);
   const [periodLabel, setPeriodLabel] = useState(
-    new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })
+    new Date().toLocaleDateString(DEFAULT_LOCALE, { day: "numeric", month: "long", year: "numeric" })
   );
   const [periodStart, setPeriodStart] = useState(todayIso);
   const [periodEnd, setPeriodEnd] = useState(todayIso);
@@ -225,7 +249,7 @@ function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
 
   function downloadTemplate() {
     const csv = [
-      ["Dönem", ...kpiFields].join(","),
+      [t(locale, "integrations.csv.templatePeriodHeader"), ...kpiFields].join(","),
       ["2026-07", ...kpiFields.map(() => "")].join(","),
     ].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -302,23 +326,30 @@ function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
       }));
       replaceEntities("assessed-risks", records);
 
-      const dateLabel = now.toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" });
+      const dateLabel = now.toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
       const critCount = records.filter((r) => r.severity === "critical").length;
       const report: SavedReport = {
         id: newId(),
         createdAt: nowIso,
-        title: `Günlük Analiz — ${dateLabel} (${critCount} kritik bulgu)`,
+        title: formatMessage(locale, "integrations.csv.reportTitle", { date: dateLabel, count: critCount }),
         roleId,
         content: records
-          .map((r) => `[${r.severity.toUpperCase()}] ${r.categoryLabel}\n${r.explanation}\nÖneri: ${r.recommendedAction}`)
+          .map(
+            (r) =>
+              `[${r.severity.toUpperCase()}] ${r.categoryLabel}\n${r.explanation}\n${formatMessage(
+                locale,
+                "integrations.csv.recommendation",
+                { text: r.recommendedAction }
+              )}`
+          )
           .join("\n\n"),
       };
       upsertEntity("saved-reports", report);
     } catch (err) {
-      const base = err instanceof Error ? err.message : "Bilinmeyen hata.";
+      const base = err instanceof Error ? err.message : t(locale, "integrations.errorUnknown");
       setAssessError(
         kpis.length > 0
-          ? `${base} — Yine de verinizdeki ${kpis.length} KPI kaydedildi ve ana sayfada görüntüleniyor.`
+          ? base + formatMessage(locale, "integrations.csv.kpiSavedSuffix", { count: kpis.length })
           : base
       );
     } finally {
@@ -329,30 +360,30 @@ function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
   return (
     <div>
       <p className="text-sm text-abys-muted mb-5">
-        CRM/sisteminizden dışa aktardığınız veriyi bu şablona uyarlayıp yükleyin.
-        AI, gerçek verinize dayanarak {sector?.label.toLowerCase() ?? "sektörünüz"}{" "}
-        risk kategorilerini değerlendirecek.
+        {formatMessage(locale, "integrations.csv.description", {
+          sector: sector?.label.toLowerCase() ?? t(locale, "integrations.csv.sectorFallback"),
+        })}
       </p>
 
       <button
         onClick={downloadTemplate}
         className="rounded-full border border-abys-ink/15 text-sm font-medium px-5 py-2.5 hover:bg-white/60 transition-colors mb-6"
       >
-        Şablon indir (.csv) ↓
+        {t(locale, "integrations.csv.downloadTemplate")}
       </button>
 
       <div className="grid grid-cols-3 gap-3 mb-4 max-w-lg">
         <div>
-          <label className="block text-xs text-abys-muted mb-1">Dönem Etiketi</label>
+          <label className="block text-xs text-abys-muted mb-1">{t(locale, "integrations.csv.periodLabel")}</label>
           <input
             value={periodLabel}
             onChange={(e) => setPeriodLabel(e.target.value)}
-            placeholder="Örn: Ocak 2026"
+            placeholder={t(locale, "integrations.csv.periodPlaceholder")}
             className="w-full rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-abys-accent"
           />
         </div>
         <div>
-          <label className="block text-xs text-abys-muted mb-1">Başlangıç</label>
+          <label className="block text-xs text-abys-muted mb-1">{t(locale, "integrations.csv.periodStart")}</label>
           <input
             type="date"
             value={periodStart}
@@ -361,7 +392,7 @@ function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
           />
         </div>
         <div>
-          <label className="block text-xs text-abys-muted mb-1">Bitiş</label>
+          <label className="block text-xs text-abys-muted mb-1">{t(locale, "integrations.csv.periodEnd")}</label>
           <input
             type="date"
             value={periodEnd}
@@ -377,7 +408,9 @@ function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
 
       {rows && (
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-4 overflow-x-auto mb-4">
-          <p className="text-xs text-abys-muted mb-3">{fileName} — önizleme</p>
+          <p className="text-xs text-abys-muted mb-3">
+            {formatMessage(locale, "integrations.csv.preview", { name: fileName ?? "" })}
+          </p>
           <table className="text-sm w-full">
             <tbody>
               {rows.map((row, i) => (
@@ -400,7 +433,9 @@ function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
           disabled={assessing}
           className="rounded-full bg-abys-navy text-white text-sm font-medium px-5 py-2.5 hover:bg-abys-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed mb-4"
         >
-          {assessing ? "Değerlendiriliyor…" : "AI ile Risk Değerlendirmesi Yap →"}
+          {assessing
+            ? t(locale, "integrations.csv.assessing")
+            : t(locale, "integrations.csv.assess")}
         </button>
       )}
 
@@ -424,16 +459,20 @@ function CsvTab({ sector, roleId }: { sector: Sector | null; roleId: string }) {
                   <p className="text-sm font-medium text-abys-navy">{a.categoryLabel}</p>
                 </div>
                 <p className="text-sm text-abys-ink mb-1">{a.explanation}</p>
-                <p className="text-xs text-abys-muted">Öneri: {a.recommendedAction}</p>
+                <p className="text-xs text-abys-muted">
+                  {formatMessage(locale, "integrations.csv.recommendation", {
+                    text: a.recommendedAction,
+                  })}
+                </p>
               </div>
             );
           })}
           <p className="text-xs text-abys-muted">
-            Bu değerlendirme kaydedildi —{" "}
+            {t(locale, "integrations.csv.savedPrefix")}{" "}
             <Link href="/dashboard/alerts" className="text-abys-accent font-medium">
-              Alerts sayfasında
+              {t(locale, "integrations.csv.savedLink")}
             </Link>{" "}
-            görüntülenebilir.
+            {t(locale, "integrations.csv.savedSuffix")}
           </p>
         </div>
       )}
@@ -457,6 +496,7 @@ type Bitrix24Status = {
  * modda daima "Bitrix24 uyumlu demo verisi" ifadesi kullanılır.
  */
 function Bitrix24Card() {
+  const locale = useLocale();
   const session = useSession();
   const [status, setStatus] = useState<Bitrix24Status | null>(null);
 
@@ -480,21 +520,29 @@ function Bitrix24Card() {
 
   const badge =
     status.mode === "demo"
-      ? { label: "Bitrix24 uyumlu demo verisi", color: "text-abys-muted", bg: "bg-abys-ink/5" }
+      ? { label: t(locale, "integrations.bitrix24.demoBadge"), color: "text-abys-muted", bg: "bg-abys-ink/5" }
       : status.connected
-      ? { label: "Bitrix24 bağlantısı doğrulandı", color: "text-abys-healthy", bg: "bg-abys-healthy-soft" }
-      : { label: "Bitrix24 bağlantısı yapılandırılmamış", color: "text-abys-warning", bg: "bg-abys-warning-soft" };
+      ? {
+          label: t(locale, "integrations.bitrix24.connectedBadge"),
+          color: "text-abys-healthy",
+          bg: "bg-abys-healthy-soft",
+        }
+      : {
+          label: t(locale, "integrations.bitrix24.unconfiguredBadge"),
+          color: "text-abys-warning",
+          bg: "bg-abys-warning-soft",
+        };
 
   const counts = status.importedRecordCounts ?? status.demoRecordCounts ?? {};
-  const summaryFields: { label: string; key: string }[] = [
-    { label: "Müşteriler", key: "companies" },
-    { label: "Fırsatlar", key: "deals" },
-    { label: "Görevler", key: "tasks" },
-    { label: "Aktiviteler", key: "activities" },
-    { label: "Kullanıcılar", key: "users" },
-    { label: "Hizmet talepleri", key: "serviceRequest" },
-    { label: "Şikâyetler", key: "complaint" },
-    { label: "Kalite kayıtları", key: "qualityIssue" },
+  const summaryFields: { label: ShellKey; key: string }[] = [
+    { label: "integrations.bitrix24.companies", key: "companies" },
+    { label: "integrations.bitrix24.deals", key: "deals" },
+    { label: "integrations.bitrix24.tasks", key: "tasks" },
+    { label: "integrations.bitrix24.activities", key: "activities" },
+    { label: "integrations.bitrix24.users", key: "users" },
+    { label: "integrations.bitrix24.serviceRequests", key: "serviceRequest" },
+    { label: "integrations.bitrix24.complaints", key: "complaint" },
+    { label: "integrations.bitrix24.qualityRecords", key: "qualityIssue" },
   ];
 
   return (
@@ -506,23 +554,28 @@ function Bitrix24Card() {
         </span>
       </div>
       <p className="text-xs text-abys-muted mb-3">
-         Mod: {status.mode === "demo" ? "Demo" : "Yapılandırılmış"} · Son senkron:{" "}
-        {status.lastSyncAt
-          ? new Date(status.lastSyncAt).toLocaleString("tr-TR", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "Henüz senkronize edilmedi"}
+        {formatMessage(locale, "integrations.bitrix24.modeLine", {
+          mode:
+            status.mode === "demo"
+              ? t(locale, "integrations.bitrix24.modeDemo")
+              : t(locale, "integrations.bitrix24.modeLive"),
+          sync: status.lastSyncAt
+            ? new Date(status.lastSyncAt).toLocaleString(locale, {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : t(locale, "integrations.bitrix24.notSynced"),
+        })}
         {status.lastError && <span className="text-abys-critical"> — {status.lastError}</span>}
       </p>
       {(status.lastSyncAt || status.demoRecordCounts) && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {summaryFields.map((f) => (
             <div key={f.key} className="rounded-lg bg-white/60 border border-abys-cream-border px-2.5 py-2">
-              <p className="text-[10px] text-abys-muted">{f.label}</p>
+              <p className="text-[10px] text-abys-muted">{t(locale, f.label)}</p>
               <p className="text-sm font-semibold text-abys-navy">{counts[f.key] ?? 0}</p>
             </div>
           ))}
@@ -533,14 +586,15 @@ function Bitrix24Card() {
 }
 
 function OAuthTab({ sector }: { sector: Sector | null }) {
+  const locale = useLocale();
   const connectors = sector?.dataSources ?? [];
   return (
     <div>
       <Bitrix24Card />
       <p className="text-sm text-abys-muted mb-5">
-        {sector?.label ?? "Sektörünüz"} için önerilen sistem bağlantıları. OAuth
-        entegrasyonları henüz aktif değil — bağlantı kurulduğunda burada
-        listelenecek.
+        {formatMessage(locale, "integrations.oauth.description", {
+          sector: sector?.label ?? t(locale, "integrations.csv.sectorFallback"),
+        })}
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {connectors.map((name) => (
@@ -551,13 +605,13 @@ function OAuthTab({ sector }: { sector: Sector | null }) {
             <span className="text-sm font-medium text-abys-navy">{name}</span>
             <span className="flex items-center gap-2">
               <span className="text-[10px] font-semibold tracking-widest text-abys-warning bg-abys-warning-soft rounded-full px-2 py-1">
-                YAKINDA
+                {t(locale, "integrations.oauth.soon")}
               </span>
               <button
                 disabled
                 className="text-xs rounded-full border border-abys-ink/15 px-3 py-1.5 text-abys-muted cursor-not-allowed"
               >
-                Bağlan
+                {t(locale, "integrations.oauth.connect")}
               </button>
             </span>
           </div>
@@ -568,6 +622,7 @@ function OAuthTab({ sector }: { sector: Sector | null }) {
 }
 
 function WebhookTab({ companyName }: { companyName: string }) {
+  const locale = useLocale();
   void companyName;
   const [cfg, setCfg] = useState<{
     url: string;
@@ -580,24 +635,25 @@ function WebhookTab({ companyName }: { companyName: string }) {
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    const effectLocale = readLocale();
     let cancelled = false;
     fetch("/api/webhook-config")
       .then(async (r) => {
         if (cancelled) return;
         if (r.status === 401) {
-          setError("Webhook yapılandırması kurumsal oturum gerektirir.");
+          setError(t(effectLocale, "integrations.webhook.sessionRequired"));
           return;
         }
         const j = await r.json();
         if (!r.ok) {
-          setError(j.error ?? "Yapılandırma alınamadı.");
+          setError(j.error ?? t(effectLocale, "integrations.webhook.configUnavailable"));
           return;
         }
         setError(null);
         setCfg(j);
       })
       .catch(() => {
-        if (!cancelled) setError("Yapılandırma alınamadı.");
+        if (!cancelled) setError(t(effectLocale, "integrations.webhook.configUnavailable"));
       });
     return () => {
       cancelled = true;
@@ -613,7 +669,7 @@ function WebhookTab({ companyName }: { companyName: string }) {
   if (error) {
     return <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3">{error}</p>;
   }
-  if (!cfg) return <p className="text-sm text-abys-muted">Yükleniyor…</p>;
+  if (!cfg) return <p className="text-sm text-abys-muted">{t(locale, "integrations.webhook.loading")}</p>;
 
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const fullUrl = origin + cfg.url;
@@ -637,24 +693,31 @@ function WebhookTab({ companyName }: { companyName: string }) {
   return (
     <div>
       <p className="text-sm text-abys-muted mb-5">
-        Bu uç <strong className="text-abys-ink">canlıdır</strong>: imzalı POST istekleri gerçek veri
-        olarak kaydedilir, KPI&apos;lar ayıklanır ve denetim günlüğüne işlenir. Güvenlik HMAC imzası,
-        ±5 dakika zaman penceresi (replay koruması), idempotency anahtarı ve hız sınırı ile sağlanır.
+        {t(locale, "integrations.webhook.descriptionPrefix")}{" "}
+        <strong className="text-abys-ink">{t(locale, "integrations.webhook.descriptionLive")}</strong>
+        {t(locale, "integrations.webhook.descriptionSuffix")}
       </p>
 
       <div className="rounded-lg bg-abys-cream border border-abys-cream-border px-4 py-3 mb-5 flex items-center justify-between gap-3">
         <span className="text-sm text-abys-ink">
-          Teslimat: <strong>{cfg.deliveries.accepted}</strong> kabul / {cfg.deliveries.total} deneme
+          {formatMessage(locale, "integrations.webhook.delivery", {
+            accepted: cfg.deliveries.accepted,
+            total: cfg.deliveries.total,
+          })}
         </span>
-        <span className="text-xs text-abys-healthy">● uç aktif</span>
+        <span className="text-xs text-abys-healthy">{t(locale, "integrations.webhook.endpointActive")}</span>
       </div>
 
-      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">WEBHOOK URL</label>
+      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
+        {t(locale, "integrations.webhook.urlLabel")}
+      </label>
       <code className="block rounded-lg bg-abys-cream border border-abys-cream-border px-4 py-3 text-sm font-mono text-abys-navy mb-5 break-all">
         POST {fullUrl}
       </code>
 
-      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">GİZLİ ANAHTAR</label>
+      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
+        {t(locale, "integrations.webhook.secretLabel")}
+      </label>
       <div className="flex gap-2 mb-5">
         <code className="flex-1 rounded-lg bg-abys-cream border border-abys-cream-border px-4 py-3 text-sm font-mono text-abys-navy break-all">
           {showSecret ? cfg.secret : "••••••••••••••••••••••••••••••••"}
@@ -663,14 +726,18 @@ function WebhookTab({ companyName }: { companyName: string }) {
           onClick={() => setShowSecret((v) => !v)}
           className="text-xs rounded-lg border border-abys-ink/15 px-3 hover:bg-white/60"
         >
-          {showSecret ? "gizle" : "göster"}
+          {showSecret
+            ? t(locale, "integrations.webhook.hide")
+            : t(locale, "integrations.webhook.show")}
         </button>
         <button onClick={rotate} className="text-xs rounded-lg border border-abys-ink/15 px-3 hover:bg-white/60">
-          yenile
+          {t(locale, "integrations.webhook.rotate")}
         </button>
       </div>
 
-      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">ZORUNLU BAŞLIKLAR</label>
+      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
+        {t(locale, "integrations.webhook.headersLabel")}
+      </label>
       <div className="rounded-lg bg-abys-cream border border-abys-cream-border px-4 py-3 mb-5 space-y-1">
         {Object.entries(cfg.headers).map(([k, v]) => (
           <p key={k} className="text-xs font-mono text-abys-navy">
@@ -679,7 +746,9 @@ function WebhookTab({ companyName }: { companyName: string }) {
         ))}
       </div>
 
-      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">ÖRNEK (Node.js)</label>
+      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
+        {t(locale, "integrations.webhook.exampleLabel")}
+      </label>
       <pre className="rounded-lg bg-abys-cream border border-abys-cream-border px-4 py-3 text-xs font-mono text-abys-navy overflow-x-auto">
         {ornek}
       </pre>
@@ -689,10 +758,10 @@ function WebhookTab({ companyName }: { companyName: string }) {
 
 type ApiKeyScope = "events:write" | "read:advisors" | "read:all";
 
-const API_KEY_SCOPES: { id: ApiKeyScope; label: string }[] = [
-  { id: "events:write", label: "events:write — olay gönderimi" },
-  { id: "read:advisors", label: "read:advisors — danışman verisi okuma" },
-  { id: "read:all", label: "read:all — tüm veriyi okuma" },
+const API_KEY_SCOPES: { id: ApiKeyScope; label: ShellKey }[] = [
+  { id: "events:write", label: "integrations.apiKeys.scope.events_write" },
+  { id: "read:advisors", label: "integrations.apiKeys.scope.read_advisors" },
+  { id: "read:all", label: "integrations.apiKeys.scope.read_all" },
 ];
 
 type ApiKeyRow = {
@@ -707,6 +776,7 @@ type ApiKeyRow = {
 };
 
 function ApiKeysTab() {
+  const locale = useLocale();
   const [keys, setKeys] = useState<ApiKeyRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
@@ -719,20 +789,21 @@ function ApiKeysTab() {
   const [revokingId, setRevokingId] = useState<string | null>(null);
 
   useEffect(() => {
+    const effectLocale = readLocale();
     let cancelled = false;
     fetch("/api/integration/keys")
       .then(async (r) => {
         if (cancelled) return;
         const j = await r.json();
         if (!r.ok) {
-          setError(j.error ?? "Anahtarlar alınamadı.");
+          setError(j.error ?? t(effectLocale, "integrations.apiKeys.loadFailed"));
           return;
         }
         setError(null);
         setKeys(j.keys ?? []);
       })
       .catch(() => {
-        if (!cancelled) setError("Anahtarlar alınamadı.");
+        if (!cancelled) setError(t(effectLocale, "integrations.apiKeys.loadFailed"));
       });
     return () => {
       cancelled = true;
@@ -755,7 +826,7 @@ function ApiKeysTab() {
       });
       const j = await r.json();
       if (!r.ok) {
-        setCreateError(j.error ?? "Anahtar oluşturulamadı.");
+        setCreateError(j.error ?? t(locale, "integrations.apiKeys.createFailed"));
         return;
       }
       setNewKey({ key: j.key, prefix: j.prefix, warning: j.warning });
@@ -763,7 +834,7 @@ function ApiKeysTab() {
       setScopes(["events:write"]);
       setReloadKey((k) => k + 1);
     } catch {
-      setCreateError("Anahtar oluşturulamadı.");
+      setCreateError(t(locale, "integrations.apiKeys.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -782,13 +853,12 @@ function ApiKeysTab() {
   if (error) {
     return <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3">{error}</p>;
   }
-  if (!keys) return <p className="text-sm text-abys-muted">Yükleniyor…</p>;
+  if (!keys) return <p className="text-sm text-abys-muted">{t(locale, "integrations.apiKeys.loading")}</p>;
 
   return (
     <div>
       <p className="text-sm text-abys-muted mb-5">
-        Portal entegrasyonlarınızın kullanacağı API anahtarlarını buradan yönetin. Anahtar yalnızca
-        oluşturulduğu anda tam olarak gösterilir.
+        {t(locale, "integrations.apiKeys.description")}
       </p>
 
       {newKey && (
@@ -800,19 +870,21 @@ function ApiKeysTab() {
         </div>
       )}
 
-      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">MEVCUT ANAHTARLAR</label>
+      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
+        {t(locale, "integrations.apiKeys.currentKeys")}
+      </label>
       {keys.length === 0 ? (
-        <p className="text-sm text-abys-muted mb-6">Henüz API anahtarı oluşturulmadı.</p>
+        <p className="text-sm text-abys-muted mb-6">{t(locale, "integrations.apiKeys.empty")}</p>
       ) : (
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-4 mb-6 overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-abys-muted">
-                <th className="pb-2 pr-4">Ad</th>
-                <th className="pb-2 pr-4">Önek</th>
-                <th className="pb-2 pr-4">Kapsam</th>
-                <th className="pb-2 pr-4">Son kullanım</th>
-                <th className="pb-2 pr-4">Durum</th>
+                <th className="pb-2 pr-4">{t(locale, "integrations.apiKeys.colName")}</th>
+                <th className="pb-2 pr-4">{t(locale, "integrations.apiKeys.colPrefix")}</th>
+                <th className="pb-2 pr-4">{t(locale, "integrations.apiKeys.colScopes")}</th>
+                <th className="pb-2 pr-4">{t(locale, "integrations.apiKeys.colLastUsed")}</th>
+                <th className="pb-2 pr-4">{t(locale, "integrations.apiKeys.colStatus")}</th>
                 <th className="pb-2"></th>
               </tr>
             </thead>
@@ -826,14 +898,14 @@ function ApiKeysTab() {
                     <td className="py-2 pr-4 text-abys-ink">{k.scopes.join(", ")}</td>
                     <td className="py-2 pr-4 text-abys-muted">
                       {k.last_used_at
-                        ? new Date(k.last_used_at).toLocaleString("tr-TR", {
+                        ? new Date(k.last_used_at).toLocaleString(locale, {
                             day: "numeric",
                             month: "long",
                             year: "numeric",
                             hour: "2-digit",
                             minute: "2-digit",
                           })
-                        : "Hiç kullanılmadı"}
+                        : t(locale, "integrations.apiKeys.neverUsed")}
                     </td>
                     <td className="py-2 pr-4">
                       <span
@@ -841,7 +913,9 @@ function ApiKeysTab() {
                           revoked ? "text-abys-muted bg-abys-ink/5" : "text-abys-healthy bg-abys-healthy-soft"
                         }`}
                       >
-                        {revoked ? "İPTAL EDİLDİ" : "AKTİF"}
+                        {revoked
+                          ? t(locale, "integrations.apiKeys.revoked")
+                          : t(locale, "integrations.apiKeys.active")}
                       </span>
                     </td>
                     <td className="py-2">
@@ -851,7 +925,9 @@ function ApiKeysTab() {
                           disabled={revokingId === k.id}
                           className="text-xs rounded-lg border border-abys-ink/15 px-3 py-1 hover:bg-white/60 disabled:opacity-40 disabled:cursor-not-allowed"
                         >
-                          {revokingId === k.id ? "iptal ediliyor…" : "iptal et"}
+                          {revokingId === k.id
+                            ? t(locale, "integrations.apiKeys.revoking")
+                            : t(locale, "integrations.apiKeys.revoke")}
                         </button>
                       )}
                     </td>
@@ -863,19 +939,21 @@ function ApiKeysTab() {
         </div>
       )}
 
-      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">YENİ ANAHTAR</label>
+      <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
+        {t(locale, "integrations.apiKeys.newKey")}
+      </label>
       <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-4 max-w-md">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Anahtar adı (örn: Portal Entegrasyonu)"
+          placeholder={t(locale, "integrations.apiKeys.namePlaceholder")}
           className="w-full rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-abys-accent mb-3"
         />
         <div className="space-y-1.5 mb-3">
           {API_KEY_SCOPES.map((s) => (
             <label key={s.id} className="flex items-center gap-2 text-sm text-abys-ink">
               <input type="checkbox" checked={scopes.includes(s.id)} onChange={() => toggleScope(s.id)} />
-              {s.label}
+              {s.id} — {t(locale, s.label)}
             </label>
           ))}
         </div>
@@ -884,7 +962,9 @@ function ApiKeysTab() {
           disabled={creating || !name.trim() || scopes.length === 0}
           className="rounded-full bg-abys-navy text-white text-sm font-medium px-5 py-2.5 hover:bg-abys-ink transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {creating ? "Oluşturuluyor…" : "Anahtar Oluştur →"}
+          {creating
+            ? t(locale, "integrations.apiKeys.creating")
+            : t(locale, "integrations.apiKeys.create")}
         </button>
         {createError && (
           <p className="mt-3 text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3">{createError}</p>

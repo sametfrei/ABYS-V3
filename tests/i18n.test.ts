@@ -166,6 +166,15 @@ describe("i18n kabuk sözlüğü", () => {
     }
   });
 
+  it("veri kaynakları ekranı anahtarları iki dilde dolu", () => {
+    const keys = shellKeys().filter((key) => key.startsWith("integrations."));
+    expect(keys.length).toBeGreaterThan(20);
+    for (const key of keys) {
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });
