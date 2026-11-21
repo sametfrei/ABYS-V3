@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T20:27:46.537Z",
+  "updatedAt": "2026-11-21T20:43:20.252Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1383,6 +1383,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Smoke asserts exact ledger/audit/forecast CSV header lines, attachment disposition, anonymous 401 on all three exports and 400 for an out-of-range audit limit.",
       "evidence": "Specialist Mendel added 10 checks; Founder B reviewed and ran eslint + smoke: 53 passed, 0 failed."
+    },
+    {
+      "id": "TB-069",
+      "commit": "ba9a43f",
+      "title": "Institutional memory TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/memory/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Decision memory, audit log and documents tabs, the TAIS view, upload flows, outcome recording labels and audit type names render in TR and EN; dates follow the locale.",
+      "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 92 files/822 tests (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
