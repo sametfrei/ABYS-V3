@@ -24,6 +24,25 @@ interface QualityIssue {
   resolvedBy: string | null;
 }
 
+type ScoreDimension = "completeness" | "validity" | "uniqueness" | "freshness";
+
+interface ScoreReport {
+  dimensions: { dimension: ScoreDimension; score: number | null; sample: number }[];
+  overall: number | null;
+  worst: ScoreDimension | null;
+  total: number;
+  maxAgeDays: number;
+  label: string | null;
+  sampled: boolean;
+}
+
+const DIMENSION_KEY: Record<ScoreDimension, ShellKey> = {
+  completeness: "dataQuality.score.dimension.completeness",
+  validity: "dataQuality.score.dimension.validity",
+  uniqueness: "dataQuality.score.dimension.uniqueness",
+  freshness: "dataQuality.score.dimension.freshness",
+};
+
 function useLocale(): Locale {
   return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
 }
@@ -46,6 +65,13 @@ function statusLabel(locale: Locale, status: QualityIssue["status"]): string {
 function formatDate(value: string, locale: Locale): string {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString(locale);
+}
+
+function formatPercent(value: number, locale: Locale): string {
+  return `${(value * 100).toLocaleString(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}%`;
 }
 
 async function readError(res: Response, locale: Locale): Promise<string> {
@@ -71,6 +97,40 @@ export default function DataQualityPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
+  const [score, setScore] = useState<ScoreReport | null>(null);
+  const [scoreLoading, setScoreLoading] = useState(true);
+  const [scoreError, setScoreError] = useState("");
+
+  useEffect(() => {
+    const effectLocale = readLocale();
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/data-quality/score?maxAgeDays=30", { cache: "no-store" });
+        if (!res.ok) {
+          if (res.status === 401) throw new Error(t(effectLocale, "dataQuality.errorUnauthorized"));
+          if (res.status === 403) throw new Error(t(effectLocale, "dataQuality.errorForbidden"));
+          throw new Error(await readError(res, effectLocale));
+        }
+        const data = (await res.json()) as ScoreReport;
+        if (!cancelled) {
+          setScore(data);
+          setScoreError("");
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setScoreError(
+            err instanceof Error ? err.message : t(effectLocale, "dataQuality.score.error")
+          );
+        }
+      } finally {
+        if (!cancelled) setScoreLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +205,72 @@ export default function DataQualityPage() {
       />
 
       <div className="px-10 pb-16 max-w-4xl">
+        <div className="mb-6 rounded-xl border border-abys-cream-border bg-abys-cream p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-semibold tracking-widest text-abys-muted">
+              {t(locale, "dataQuality.score.heading")}
+            </p>
+            {score?.worst && (
+              <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-abys-muted">
+                {formatMessage(locale, "dataQuality.score.worst", {
+                  dimension: t(locale, DIMENSION_KEY[score.worst]),
+                })}
+              </span>
+            )}
+          </div>
+
+          {scoreError ? (
+            <p role="alert" className="text-sm text-abys-critical">{scoreError}</p>
+          ) : scoreLoading || !score ? (
+            <p role="status" className="text-sm text-abys-muted">{t(locale, "dataQuality.loading")}</p>
+          ) : (
+            <>
+              <div className="mb-3 flex items-baseline gap-3">
+                <div>
+                  <p className="text-[11px] uppercase tracking-wide text-abys-muted">
+                    {t(locale, "dataQuality.score.overall")}
+                  </p>
+                  <p className="font-serif text-3xl text-abys-navy">
+                    {score.overall === null
+                      ? t(locale, "dataQuality.score.noData")
+                      : formatPercent(score.overall, locale)}
+                  </p>
+                </div>
+                <p className="text-xs text-abys-muted">
+                  {formatMessage(locale, "dataQuality.score.total", {
+                    count: score.total.toLocaleString(locale),
+                  })}
+                </p>
+              </div>
+
+              <ul className="space-y-1 list-none p-0 m-0">
+                {score.dimensions.map((d) => (
+                  <li key={d.dimension} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+                    <span className="text-abys-ink">{t(locale, DIMENSION_KEY[d.dimension])}</span>
+                    <span className="font-mono text-abys-muted">
+                      {d.score === null
+                        ? t(locale, "dataQuality.score.noData")
+                        : formatPercent(d.score, locale)}{" "}
+                      ·{" "}
+                      {formatMessage(locale, "dataQuality.score.sample", {
+                        count: d.sample.toLocaleString(locale),
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {score.sampled && (
+                <p className="mt-3 text-xs text-abys-warning">
+                  {formatMessage(locale, "dataQuality.score.sampled", {
+                    count: score.total.toLocaleString(locale),
+                  })}
+                </p>
+              )}
+            </>
+          )}
+        </div>
+
         <div className="mb-4 flex flex-wrap items-center gap-2">
           {(["pending", "all"] as const).map((s) => (
             <button

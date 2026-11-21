@@ -175,6 +175,15 @@ describe("i18n kabuk sözlüğü", () => {
     }
   });
 
+  it("veri kalitesi skor anahtarları iki dilde dolu", () => {
+    const keys = shellKeys().filter((key) => key.startsWith("dataQuality.score."));
+    expect(keys.length).toBeGreaterThan(5);
+    for (const key of keys) {
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });

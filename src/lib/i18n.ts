@@ -837,7 +837,19 @@ export type ShellKey =
   | "integrations.apiKeys.createFailed"
   | "integrations.apiKeys.scope.events_write"
   | "integrations.apiKeys.scope.read_advisors"
-  | "integrations.apiKeys.scope.read_all";
+  | "integrations.apiKeys.scope.read_all"
+  | "dataQuality.score.heading"
+  | "dataQuality.score.overall"
+  | "dataQuality.score.worst"
+  | "dataQuality.score.noData"
+  | "dataQuality.score.sample"
+  | "dataQuality.score.total"
+  | "dataQuality.score.sampled"
+  | "dataQuality.score.error"
+  | "dataQuality.score.dimension.completeness"
+  | "dataQuality.score.dimension.validity"
+  | "dataQuality.score.dimension.uniqueness"
+  | "dataQuality.score.dimension.freshness";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -2268,6 +2280,24 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "integrations.apiKeys.scope.events_write": { tr: "olay gönderimi", en: "event submission" },
   "integrations.apiKeys.scope.read_advisors": { tr: "danışman verisi okuma", en: "read advisor data" },
   "integrations.apiKeys.scope.read_all": { tr: "tüm veriyi okuma", en: "read all data" },
+  "dataQuality.score.heading": { tr: "Kalite skoru", en: "Quality score" },
+  "dataQuality.score.overall": { tr: "Genel skor", en: "Overall score" },
+  "dataQuality.score.worst": { tr: "En zayıf: {dimension}", en: "Weakest: {dimension}" },
+  "dataQuality.score.noData": { tr: "Yeterli veri yok", en: "Not enough data" },
+  "dataQuality.score.sample": { tr: "{count} örneklem", en: "{count} samples" },
+  "dataQuality.score.total": { tr: "Toplam {count} satır", en: "{count} rows total" },
+  "dataQuality.score.sampled": {
+    tr: "İlk {count} satır üzerinden hesaplandı.",
+    en: "Calculated over the first {count} rows.",
+  },
+  "dataQuality.score.error": {
+    tr: "Kalite skoru yüklenemedi.",
+    en: "Quality score could not be loaded.",
+  },
+  "dataQuality.score.dimension.completeness": { tr: "Tamlık", en: "Completeness" },
+  "dataQuality.score.dimension.validity": { tr: "Geçerlilik", en: "Validity" },
+  "dataQuality.score.dimension.uniqueness": { tr: "Tekillik", en: "Uniqueness" },
+  "dataQuality.score.dimension.freshness": { tr: "Tazelik", en: "Freshness" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
