@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T21:38:15.662Z",
+  "updatedAt": "2026-11-21T22:13:31Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1503,6 +1503,57 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Classification, business context, KPI framework, observed schema, semantic graph, golden-record policy and digital-twin sections render in TR and EN.",
       "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 822 tests (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/decisions/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "evidence": "Founder B gates: tsc clean, eslint clean, i18n 19/19, full suite 822 passed (9 skipped), build OK, smoke 53/53, pushed to origin/main.",
+      "id": "TB-076",
+      "commit": "0016439",
+      "title": "Decision center shell and analyzer TR/EN localization",
+      "acceptanceCriteria": "Decision center shell, tabs, analyzer form, guidance and empty states render fully in TR and EN."
+    },
+    {
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/decisions/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "evidence": "Founder B gates: tsc clean, eslint clean, i18n 19/19, full suite 822 passed (9 skipped), build OK, smoke 53/53, pushed to origin/main.",
+      "id": "TB-077",
+      "commit": "f4dbcf0",
+      "title": "Decision case cards and evidence panels TR/EN localization",
+      "acceptanceCriteria": "Case cards, status filters, evidence/assumption/limitation blocks and empty states render in TR and EN."
+    },
+    {
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/decisions/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "evidence": "Founder B gates: tsc clean, eslint clean, i18n 19/19, full suite 822 passed (9 skipped), build OK, smoke 53/53, pushed to origin/main.",
+      "id": "TB-078",
+      "commit": "47f1aa3",
+      "title": "Decision causal chain, trace modal and options TR/EN localization",
+      "acceptanceCriteria": "Causal panel, trace modal, options panel, option rows and uncertainty levels render in TR and EN."
     }
   ]
 }
