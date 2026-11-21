@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T20:57:57.003Z",
+  "updatedAt": "2026-11-21T21:13:52.457Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1433,6 +1433,23 @@
       ],
       "status": "VERIFIED",
       "acceptanceCriteria": "Advisor cards, metric labels, duration formatting (min/h) and the timeline modal render in TR and EN.",
+      "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 822 tests (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-072",
+      "commit": "cd4cdf1",
+      "title": "Decision options TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/options/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Criteria editor, option matrix, weighted ranking/Pareto result and allocation optimizer render in TR and EN with locale-aware numbers.",
       "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 822 tests (9 skipped), build OK, smoke 53/53."
     }
   ]
