@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T20:43:20.252Z",
+  "updatedAt": "2026-11-21T20:50:58.403Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1400,6 +1400,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Decision memory, audit log and documents tabs, the TAIS view, upload flows, outcome recording labels and audit type names render in TR and EN; dates follow the locale.",
       "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 92 files/822 tests (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-070",
+      "commit": "33a79f0",
+      "title": "Analysis screen TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/analysis/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Analysis header, tabs, AI analysis flow and result labels, TAIS breakdown tables and management KPI tiles render in TR and EN.",
+      "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 822 tests (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
