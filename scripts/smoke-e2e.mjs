@@ -149,6 +149,15 @@ async function main() {
     bad("vaka listesi kalibrasyonu", "calibration eksik");
   }
 
+  const ledgerCsv = await req("/api/decision-ledger/export", { cookie });
+  expectStatus("karar defteri CSV", ledgerCsv.status, 200);
+  const csvType = ledgerCsv.headers?.get?.("content-type") ?? "";
+  if (csvType.startsWith("text/csv") && String(ledgerCsv.text ?? "").startsWith("decision_id,")) {
+    ok("karar defteri CSV başlığı", `${String(ledgerCsv.text).split("\r\n").length - 2} kayıt`);
+  } else {
+    bad("karar defteri CSV başlığı", `content-type=${csvType || "yok"}`);
+  }
+
   const capture = await req("/api/forecast/snapshots/capture", { method: "POST", cookie });
   expectStatus("zamanlanmış tahmin yakalama", capture.status, 200);
   if (capture.json && typeof capture.json.captured === "number" && Array.isArray(capture.json.results)) {
