@@ -1,10 +1,18 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 import {
   MIN_PASSWORD_LENGTH,
   MAX_PASSWORD_LENGTH,
 } from "@/lib/password-policy";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 /**
  * Oturum sahibinin kendi parolasını değiştirmesi.
@@ -21,21 +29,34 @@ const inputClass =
 const labelClass =
   "block text-xs tracking-widest text-abys-muted font-semibold mb-2";
 
-const NETWORK_ERROR =
-  "Sunucuya ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin.";
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
 
-/** Sunucunun Türkçe hata metnini kullanır; yoksa durum kodlu yedek metin. */
-async function readError(res: Response): Promise<string> {
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+/** Sunucunun hata metnini kullanır; yoksa dile uygun yedek metne düşer. */
+async function readError(res: Response, locale: Locale): Promise<string> {
   try {
     const data = (await res.json()) as { error?: unknown };
     if (typeof data?.error === "string" && data.error) return data.error;
   } catch {
     // Gövde JSON değilse yedek metne düş.
   }
-  return `Parola değiştirilemedi (HTTP ${res.status}).`;
+  return formatMessage(locale, "settings.password.failedHttp", { status: res.status });
 }
 
 export function ChangePassword() {
+  const locale = useLocale();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -52,23 +73,23 @@ export function ChangePassword() {
     setSuccess("");
 
     if (!currentPassword) {
-      setError("Mevcut parolanızı girin.");
+      setError(t(locale, "settings.password.currentRequired"));
       return;
     }
     if (newPassword.length < MIN_PASSWORD_LENGTH) {
-      setError(`Yeni parola en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`);
+      setError(formatMessage(locale, "settings.password.min", { min: MIN_PASSWORD_LENGTH }));
       return;
     }
     if (newPassword.length > MAX_PASSWORD_LENGTH) {
-      setError(`Yeni parola en fazla ${MAX_PASSWORD_LENGTH} karakter olmalı.`);
+      setError(formatMessage(locale, "settings.password.max", { max: MAX_PASSWORD_LENGTH }));
       return;
     }
     if (newPassword === currentPassword) {
-      setError("Yeni parola mevcut parolayla aynı olamaz.");
+      setError(t(locale, "settings.password.same"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError("Yeni parola ve tekrarı eşleşmiyor.");
+      setError(t(locale, "settings.password.mismatch"));
       return;
     }
 
@@ -80,16 +101,16 @@ export function ChangePassword() {
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       if (!res.ok) {
-        setError(await readError(res));
+        setError(await readError(res, locale));
         return;
       }
       // Parola yanıtta dönmez; yalnızca başarı durumu işlenir.
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      setSuccess("Parola değiştirildi.");
+      setSuccess(t(locale, "settings.password.success"));
     } catch {
-      setError(NETWORK_ERROR);
+      setError(t(locale, "settings.password.network"));
     } finally {
       setSaving(false);
     }
@@ -105,17 +126,19 @@ export function ChangePassword() {
           id="change-password-heading"
           className="font-serif text-lg text-abys-navy mb-1"
         >
-          Parola değiştir
+          {t(locale, "settings.password.title")}
         </h2>
         <p className="text-xs text-abys-muted mb-4">
-          Parola en az {MIN_PASSWORD_LENGTH}, en fazla {MAX_PASSWORD_LENGTH}{" "}
-          karakter olmalıdır. Boşluklar da parolanın parçasıdır.
+          {formatMessage(locale, "settings.password.help", {
+            min: MIN_PASSWORD_LENGTH,
+            max: MAX_PASSWORD_LENGTH,
+          })}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
           <div>
             <label htmlFor="change-password-current" className={labelClass}>
-              MEVCUT PAROLA
+              {t(locale, "settings.password.current")}
             </label>
             <input
               id="change-password-current"
@@ -138,7 +161,7 @@ export function ChangePassword() {
 
           <div>
             <label htmlFor="change-password-new" className={labelClass}>
-              YENİ PAROLA
+              {t(locale, "settings.password.new")}
             </label>
             <input
               id="change-password-new"
@@ -162,7 +185,7 @@ export function ChangePassword() {
 
           <div>
             <label htmlFor="change-password-confirm" className={labelClass}>
-              YENİ PAROLA TEKRAR
+              {t(locale, "settings.password.confirm")}
             </label>
             <input
               id="change-password-confirm"
@@ -200,7 +223,7 @@ export function ChangePassword() {
             disabled={saving}
             className="rounded-full bg-abys-accent text-white text-sm px-5 py-2.5 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-abys-accent disabled:opacity-50"
           >
-            {saving ? "Değiştiriliyor…" : "Parolayı değiştir"}
+            {saving ? t(locale, "settings.password.submitting") : t(locale, "settings.password.submit")}
           </button>
         </form>
       </div>

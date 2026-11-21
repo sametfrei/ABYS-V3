@@ -556,7 +556,76 @@ export type ShellKey =
   | "settings.role.hr"
   | "settings.role.operations"
   | "settings.role.bizdev"
-  | "settings.role.product";
+  | "settings.role.product"
+  | "settings.password.title"
+  | "settings.password.help"
+  | "settings.password.current"
+  | "settings.password.new"
+  | "settings.password.confirm"
+  | "settings.password.currentRequired"
+  | "settings.password.min"
+  | "settings.password.max"
+  | "settings.password.same"
+  | "settings.password.mismatch"
+  | "settings.password.failedHttp"
+  | "settings.password.network"
+  | "settings.password.success"
+  | "settings.password.submitting"
+  | "settings.password.submit"
+  | "settings.sessions.title"
+  | "settings.sessions.subtitle"
+  | "settings.sessions.loading"
+  | "settings.sessions.empty"
+  | "settings.sessions.current"
+  | "settings.sessions.other"
+  | "settings.sessions.activeBadge"
+  | "settings.sessions.started"
+  | "settings.sessions.expires"
+  | "settings.sessions.revoke"
+  | "settings.sessions.revokeAll"
+  | "settings.sessions.revoked"
+  | "settings.sessions.failedHttp"
+  | "settings.sessions.network"
+  | "settings.users.title"
+  | "settings.users.subtitle"
+  | "settings.users.loading"
+  | "settings.users.retry"
+  | "settings.users.empty"
+  | "settings.users.newTitle"
+  | "settings.users.tempPasswordHelp"
+  | "settings.users.email"
+  | "settings.users.displayName"
+  | "settings.users.role"
+  | "settings.users.tempPassword"
+  | "settings.users.created"
+  | "settings.users.creating"
+  | "settings.users.create"
+  | "settings.users.failedHttp"
+  | "settings.users.network"
+  | "settings.users.passwordMin"
+  | "settings.users.passwordMax"
+  | "settings.users.statusActive"
+  | "settings.users.statusDisabled"
+  | "settings.users.status"
+  | "settings.users.save"
+  | "settings.users.saving"
+  | "settings.users.resetPassword"
+  | "settings.users.resetPasswordAria"
+  | "settings.users.statusAria"
+  | "settings.users.saveAria"
+  | "settings.users.newPassword"
+  | "settings.users.cancel"
+  | "settings.users.passwordReset"
+  | "settings.users.passwordHelp"
+  | "settings.users.role.board"
+  | "settings.users.role.ceo"
+  | "settings.users.role.clevel"
+  | "settings.users.role.dept_manager"
+  | "settings.users.role.risk_manager"
+  | "settings.users.role.analyst"
+  | "settings.users.role.auditor"
+  | "settings.users.role.data_admin"
+  | "settings.users.role.sys_admin";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -1538,6 +1607,144 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "settings.role.operations": { tr: "Operasyon", en: "Operations" },
   "settings.role.bizdev": { tr: "İş Geliştirme", en: "Business Development" },
   "settings.role.product": { tr: "Ürün / Teknoloji", en: "Product / Tech" },
+  "settings.password.title": { tr: "Parola değiştir", en: "Change password" },
+  "settings.password.help": {
+    tr: "Parola en az {min}, en fazla {max} karakter olmalıdır. Boşluklar da parolanın parçasıdır.",
+    en: "Password must be between {min} and {max} characters. Spaces are part of the password.",
+  },
+  "settings.password.current": { tr: "MEVCUT PAROLA", en: "CURRENT PASSWORD" },
+  "settings.password.new": { tr: "YENİ PAROLA", en: "NEW PASSWORD" },
+  "settings.password.confirm": { tr: "YENİ PAROLA TEKRAR", en: "CONFIRM NEW PASSWORD" },
+  "settings.password.currentRequired": {
+    tr: "Mevcut parolanızı girin.",
+    en: "Enter your current password.",
+  },
+  "settings.password.min": {
+    tr: "Yeni parola en az {min} karakter olmalı.",
+    en: "New password must be at least {min} characters.",
+  },
+  "settings.password.max": {
+    tr: "Yeni parola en fazla {max} karakter olmalı.",
+    en: "New password must be at most {max} characters.",
+  },
+  "settings.password.same": {
+    tr: "Yeni parola mevcut parolayla aynı olamaz.",
+    en: "New password cannot be the same as the current password.",
+  },
+  "settings.password.mismatch": {
+    tr: "Yeni parola ve tekrarı eşleşmiyor.",
+    en: "New password and confirmation do not match.",
+  },
+  "settings.password.failedHttp": {
+    tr: "Parola değiştirilemedi (HTTP {status}).",
+    en: "Password could not be changed (HTTP {status}).",
+  },
+  "settings.password.network": {
+    tr: "Sunucuya ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin.",
+    en: "Could not reach the server. Check your connection and try again.",
+  },
+  "settings.password.success": { tr: "Parola değiştirildi.", en: "Password changed." },
+  "settings.password.submitting": { tr: "Değiştiriliyor…", en: "Changing…" },
+  "settings.password.submit": { tr: "Parolayı değiştir", en: "Change password" },
+  "settings.sessions.title": { tr: "Aktif oturumlar", en: "Active sessions" },
+  "settings.sessions.subtitle": {
+    tr: "Hesabınızdaki cihaz/oturumlar. Tanımadığınız bir oturum varsa kapatın.",
+    en: "Devices and sessions on your account. Close any session you do not recognize.",
+  },
+  "settings.sessions.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "settings.sessions.empty": { tr: "Aktif oturum bulunamadı.", en: "No active sessions found." },
+  "settings.sessions.current": { tr: "Bu oturum", en: "This session" },
+  "settings.sessions.other": { tr: "Diğer oturum", en: "Other session" },
+  "settings.sessions.activeBadge": { tr: "AKTİF", en: "ACTIVE" },
+  "settings.sessions.started": { tr: "Başlangıç: {date}", en: "Started: {date}" },
+  "settings.sessions.expires": { tr: "Bitiş: {date}", en: "Expires: {date}" },
+  "settings.sessions.revoke": { tr: "Oturumu kapat", en: "Revoke session" },
+  "settings.sessions.revokeAll": {
+    tr: "Diğer tüm oturumları kapat",
+    en: "Revoke all other sessions",
+  },
+  "settings.sessions.revoked": { tr: "Oturum kapatıldı.", en: "Session revoked." },
+  "settings.sessions.failedHttp": {
+    tr: "İşlem başarısız oldu (HTTP {status}).",
+    en: "Operation failed (HTTP {status}).",
+  },
+  "settings.sessions.network": {
+    tr: "Sunucuya ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin.",
+    en: "Could not reach the server. Check your connection and try again.",
+  },
+  "settings.users.title": { tr: "Kullanıcılar", en: "Users" },
+  "settings.users.subtitle": {
+    tr: "Kurumunuzdaki kullanıcıları ve rollerini yönetin. Yetkiler her istekte sunucuda denetlenir.",
+    en: "Manage users and roles in your organization. Permissions are checked server-side on every request.",
+  },
+  "settings.users.loading": { tr: "Kullanıcılar yükleniyor…", en: "Loading users…" },
+  "settings.users.retry": { tr: "Yeniden dene", en: "Try again" },
+  "settings.users.empty": {
+    tr: "Bu kurumda henüz kullanıcı yok.",
+    en: "There are no users in this organization yet.",
+  },
+  "settings.users.newTitle": { tr: "Yeni kullanıcı", en: "New user" },
+  "settings.users.tempPasswordHelp": {
+    tr: "Geçici parola en az {min} karakter olmalıdır.",
+    en: "Temporary password must be at least {min} characters.",
+  },
+  "settings.users.email": { tr: "E-POSTA", en: "EMAIL" },
+  "settings.users.displayName": { tr: "GÖRÜNEN AD", en: "DISPLAY NAME" },
+  "settings.users.role": { tr: "ROL", en: "ROLE" },
+  "settings.users.tempPassword": { tr: "GEÇİCİ PAROLA", en: "TEMPORARY PASSWORD" },
+  "settings.users.created": { tr: "Kullanıcı oluşturuldu.", en: "User created." },
+  "settings.users.creating": { tr: "Oluşturuluyor…", en: "Creating…" },
+  "settings.users.create": { tr: "Kullanıcı oluştur", en: "Create user" },
+  "settings.users.failedHttp": {
+    tr: "İşlem başarısız oldu (HTTP {status}).",
+    en: "Operation failed (HTTP {status}).",
+  },
+  "settings.users.network": {
+    tr: "Sunucuya ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin.",
+    en: "Could not reach the server. Check your connection and try again.",
+  },
+  "settings.users.passwordMin": {
+    tr: "Parola en az {min} karakter olmalı.",
+    en: "Password must be at least {min} characters.",
+  },
+  "settings.users.passwordMax": {
+    tr: "Parola en fazla {max} karakter olmalı.",
+    en: "Password must be at most {max} characters.",
+  },
+  "settings.users.statusActive": { tr: "Etkin", en: "Active" },
+  "settings.users.statusDisabled": { tr: "Devre dışı", en: "Disabled" },
+  "settings.users.status": { tr: "DURUM", en: "STATUS" },
+  "settings.users.save": { tr: "Kaydet", en: "Save" },
+  "settings.users.saving": { tr: "Kaydediliyor…", en: "Saving…" },
+  "settings.users.resetPassword": { tr: "Parola sıfırla", en: "Reset password" },
+  "settings.users.resetPasswordAria": {
+    tr: "{name} için parola sıfırla",
+    en: "Reset password for {name}",
+  },
+  "settings.users.statusAria": {
+    tr: "{name} hesabı {status}",
+    en: "Account for {name} is {status}",
+  },
+  "settings.users.saveAria": {
+    tr: "{name} değişikliklerini kaydet",
+    en: "Save changes for {name}",
+  },
+  "settings.users.newPassword": { tr: "YENİ PAROLA", en: "NEW PASSWORD" },
+  "settings.users.cancel": { tr: "Vazgeç", en: "Cancel" },
+  "settings.users.passwordReset": { tr: "Parola sıfırlandı.", en: "Password reset." },
+  "settings.users.passwordHelp": {
+    tr: "Parola en az {min} karakter olmalıdır.",
+    en: "Password must be at least {min} characters.",
+  },
+  "settings.users.role.board": { tr: "Yönetim Kurulu", en: "Board" },
+  "settings.users.role.ceo": { tr: "CEO", en: "CEO" },
+  "settings.users.role.clevel": { tr: "C-Level", en: "C-Level" },
+  "settings.users.role.dept_manager": { tr: "Departman Yöneticisi", en: "Department Manager" },
+  "settings.users.role.risk_manager": { tr: "Risk Yöneticisi", en: "Risk Manager" },
+  "settings.users.role.analyst": { tr: "Analist", en: "Analyst" },
+  "settings.users.role.auditor": { tr: "Denetçi", en: "Auditor" },
+  "settings.users.role.data_admin": { tr: "Veri Yöneticisi", en: "Data Administrator" },
+  "settings.users.role.sys_admin": { tr: "Sistem Yöneticisi", en: "System Administrator" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

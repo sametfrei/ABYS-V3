@@ -128,6 +128,17 @@ describe("i18n kabuk sözlüğü", () => {
     }
   });
 
+  it("ayarlar gömülü bileşen anahtarları iki dilde dolu", () => {
+    for (const prefix of ["settings.password.", "settings.sessions.", "settings.users."]) {
+      const keys = shellKeys().filter((key) => key.startsWith(prefix));
+      expect(keys.length).toBeGreaterThan(5);
+      for (const key of keys) {
+        expect(t("tr", key).trim().length).toBeGreaterThan(0);
+        expect(t("en", key).trim().length).toBeGreaterThan(0);
+      }
+    }
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });

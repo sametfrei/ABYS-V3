@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 /**
  * Kurum kullanıcı yönetimi (yalnızca sys_admin).
@@ -9,17 +17,17 @@ import { useEffect, useState, type FormEvent } from "react";
  * güvenlik önlemi DEĞİLDİR; yetki her istekte sunucuda (`manage_users`)
  * uygulanır. Aşağıdaki rol listesi yalnızca seçenek etiketleridir.
  */
-const ROLE_OPTIONS: ReadonlyArray<{ value: string; label: string }> = [
-  { value: "board", label: "Yönetim Kurulu" },
-  { value: "ceo", label: "CEO" },
-  { value: "clevel", label: "C-Level" },
-  { value: "dept_manager", label: "Departman Yöneticisi" },
-  { value: "risk_manager", label: "Risk Yöneticisi" },
-  { value: "analyst", label: "Analist" },
-  { value: "auditor", label: "Denetçi" },
-  { value: "data_admin", label: "Veri Yöneticisi" },
-  { value: "sys_admin", label: "Sistem Yöneticisi" },
-];
+const ROLE_OPTIONS = [
+  "board",
+  "ceo",
+  "clevel",
+  "dept_manager",
+  "risk_manager",
+  "analyst",
+  "auditor",
+  "data_admin",
+  "sys_admin",
+] as const;
 
 const MIN_PASSWORD_LENGTH = 12;
 
@@ -34,8 +42,25 @@ interface ManageUser {
   createdAt: string;
 }
 
-function roleLabel(role: string): string {
-  return ROLE_OPTIONS.find((r) => r.value === role)?.label ?? role;
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function roleLabel(locale: Locale, role: string): string {
+  const key = `settings.users.role.${role}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? role : label;
 }
 
 function toUser(value: unknown): ManageUser | null {
@@ -64,18 +89,15 @@ function sortUsers(users: ManageUser[]): ManageUser[] {
 }
 
 /** Sunucunun Türkçe hata metnini kullanır; yoksa durum kodlu yedek metin. */
-async function readError(res: Response): Promise<string> {
+async function readError(res: Response, locale: Locale): Promise<string> {
   try {
     const data = (await res.json()) as { error?: unknown };
     if (typeof data?.error === "string" && data.error) return data.error;
   } catch {
     // Gövde JSON değilse yedek metne düş.
   }
-  return `İşlem başarısız oldu (HTTP ${res.status}).`;
+  return formatMessage(locale, "settings.users.failedHttp", { status: res.status });
 }
-
-const NETWORK_ERROR =
-  "Sunucuya ulaşılamadı. Bağlantınızı kontrol edip yeniden deneyin.";
 
 const inputClass =
   "w-full rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3 text-abys-ink focus:outline-none focus:ring-2 focus:ring-abys-accent";
@@ -83,6 +105,7 @@ const labelClass =
   "block text-xs tracking-widest text-abys-muted font-semibold mb-2";
 
 export function UserManagement() {
+  const locale = useLocale();
   const [users, setUsers] = useState<ManageUser[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading"
@@ -106,7 +129,7 @@ export function UserManagement() {
     (async () => {
       try {
         const res = await fetch("/api/users", { cache: "no-store" });
-        if (!res.ok) throw new Error(await readError(res));
+        if (!res.ok) throw new Error(await readError(res, locale));
         const data = (await res.json()) as { users?: unknown };
         const list = Array.isArray(data?.users)
           ? data.users
@@ -118,7 +141,7 @@ export function UserManagement() {
         setLoadState("ready");
       } catch (err) {
         if (cancelled) return;
-        setLoadError(err instanceof Error ? err.message : NETWORK_ERROR);
+        setLoadError(err instanceof Error ? err.message : t(locale, "settings.users.network"));
         setLoadState("error");
       }
     })();
@@ -126,7 +149,7 @@ export function UserManagement() {
     return () => {
       cancelled = true;
     };
-  }, [reloadKey]);
+  }, [reloadKey, locale]);
 
   function replaceUser(updated: ManageUser) {
     setUsers((prev) =>
@@ -140,9 +163,7 @@ export function UserManagement() {
     setFormNotice("");
 
     if (form.password.length < MIN_PASSWORD_LENGTH) {
-      setFormError(
-        `Parola en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`
-      );
+      setFormError(formatMessage(locale, "settings.users.passwordMin", { min: MIN_PASSWORD_LENGTH }));
       return;
     }
 
@@ -159,7 +180,7 @@ export function UserManagement() {
         }),
       });
       if (!res.ok) {
-        setFormError(await readError(res));
+        setFormError(await readError(res, locale));
         return;
       }
       const data = (await res.json()) as { user?: unknown };
@@ -168,9 +189,9 @@ export function UserManagement() {
         setUsers((prev) => sortUsers([...prev, created]));
       }
       setForm({ email: "", displayName: "", role: "analyst", password: "" });
-      setFormNotice("Kullanıcı oluşturuldu.");
+      setFormNotice(t(locale, "settings.users.created"));
     } catch {
-      setFormError(NETWORK_ERROR);
+      setFormError(t(locale, "settings.users.network"));
     } finally {
       setCreating(false);
     }
@@ -185,16 +206,15 @@ export function UserManagement() {
         id="user-management-heading"
         className="font-serif text-2xl text-abys-navy mb-1"
       >
-        Kullanıcılar
+        {t(locale, "settings.users.title")}
       </h2>
       <p className="text-sm text-abys-muted mb-6">
-        Kurumunuzdaki kullanıcıları ve rollerini yönetin. Yetkiler her istekte
-        sunucuda denetlenir.
+        {t(locale, "settings.users.subtitle")}
       </p>
 
       {loadState === "loading" && (
         <p className="text-sm text-abys-muted" role="status" aria-live="polite">
-          Kullanıcılar yükleniyor…
+          {t(locale, "settings.users.loading")}
         </p>
       )}
 
@@ -210,14 +230,14 @@ export function UserManagement() {
             }}
             className="mt-3 rounded-full border border-abys-critical/40 px-4 py-1.5 text-xs hover:bg-white/40 focus:outline-none focus:ring-2 focus:ring-abys-critical"
           >
-            Yeniden dene
+            {t(locale, "settings.users.retry")}
           </button>
         </div>
       )}
 
       {loadState === "ready" && users.length === 0 && (
         <p className="rounded-xl border border-abys-cream-border bg-abys-cream p-4 text-sm text-abys-muted">
-          Bu kurumda henüz kullanıcı yok.
+          {t(locale, "settings.users.empty")}
         </p>
       )}
 
@@ -235,16 +255,18 @@ export function UserManagement() {
 
       <div className="mt-8 rounded-xl border border-abys-cream-border bg-abys-cream p-5">
         <h3 className="font-serif text-lg text-abys-navy mb-1">
-          Yeni kullanıcı
+          {t(locale, "settings.users.newTitle")}
         </h3>
         <p className="text-xs text-abys-muted mb-4">
-          Geçici parola en az {MIN_PASSWORD_LENGTH} karakter olmalıdır.
+          {formatMessage(locale, "settings.users.tempPasswordHelp", {
+            min: MIN_PASSWORD_LENGTH,
+          })}
         </p>
 
         <form onSubmit={handleCreate} className="space-y-4" noValidate>
           <div>
             <label htmlFor="new-user-email" className={labelClass}>
-              E-POSTA
+              {t(locale, "settings.users.email")}
             </label>
             <input
               id="new-user-email"
@@ -260,7 +282,7 @@ export function UserManagement() {
 
           <div>
             <label htmlFor="new-user-name" className={labelClass}>
-              GÖRÜNEN AD
+              {t(locale, "settings.users.displayName")}
             </label>
             <input
               id="new-user-name"
@@ -278,7 +300,7 @@ export function UserManagement() {
 
           <div>
             <label htmlFor="new-user-role" className={labelClass}>
-              ROL
+              {t(locale, "settings.users.role")}
             </label>
             <select
               id="new-user-role"
@@ -286,9 +308,9 @@ export function UserManagement() {
               onChange={(e) => setForm({ ...form, role: e.target.value })}
               className={inputClass}
             >
-              {ROLE_OPTIONS.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
+              {ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>
+                  {roleLabel(locale, role)}
                 </option>
               ))}
             </select>
@@ -296,7 +318,7 @@ export function UserManagement() {
 
           <div>
             <label htmlFor="new-user-password" className={labelClass}>
-              GEÇİCİ PAROLA
+              {t(locale, "settings.users.tempPassword")}
             </label>
             <input
               id="new-user-password"
@@ -327,7 +349,7 @@ export function UserManagement() {
             disabled={creating}
             className="rounded-full bg-abys-accent text-white text-sm px-5 py-2.5 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-abys-accent disabled:opacity-50"
           >
-            {creating ? "Oluşturuluyor…" : "Kullanıcı oluştur"}
+            {creating ? t(locale, "settings.users.creating") : t(locale, "settings.users.create")}
           </button>
         </form>
       </div>
@@ -342,6 +364,7 @@ function UserRow({
   user: ManageUser;
   onUpdated: (user: ManageUser) => void;
 }) {
+  const locale = useLocale();
   const [role, setRole] = useState(user.role);
   const [status, setStatus] = useState<UserStatus>(user.status);
   const [saving, setSaving] = useState(false);
@@ -375,14 +398,14 @@ function UserRow({
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        setError(await readError(res));
+        setError(await readError(res, locale));
         return;
       }
       const data = (await res.json()) as { user?: unknown };
       const updated = toUser(data?.user);
       if (updated) onUpdated(updated);
     } catch {
-      setError(NETWORK_ERROR);
+      setError(t(locale, "settings.users.network"));
     } finally {
       setSaving(false);
     }
@@ -408,11 +431,13 @@ function UserRow({
     setPasswordNotice("");
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      setPasswordError(`Parola en az ${MIN_PASSWORD_LENGTH} karakter olmalı.`);
+      setPasswordError(
+        formatMessage(locale, "settings.users.passwordMin", { min: MIN_PASSWORD_LENGTH })
+      );
       return;
     }
     if (password.length > 200) {
-      setPasswordError("Parola en fazla 200 karakter olmalı.");
+      setPasswordError(formatMessage(locale, "settings.users.passwordMax", { max: 200 }));
       return;
     }
 
@@ -424,16 +449,16 @@ function UserRow({
         body: JSON.stringify({ password }),
       });
       if (!res.ok) {
-        setPasswordError(await readError(res));
+        setPasswordError(await readError(res, locale));
         return;
       }
       // Parola yanıtta dönmez; yalnızca başarı durumu işlenir.
       setPassword("");
       setPasswordError("");
       setPasswordOpen(false);
-      setPasswordNotice("Parola sıfırlandı.");
+      setPasswordNotice(t(locale, "settings.users.passwordReset"));
     } catch {
-      setPasswordError(NETWORK_ERROR);
+      setPasswordError(t(locale, "settings.users.network"));
     } finally {
       setPasswordSaving(false);
     }
@@ -455,14 +480,16 @@ function UserRow({
               : "bg-abys-critical-soft text-abys-critical"
           }`}
         >
-          {user.status === "active" ? "Etkin" : "Devre dışı"}
+          {user.status === "active"
+            ? t(locale, "settings.users.statusActive")
+            : t(locale, "settings.users.statusDisabled")}
         </span>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
         <div>
           <label htmlFor={roleId} className={labelClass}>
-            ROL
+            {t(locale, "settings.users.role")}
           </label>
           <select
             id={roleId}
@@ -470,24 +497,29 @@ function UserRow({
             onChange={(e) => setRole(e.target.value)}
             className="w-full rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2.5 text-sm text-abys-ink focus:outline-none focus:ring-2 focus:ring-abys-accent"
           >
-            {ROLE_OPTIONS.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
+            {ROLE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {roleLabel(locale, option)}
               </option>
             ))}
-            {!ROLE_OPTIONS.some((r) => r.value === role) && (
-              <option value={role}>{roleLabel(role)}</option>
+            {!ROLE_OPTIONS.some((option) => option === role) && (
+              <option value={role}>{roleLabel(locale, role)}</option>
             )}
           </select>
         </div>
 
         <div>
-          <span className={labelClass}>DURUM</span>
+          <span className={labelClass}>{t(locale, "settings.users.status")}</span>
           <button
             type="button"
             role="switch"
             aria-checked={isActive}
-            aria-label={`${user.displayName} hesabı ${isActive ? "etkin" : "devre dışı"}`}
+            aria-label={formatMessage(locale, "settings.users.statusAria", {
+              name: user.displayName,
+              status: isActive
+                ? t(locale, "settings.users.statusActive")
+                : t(locale, "settings.users.statusDisabled"),
+            })}
             onClick={() => setStatus(isActive ? "disabled" : "active")}
             className={`w-full sm:w-auto rounded-full border px-4 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-abys-accent ${
               isActive
@@ -495,7 +527,9 @@ function UserRow({
                 : "border-abys-critical/40 bg-abys-critical-soft text-abys-critical"
             }`}
           >
-            {isActive ? "Etkin" : "Devre dışı"}
+            {isActive
+              ? t(locale, "settings.users.statusActive")
+              : t(locale, "settings.users.statusDisabled")}
           </button>
         </div>
 
@@ -503,10 +537,12 @@ function UserRow({
           type="button"
           onClick={save}
           disabled={!dirty || saving}
-          aria-label={`${user.displayName} değişikliklerini kaydet`}
+          aria-label={formatMessage(locale, "settings.users.saveAria", {
+            name: user.displayName,
+          })}
           className="rounded-full bg-abys-accent text-white text-xs px-4 py-2.5 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-abys-accent disabled:opacity-40"
         >
-          {saving ? "Kaydediliyor…" : "Kaydet"}
+          {saving ? t(locale, "settings.users.saving") : t(locale, "settings.users.save")}
         </button>
       </div>
 
@@ -516,10 +552,12 @@ function UserRow({
           onClick={passwordOpen ? cancelPasswordReset : openPasswordReset}
           aria-expanded={passwordOpen}
           aria-controls={passwordPanelId}
-          aria-label={`${user.displayName} için parola sıfırla`}
+          aria-label={formatMessage(locale, "settings.users.resetPasswordAria", {
+            name: user.displayName,
+          })}
           className="rounded-full border border-abys-cream-border bg-white/60 px-3 py-1.5 text-xs font-semibold text-abys-ink hover:border-abys-accent/50 focus:outline-none focus:ring-2 focus:ring-abys-accent"
         >
-          Parola sıfırla
+          {t(locale, "settings.users.resetPassword")}
         </button>
         {passwordNotice && (
           <p className="text-xs text-abys-healthy" role="status">
@@ -536,7 +574,7 @@ function UserRow({
           noValidate
         >
           <label htmlFor={passwordId} className={labelClass}>
-            YENİ PAROLA
+            {t(locale, "settings.users.newPassword")}
           </label>
           <div className="flex flex-wrap items-center gap-2">
             <input
@@ -564,7 +602,7 @@ function UserRow({
               disabled={passwordSaving}
               className="rounded-full bg-abys-accent text-white text-xs px-4 py-2.5 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-abys-accent disabled:opacity-40"
             >
-              {passwordSaving ? "Kaydediliyor…" : "Kaydet"}
+              {passwordSaving ? t(locale, "settings.users.saving") : t(locale, "settings.users.save")}
             </button>
             <button
               type="button"
@@ -572,11 +610,13 @@ function UserRow({
               disabled={passwordSaving}
               className="rounded-full border border-abys-cream-border px-4 py-2.5 text-xs font-semibold text-abys-ink hover:bg-white/40 focus:outline-none focus:ring-2 focus:ring-abys-accent disabled:opacity-40"
             >
-              Vazgeç
+              {t(locale, "settings.users.cancel")}
             </button>
           </div>
           <p className="mt-2 text-xs text-abys-muted">
-            Parola en az {MIN_PASSWORD_LENGTH} karakter olmalıdır.
+            {formatMessage(locale, "settings.users.passwordHelp", {
+              min: MIN_PASSWORD_LENGTH,
+            })}
           </p>
           {passwordError && (
             <p
