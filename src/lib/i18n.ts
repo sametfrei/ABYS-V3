@@ -909,6 +909,45 @@ export type ShellKey =
   | "ledger.exportCsv"
   | "audit.exportCsv"
   | "forecast.exportCsv"
+  | "decisions.eyebrow"
+  | "decisions.title"
+  | "decisions.titleAccent"
+  | "decisions.subtitle"
+  | "decisions.taisSubtitle"
+  | "decisions.loading"
+  | "decisions.taisEmpty"
+  | "decisions.noOpenCases"
+  | "decisions.closeAnalyzer"
+  | "decisions.openAnalyzer"
+  | "decisions.caseCounts"
+  | "decisions.defaultUser"
+  | "decisions.decidedHeading"
+  | "decisions.decidedBadge"
+  | "decisions.unknownError"
+  | "decisions.analyzer.dataHeading"
+  | "decisions.analyzer.dataPlaceholder"
+  | "decisions.analyzer.constraintsHeading"
+  | "decisions.analyzer.constraintsHint"
+  | "decisions.analyzer.deleteConstraint"
+  | "decisions.analyzer.newConstraint"
+  | "decisions.analyzer.addConstraint"
+  | "decisions.analyzer.running"
+  | "decisions.analyzer.run"
+  | "decisions.analyzer.busyHint"
+  | "decisions.analyzer.noData"
+  | "decisions.severity.critical"
+  | "decisions.severity.warning"
+  | "decisions.severity.info"
+  | "decisions.severity.healthy"
+  | "decisions.confidenceHeading"
+  | "decisions.calibration.measured"
+  | "decisions.calibration.rate"
+  | "decisions.calibration.adjusted"
+  | "decisions.calibration.insufficient"
+  | "decisions.calibration.bucketInfo"
+  | "decisions.calibration.overconfident"
+  | "decisions.calibration.aligned"
+  | "decisions.calibration.underconfident"
   | "discovery.eyebrow"
   | "discovery.title"
   | "discovery.titleAccent"
@@ -2786,6 +2825,63 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
+  "decisions.eyebrow": { tr: "KARAR MERKEZİ", en: "DECISION CENTER" },
+  "decisions.title": { tr: "Ne oluyor, neden önemli,", en: "What is happening, why it matters," },
+  "decisions.titleAccent": { tr: "ne yapmalı.", en: "what to do." },
+  "decisions.subtitle": { tr: "ABYS operasyonel veriyi kanıt zinciri, güven skoru, karşı senaryo ve kısıt-farkındalıklı seçeneklerle karar vakalarına dönüştürür. Karar sizde kalır — sistem her kararı hafızasına işler.", en: "ABYS turns operational data into decision cases with an evidence chain, confidence score, counterfactual and constraint-aware options. The decision stays with you — the system records every decision in its memory." },
+  "decisions.taisSubtitle": { tr: "Kurumun kayıtlı karar vakaları — kanıt zinciri, güven skoru, karşı senaryo ve alternatiflerle.", en: "The organization's recorded decision cases — with evidence chain, confidence score, counterfactual and alternatives." },
+  "decisions.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "decisions.taisEmpty": { tr: "Henüz kayıtlı karar vakası yok.", en: "No recorded decision cases yet." },
+  "decisions.noOpenCases": { tr: "Açık karar vakası yok. Operasyonel veri girerek yeni analiz çalıştırın.", en: "No open decision cases. Run a new analysis by entering operational data." },
+  "decisions.closeAnalyzer": { tr: "Analiz panelini kapat", en: "Close the analysis panel" },
+  "decisions.openAnalyzer": { tr: "Yeni analiz çalıştır", en: "Run new analysis" },
+  "decisions.caseCounts": { tr: "{open} açık vaka · {decided} karara bağlandı", en: "{open} open cases · {decided} decided" },
+  "decisions.defaultUser": { tr: "Kullanıcı", en: "User" },
+  "decisions.decidedHeading": { tr: "KARARA BAĞLANAN VAKALAR", en: "DECIDED CASES" },
+  "decisions.decidedBadge": { tr: "✓ karar verildi", en: "✓ decided" },
+  "decisions.unknownError": { tr: "Bilinmeyen hata.", en: "Unknown error." },
+  "decisions.analyzer.dataHeading": { tr: "OPERASYONEL VERİ", en: "OPERATIONAL DATA" },
+  "decisions.analyzer.dataPlaceholder": { tr: "Sistem export'u, vardiya raporu, operasyon notları... ABYS ham veriyi okur, uydurma sayı üretmez.", en: "System export, shift report, operations notes... ABYS reads raw data and never invents numbers." },
+  "decisions.analyzer.constraintsHeading": { tr: "CANLI KISIT MODELİ ({count})", en: "LIVE CONSTRAINT MODEL ({count})" },
+  "decisions.analyzer.constraintsHint": { tr: "ABYS aksiyon önermeden önce bu kısıtlara bakar — sahada uygulanamayacak seçenek önermez.", en: "ABYS checks these constraints before recommending an action — it will not suggest something that cannot be applied in the field." },
+  "decisions.analyzer.deleteConstraint": { tr: "Kısıtı sil", en: "Delete constraint" },
+  "decisions.analyzer.newConstraint": { tr: "Yeni kısıt", en: "New constraint" },
+  "decisions.analyzer.addConstraint": { tr: "+ Kısıt ekle", en: "+ Add constraint" },
+  "decisions.analyzer.running": { tr: "ABYS analiz ediyor...", en: "ABYS is analyzing..." },
+  "decisions.analyzer.run": { tr: "Analiz et", en: "Analyze" },
+  "decisions.analyzer.busyHint": { tr: "Yerel model çalışıyor — veri makinenizden çıkmıyor. Bu birkaç dakika sürebilir.", en: "The local model is running — data never leaves your machine. This can take a few minutes." },
+  "decisions.analyzer.noData": { tr: "Analiz için operasyonel veri girin ya da bir senaryo seçin.", en: "Enter operational data or pick a scenario to analyze." },
+  "decisions.severity.critical": { tr: "KRİTİK", en: "CRITICAL" },
+  "decisions.severity.warning": { tr: "DİKKAT", en: "WARNING" },
+  "decisions.severity.info": { tr: "BİLGİ", en: "INFO" },
+  "decisions.severity.healthy": { tr: "SAĞLIKLI", en: "HEALTHY" },
+  "decisions.confidenceHeading": { tr: "GÜVEN SKORU", en: "CONFIDENCE SCORE" },
+  "decisions.calibration.measured": {
+    tr: "Geçmişte bu güven düzeyinde ({outcomes} sonuç) iyileşme",
+    en: "Historically at this confidence level ({outcomes} outcomes) improvement",
+  },
+  "decisions.calibration.rate": { tr: "%{value}", en: "{value}%" },
+  "decisions.calibration.adjusted": { tr: "· düzeltilmiş güven %{value}", en: "· adjusted confidence {value}%" },
+  "decisions.calibration.insufficient": {
+    tr: "Kalibrasyon için kanıt yetersiz",
+    en: "Not enough evidence for calibration",
+  },
+  "decisions.calibration.bucketInfo": {
+    tr: " · bu kovada {outcomes}/{threshold} sonuç",
+    en: " · this bucket has {outcomes}/{threshold} outcomes",
+  },
+  "decisions.calibration.overconfident": {
+    tr: "geçmişte bu güven düzeyi fazla iyimser çıktı",
+    en: "this confidence level proved over-optimistic historically",
+  },
+  "decisions.calibration.aligned": {
+    tr: "geçmişte bu güven düzeyi tutarlı çıktı",
+    en: "this confidence level proved aligned historically",
+  },
+  "decisions.calibration.underconfident": {
+    tr: "geçmişte bu güven düzeyi temkinli kaldı",
+    en: "this confidence level stayed cautious historically",
+  },
   "discovery.eyebrow": { tr: "İŞ KEŞFİ", en: "BUSINESS DISCOVERY" },
   "discovery.title": { tr: "ABYS şirketinizi", en: "ABYS knows" },
   "discovery.titleAccent": { tr: "tanıyor", en: "your company" },

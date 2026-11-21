@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { DecisionIntelligencePanel } from "@/components/DecisionIntelligencePanel";
 import { loadProfile } from "@/lib/profile";
@@ -26,6 +26,35 @@ import { getConstraints, saveConstraints, constraintsToPrompt, type Constraint }
 import { getScenarios } from "@/lib/scenarios";
 import type { AiDecisionCase } from "@/lib/ai/provider";
 import { postJsonStreamed } from "@/lib/ndjson-client";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function severityText(locale: Locale, code: string): string {
+  const key = `decisions.severity.${code}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? code : label;
+}
 
 interface CalibrationSummary {
   status: "measured" | "partial" | "insufficient_evidence";
@@ -46,13 +75,8 @@ interface CalibrationSummary {
   }>;
 }
 
-const CALIBRATION_DIRECTION_TEXT: Record<string, string> = {
-  overconfident: "geçmişte bu güven düzeyi fazla iyimser çıktı",
-  aligned: "geçmişte bu güven düzeyi tutarlı çıktı",
-  underconfident: "geçmişte bu güven düzeyi temkinli kaldı",
-};
-
 export default function DecisionsPage() {
+  const locale = useLocale();
   const [stored, refresh] = useStored(() => {
     const p = loadProfile();
     const s = p ? getSector(p.sectorId) ?? null : null;
@@ -145,15 +169,17 @@ export default function DecisionsPage() {
     return (
       <div>
         <PageHeader
-          eyebrow="KARAR MERKEZİ"
-          title="Ne oluyor, neden önemli,"
-          accent="ne yapmalı."
-          desc="Kurumun kayıtlı karar vakaları — kanıt zinciri, güven skoru, karşı senaryo ve alternatiflerle."
+          eyebrow={t(locale, "decisions.eyebrow")}
+          title={t(locale, "decisions.title")}
+          accent={t(locale, "decisions.titleAccent")}
+          desc={t(locale, "decisions.taisSubtitle")}
         />
         <div className="px-10 pb-16 space-y-3 max-w-4xl">
-          {taisCases === null && <p className="text-sm text-abys-muted">Yükleniyor…</p>}
+          {taisCases === null && (
+            <p className="text-sm text-abys-muted">{t(locale, "decisions.loading")}</p>
+          )}
           {taisCases !== null && taisCases.length === 0 && (
-            <p className="text-sm text-abys-muted">Henüz kayıtlı karar vakası yok.</p>
+            <p className="text-sm text-abys-muted">{t(locale, "decisions.taisEmpty")}</p>
           )}
           {taisCases?.map((c) => (
             <TaisDecisionCard
@@ -177,10 +203,10 @@ export default function DecisionsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="KARAR MERKEZİ"
-        title="Ne oluyor, neden önemli,"
-        accent="ne yapmalı."
-        desc="ABYS operasyonel veriyi kanıt zinciri, güven skoru, karşı senaryo ve kısıt-farkındalıklı seçeneklerle karar vakalarına dönüştürür. Karar sizde kalır — sistem her kararı hafızasına işler."
+        eyebrow={t(locale, "decisions.eyebrow")}
+        title={t(locale, "decisions.title")}
+        accent={t(locale, "decisions.titleAccent")}
+        desc={t(locale, "decisions.subtitle")}
       />
 
       <div className="px-10 pb-16 space-y-6 max-w-4xl">
@@ -189,11 +215,14 @@ export default function DecisionsPage() {
             onClick={() => setShowAnalyzer(!showAnalyzer)}
             className="text-sm rounded-lg bg-abys-navy text-white px-4 py-2.5 hover:opacity-90 transition-opacity"
           >
-            {showAnalyzer ? "Analiz panelini kapat" : "Yeni analiz çalıştır"}
+            {showAnalyzer ? t(locale, "decisions.closeAnalyzer") : t(locale, "decisions.openAnalyzer")}
           </button>
           {openCases.length > 0 && (
             <span className="text-sm text-abys-muted">
-              {openCases.length} açık vaka · {decidedCases.length} karara bağlandı
+              {formatMessage(locale, "decisions.caseCounts", {
+                open: openCases.length,
+                decided: decidedCases.length,
+              })}
             </span>
           )}
         </div>
@@ -211,7 +240,7 @@ export default function DecisionsPage() {
 
         {openCases.length === 0 && !showAnalyzer && (
           <p className="text-sm text-abys-muted">
-            Açık karar vakası yok. Operasyonel veri girerek yeni analiz çalıştırın.
+            {t(locale, "decisions.noOpenCases")}
           </p>
         )}
 
@@ -228,7 +257,7 @@ export default function DecisionsPage() {
                 setServerReloadKey((k) => k + 1);
                 setSelectedId(null);
               }}
-              decidedBy={role?.label ?? "Kullanıcı"}
+              decidedBy={role?.label ?? t(locale, "decisions.defaultUser")}
               serverMode={!!session}
               calibration={calibration}
             />
@@ -238,7 +267,7 @@ export default function DecisionsPage() {
         {decidedCases.length > 0 && (
           <div>
             <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3 mt-8">
-              KARARA BAĞLANAN VAKALAR
+              {t(locale, "decisions.decidedHeading")}
             </p>
             <div className="space-y-2">
               {decidedCases.map((c) => {
@@ -252,10 +281,12 @@ export default function DecisionsPage() {
                       className="text-[10px] font-semibold tracking-wide rounded-full px-2 py-1 shrink-0"
                       style={{ color: meta.color, background: meta.soft }}
                     >
-                      {meta.label}
+                      {severityText(locale, c.severity)}
                     </span>
                     <p className="text-sm text-abys-ink flex-1">{c.title}</p>
-                    <span className="text-xs text-abys-muted shrink-0">✓ karar verildi</span>
+                    <span className="text-xs text-abys-muted shrink-0">
+                      {t(locale, "decisions.decidedBadge")}
+                    </span>
                   </div>
                 );
               })}
@@ -270,6 +301,7 @@ export default function DecisionsPage() {
 /* ---------------- Analiz paneli ---------------- */
 
 function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: DecisionCase[]) => void }) {
+  const locale = useLocale();
   const scenarios = useMemo(() => getScenarios(sector.id), [sector.id]);
   const [data, setData] = useState("");
   const [storedConstraints] = useStored(() => ({ list: getConstraints(sector.id) }));
@@ -289,7 +321,7 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
   async function run() {
     const trimmed = data.trim();
     if (!trimmed) {
-      setError("Analiz için operasyonel veri girin ya da bir senaryo seçin.");
+      setError(t(readLocale(), "decisions.analyzer.noData"));
       return;
     }
     setBusy(true);
@@ -322,7 +354,7 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
       }
       onDone(listCases(sector.id));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bilinmeyen hata.");
+      setError(err instanceof Error ? err.message : t(readLocale(), "decisions.unknownError"));
     } finally {
       setBusy(false);
     }
@@ -331,7 +363,9 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
   return (
     <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-6 space-y-4">
       <div>
-        <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">OPERASYONEL VERİ</p>
+        <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+          {t(locale, "decisions.analyzer.dataHeading")}
+        </p>
         {scenarios.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
             {scenarios.map((sc) => (
@@ -350,7 +384,7 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
           value={data}
           onChange={(e) => setData(e.target.value)}
           rows={8}
-          placeholder="Sistem export'u, vardiya raporu, operasyon notları... ABYS ham veriyi okur, uydurma sayı üretmez."
+          placeholder={t(locale, "decisions.analyzer.dataPlaceholder")}
           className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-abys-accent font-mono"
         />
       </div>
@@ -360,10 +394,13 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
           onClick={() => setShowConstraints((v) => !v)}
           className="text-xs tracking-widest text-abys-muted font-semibold flex items-center gap-1"
         >
-          CANLI KISIT MODELİ ({constraints.length}) {showConstraints ? "−" : "+"}
+          {formatMessage(locale, "decisions.analyzer.constraintsHeading", {
+            count: constraints.length,
+          })}{" "}
+          {showConstraints ? "−" : "+"}
         </button>
         <p className="text-xs text-abys-muted mt-1">
-          ABYS aksiyon önermeden önce bu kısıtlara bakar — sahada uygulanamayacak seçenek önermez.
+          {t(locale, "decisions.analyzer.constraintsHint")}
         </p>
         {showConstraints && (
           <div className="mt-3 space-y-2">
@@ -386,7 +423,7 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
                 <button
                   onClick={() => setConstraints((cs) => cs.filter((_, j) => j !== i))}
                   className="text-xs text-abys-muted hover:text-abys-critical px-1"
-                  title="Kısıtı sil"
+                  title={t(locale, "decisions.analyzer.deleteConstraint")}
                 >
                   ✕
                 </button>
@@ -394,11 +431,14 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
             ))}
             <button
               onClick={() =>
-                setConstraints((cs) => [...cs, { id: newId(), label: "Yeni kısıt", value: "" }])
+                setConstraints((cs) => [
+                  ...cs,
+                  { id: newId(), label: t(readLocale(), "decisions.analyzer.newConstraint"), value: "" },
+                ])
               }
               className="text-xs rounded-full px-3 py-1.5 border border-abys-ink/15 text-abys-ink hover:bg-white/60"
             >
-              + Kısıt ekle
+              {t(locale, "decisions.analyzer.addConstraint")}
             </button>
           </div>
         )}
@@ -412,11 +452,11 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
           disabled={busy}
           className="text-sm rounded-lg bg-abys-navy text-white px-5 py-2.5 disabled:opacity-50 hover:opacity-90 transition-opacity"
         >
-          {busy ? "ABYS analiz ediyor..." : "Analiz et"}
+          {busy ? t(locale, "decisions.analyzer.running") : t(locale, "decisions.analyzer.run")}
         </button>
         {busy && (
           <span className="text-xs text-abys-muted animate-pulse">
-            Yerel model çalışıyor — veri makinenizden çıkmıyor. Bu birkaç dakika sürebilir.
+            {t(locale, "decisions.analyzer.busyHint")}
           </span>
         )}
       </div>
@@ -655,12 +695,15 @@ function ConfidencePanel({
   c: DecisionCase;
   calibration: CalibrationSummary | null;
 }) {
+  const locale = useLocale();
   const bucket = calibration?.buckets.find(
     (item) => c.confidence >= item.min && c.confidence <= item.max
   );
   return (
     <div>
-      <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">GÜVEN SKORU</p>
+      <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+        {t(locale, "decisions.confidenceHeading")}
+      </p>
       <div className="flex items-center gap-3 mb-1.5">
         <ConfidenceBadge value={c.confidence} />
       </div>
@@ -669,17 +712,35 @@ function ConfidencePanel({
         <p className="mt-2 text-xs text-abys-muted" data-testid="calibration-hint">
           {bucket && bucket.status === "measured" && bucket.direction && bucket.improvedRate !== null ? (
             <>
-              Geçmişte bu güven düzeyinde ({bucket.withOutcome} sonuç) iyileşme{" "}
+              {formatMessage(locale, "decisions.calibration.measured", {
+                outcomes: bucket.withOutcome,
+              })}{" "}
               <span className="text-abys-ink font-medium">
-                %{(bucket.improvedRate * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })}
+                {formatMessage(locale, "decisions.calibration.rate", {
+                  value: (bucket.improvedRate * 100).toLocaleString(locale, {
+                    maximumFractionDigits: 1,
+                  }),
+                })}
               </span>{" "}
-              · {CALIBRATION_DIRECTION_TEXT[bucket.direction]}
-              {bucket.adjustedConfidence !== null && <> · düzeltilmiş güven %{bucket.adjustedConfidence}</>}
+              · {t(locale, `decisions.calibration.${bucket.direction}` as ShellKey)}
+              {bucket.adjustedConfidence !== null && (
+                <>
+                  {" "}
+                  {formatMessage(locale, "decisions.calibration.adjusted", {
+                    value: bucket.adjustedConfidence,
+                  })}
+                </>
+              )}
             </>
           ) : (
             <>
-              Kalibrasyon için kanıt yetersiz
-              {bucket ? ` · bu kovada ${bucket.withOutcome}/${calibration.threshold} sonuç` : ""}
+              {t(locale, "decisions.calibration.insufficient")}
+              {bucket
+                ? formatMessage(locale, "decisions.calibration.bucketInfo", {
+                    outcomes: bucket.withOutcome,
+                    threshold: calibration.threshold,
+                  })
+                : ""}
             </>
           )}
         </p>
