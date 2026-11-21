@@ -76,6 +76,7 @@ async function main() {
   const login = await req("/api/auth/login", {
     method: "POST",
     body: { email: EMAIL, password: PASSWORD },
+    headers: { "user-agent": "ABYS-Smoke/1.0" },
   });
   expectStatus("demo girişi", login.status, 200);
   const setCookie = login.headers.get("set-cookie") ?? "";
@@ -112,6 +113,12 @@ async function main() {
   const sessions = await req("/api/auth/sessions", { cookie });
   expectStatus("aktif oturum listesi", sessions.status, 200);
   if (Array.isArray(sessions.json?.sessions)) ok("oturum kayıtları", `${sessions.json.sessions.length} oturum`); else bad("oturum kayıtları");
+  const ownSession = sessions.json?.sessions?.find?.((row) => row.current);
+  if (ownSession && typeof ownSession.lastSeenAt === "string" && String(ownSession.userAgent ?? "").includes("ABYS-Smoke")) {
+    ok("oturum cihazı", String(ownSession.userAgent));
+  } else {
+    bad("oturum cihazı", "current.lastSeenAt/userAgent eksik");
+  }
 
   const dqScore = await req("/api/data-quality/score?maxAgeDays=30", { cookie });
   expectStatus("veri kalitesi skoru", dqScore.status, 200);
@@ -122,6 +129,14 @@ async function main() {
     );
   } else {
     bad("veri kalitesi boyutları", "dimensions eksik");
+  }
+
+  const dqFiltered = await req("/api/data-quality/score?maxAgeDays=30&label=__smoke_yok__", { cookie });
+  expectStatus("veri kalitesi etiket filtresi", dqFiltered.status, 200);
+  if (dqFiltered.json?.total === 0 && dqFiltered.json?.label === "__smoke_yok__") {
+    ok("veri kalitesi filtre kapsamı", "0 satır");
+  } else {
+    bad("veri kalitesi filtre kapsamı", "etiket kapsamı uygulanmadı");
   }
 
   // 5) Yetki sınırı: ceo kullanıcı yönetemez
@@ -145,6 +160,19 @@ async function main() {
     ["karar defteri", "/dashboard/decision-ledger"],
     ["tahmin", "/dashboard/forecast"],
     ["bağlantılar", "/dashboard/connectors"],
+    ["KPI verisi", "/dashboard/kpi"],
+    ["Ask ABYS", "/dashboard/ask"],
+    ["veri kalitesi", "/dashboard/data-quality"],
+    ["sinyaller", "/dashboard/alerts"],
+    ["analiz", "/dashboard/analysis"],
+    ["süreç zekâsı", "/dashboard/process"],
+    ["raporlar", "/dashboard/reports"],
+    ["kurumsal hafıza", "/dashboard/memory"],
+    ["karar seçenekleri", "/dashboard/options"],
+    ["senaryo laboratuvarı", "/dashboard/scenarios"],
+    ["organizasyon", "/dashboard/organization"],
+    ["iş keşfi", "/dashboard/discovery"],
+    ["veri kaynakları", "/dashboard/integrations"],
   ]) {
     const r = await req(path, { cookie });
     expectStatus(`${name} ekranı`, r.status, 200);
