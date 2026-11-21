@@ -909,6 +909,50 @@ export type ShellKey =
   | "ledger.exportCsv"
   | "audit.exportCsv"
   | "forecast.exportCsv"
+  | "options.eyebrow"
+  | "options.title"
+  | "options.titleAccent"
+  | "options.subtitle"
+  | "options.criteriaHeading"
+  | "options.addCriterion"
+  | "options.criterionName"
+  | "options.direction"
+  | "options.higherIsBetter"
+  | "options.lowerIsBetter"
+  | "options.weight"
+  | "options.remove"
+  | "options.optionsHeading"
+  | "options.addOption"
+  | "options.colOption"
+  | "options.optionName"
+  | "options.reset"
+  | "options.evaluating"
+  | "options.evaluate"
+  | "options.resultHeading"
+  | "options.colScore"
+  | "options.colPareto"
+  | "options.colBestWorst"
+  | "options.dominatedBy"
+  | "options.onFrontier"
+  | "options.allocationHeading"
+  | "options.allocationDescription"
+  | "options.addAllocation"
+  | "options.colAllocation"
+  | "options.colMin"
+  | "options.colMax"
+  | "options.colUnitValue"
+  | "options.perUnit"
+  | "options.allocationName"
+  | "options.optimizing"
+  | "options.optimize"
+  | "options.statusOptimal"
+  | "options.statusFeasible"
+  | "options.statusInfeasible"
+  | "options.infeasibleLine"
+  | "options.allocationLine"
+  | "options.methodLine"
+  | "options.evaluateFailed"
+  | "options.optimizeFailed"
   | "advisors.eyebrow"
   | "advisors.title"
   | "advisors.titleAccent"
@@ -2618,6 +2662,50 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
+  "options.eyebrow": { tr: "KARAR SEÇENEKLERİ", en: "DECISION OPTIONS" },
+  "options.title": { tr: "Hangi seçenek,", en: "Which option," },
+  "options.titleAccent": { tr: "hangi ödünleşimle?", en: "at what trade-off?" },
+  "options.subtitle": { tr: "Seçenekleri birden fazla kriterde puanlayın. Sonuç: ağırlıklı sıralama ve ağırlıktan bağımsız Pareto sınırı. Hiçbir seçenek tek doğru cevap olarak dayatılmaz.", en: "Score the options across several criteria. The result is a weighted ranking plus a weight-independent Pareto frontier. No option is pushed as the single right answer." },
+  "options.criteriaHeading": { tr: "KRİTERLER", en: "CRITERIA" },
+  "options.addCriterion": { tr: "+ Kriter", en: "+ Criterion" },
+  "options.criterionName": { tr: "Kriter adı", en: "Criterion name" },
+  "options.direction": { tr: "Yön", en: "Direction" },
+  "options.higherIsBetter": { tr: "Yüksek iyi", en: "Higher is better" },
+  "options.lowerIsBetter": { tr: "Düşük iyi", en: "Lower is better" },
+  "options.weight": { tr: "Ağırlık", en: "Weight" },
+  "options.remove": { tr: "Kaldır", en: "Remove" },
+  "options.optionsHeading": { tr: "SEÇENEKLER", en: "OPTIONS" },
+  "options.addOption": { tr: "+ Seçenek", en: "+ Option" },
+  "options.colOption": { tr: "Seçenek", en: "Option" },
+  "options.optionName": { tr: "Seçenek adı", en: "Option name" },
+  "options.reset": { tr: "Sıfırla", en: "Reset" },
+  "options.evaluating": { tr: "Değerlendiriliyor…", en: "Evaluating…" },
+  "options.evaluate": { tr: "Değerlendir", en: "Evaluate" },
+  "options.evaluateFailed": { tr: "Değerlendirme başarısız.", en: "Evaluation failed." },
+  "options.optimizeFailed": { tr: "Optimizasyon başarısız.", en: "Optimization failed." },
+  "options.resultHeading": { tr: "SONUÇ — AĞIRLIKLI SIRALAMA", en: "RESULT — WEIGHTED RANKING" },
+  "options.colScore": { tr: "Skor", en: "Score" },
+  "options.colPareto": { tr: "Pareto", en: "Pareto" },
+  "options.colBestWorst": { tr: "En güçlü / zayıf", en: "Strongest / weakest" },
+  "options.dominatedBy": { tr: "Baskın: {list}", en: "Dominated by: {list}" },
+  "options.onFrontier": { tr: "Sınırda", en: "On frontier" },
+  "options.allocationHeading": { tr: "KAYNAK TAHSİSİ · OPTİMİZASYON", en: "RESOURCE ALLOCATION · OPTIMIZATION" },
+  "options.allocationDescription": { tr: "Kapasiteleri ve birim tüketimleri tanımlayın. Çözücü yalnızca verilen sayısal model altında en yüksek toplam katkıyı arar.", en: "Define capacities and per-unit consumption. The solver only searches for the highest total contribution under the given numeric model." },
+  "options.addAllocation": { tr: "+ Tahsis", en: "+ Allocation" },
+  "options.colAllocation": { tr: "Tahsis", en: "Allocation" },
+  "options.colMin": { tr: "Min", en: "Min" },
+  "options.colMax": { tr: "Maks", en: "Max" },
+  "options.colUnitValue": { tr: "Birim değer", en: "Unit value" },
+  "options.perUnit": { tr: "{unit}/birim", en: "{unit}/unit" },
+  "options.allocationName": { tr: "Tahsis adı", en: "Allocation name" },
+  "options.optimizing": { tr: "Optimize ediliyor…", en: "Optimizing…" },
+  "options.optimize": { tr: "Optimal tahsisi hesapla", en: "Compute optimal allocation" },
+  "options.statusOptimal": { tr: "Optimal tahsis", en: "Optimal allocation" },
+  "options.statusFeasible": { tr: "Uygulanabilir tahsis (arama sınırı)", en: "Feasible allocation (search limit)" },
+  "options.statusInfeasible": { tr: "Uygulanabilir tahsis yok", en: "No feasible allocation" },
+  "options.infeasibleLine": { tr: "{resource}: gereken {required} / kapasite {capacity}", en: "{resource}: required {required} / capacity {capacity}" },
+  "options.allocationLine": { tr: "{label}: {units} birim · {value} {unit}", en: "{label}: {units} units · {value} {unit}" },
+  "options.methodLine": { tr: "{method} · {nodes} düğüm", en: "{method} · {nodes} nodes" },
   "advisors.eyebrow": { tr: "ADVISOR ANALYTICS", en: "ADVISOR ANALYTICS" },
   "advisors.title": { tr: "Danışman", en: "Advisor" },
   "advisors.titleAccent": { tr: "performans metrikleri.", en: "performance metrics." },

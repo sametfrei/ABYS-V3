@@ -1,7 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
 
 type Direction = "maximize" | "minimize";
 
@@ -67,6 +90,7 @@ function newId(prefix: string): string {
 }
 
 export default function OptionsPage() {
+  const locale = useLocale();
   const [criteria, setCriteria] = useState<Criterion[]>([
     { id: "cost", label: "Maliyet", direction: "minimize", weight: 2 },
     { id: "risk", label: "Risk", direction: "minimize", weight: 1 },
@@ -163,7 +187,9 @@ export default function OptionsPage() {
       if (!res.ok) throw new Error(body.error ?? `Değerlendirme başarısız (HTTP ${res.status}).`);
       setResult(body);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Değerlendirme başarısız.");
+      setError(
+        err instanceof Error ? err.message : t(readLocale(), "options.evaluateFailed")
+      );
       setResult(null);
     } finally {
       setBusy(false);
@@ -208,7 +234,9 @@ export default function OptionsPage() {
       if (!res.ok) throw new Error(body.error ?? `Optimizasyon başarısız (HTTP ${res.status}).`);
       setOptimization(body as OptimizationResult);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Optimizasyon başarısız.");
+      setError(
+        err instanceof Error ? err.message : t(readLocale(), "options.optimizeFailed")
+      );
       setOptimization(null);
     } finally {
       setOptBusy(false);
@@ -220,10 +248,10 @@ export default function OptionsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="KARAR SEÇENEKLERİ"
-        title="Hangi seçenek,"
-        accent="hangi ödünleşimle?"
-        desc="Seçenekleri birden fazla kriterde puanlayın. Sonuç: ağırlıklı sıralama ve ağırlıktan bağımsız Pareto sınırı. Hiçbir seçenek tek doğru cevap olarak dayatılmaz."
+        eyebrow={t(locale, "options.eyebrow")}
+        title={t(locale, "options.title")}
+        accent={t(locale, "options.titleAccent")}
+        desc={t(locale, "options.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-5xl space-y-6">
@@ -235,9 +263,11 @@ export default function OptionsPage() {
 
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs tracking-widest text-abys-muted font-semibold">KRİTERLER</p>
+            <p className="text-xs tracking-widest text-abys-muted font-semibold">
+              {t(locale, "options.criteriaHeading")}
+            </p>
             <button onClick={addCriterion} className="text-xs rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft">
-              + Kriter
+              {t(locale, "options.addCriterion")}
             </button>
           </div>
           <ul className="space-y-2 list-none p-0 m-0">
@@ -247,19 +277,19 @@ export default function OptionsPage() {
                   value={c.label}
                   onChange={(e) => updateCriterion(c.id, { label: e.target.value })}
                   className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-1.5 min-w-[140px]"
-                  aria-label="Kriter adı"
+                  aria-label={t(locale, "options.criterionName")}
                 />
                 <select
                   value={c.direction}
                   onChange={(e) => updateCriterion(c.id, { direction: e.target.value as Direction })}
                   className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1.5"
-                  aria-label="Yön"
+                  aria-label={t(locale, "options.direction")}
                 >
-                  <option value="maximize">Yüksek iyi</option>
-                  <option value="minimize">Düşük iyi</option>
+                  <option value="maximize">{t(locale, "options.higherIsBetter")}</option>
+                  <option value="minimize">{t(locale, "options.lowerIsBetter")}</option>
                 </select>
                 <label className="text-xs text-abys-muted flex items-center gap-1">
-                  Ağırlık
+                  {t(locale, "options.weight")}
                   <input
                     type="number"
                     min={0.1}
@@ -274,7 +304,7 @@ export default function OptionsPage() {
                   disabled={criteria.length <= 1}
                   className="text-xs text-abys-muted hover:text-abys-critical disabled:opacity-30"
                 >
-                  Kaldır
+                  {t(locale, "options.remove")}
                 </button>
               </li>
             ))}
@@ -283,15 +313,17 @@ export default function OptionsPage() {
 
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 overflow-x-auto">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs tracking-widest text-abys-muted font-semibold">SEÇENEKLER</p>
+            <p className="text-xs tracking-widest text-abys-muted font-semibold">
+              {t(locale, "options.optionsHeading")}
+            </p>
             <button onClick={addOption} className="text-xs rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft">
-              + Seçenek
+              {t(locale, "options.addOption")}
             </button>
           </div>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-abys-muted">
-                <th className="py-1 pr-2 font-medium">Seçenek</th>
+                <th className="py-1 pr-2 font-medium">{t(locale, "options.colOption")}</th>
                 {criteria.map((c) => (
                   <th key={c.id} className="py-1 px-2 font-medium">
                     {c.label || c.id}
@@ -310,7 +342,7 @@ export default function OptionsPage() {
                         setOptions((list) => list.map((x) => (x.id === o.id ? { ...x, label: e.target.value } : x)))
                       }
                       className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 w-36"
-                      aria-label="Seçenek adı"
+                      aria-label={t(locale, "options.optionName")}
                     />
                   </td>
                   {criteria.map((c) => (
@@ -328,14 +360,14 @@ export default function OptionsPage() {
                   <td className="py-1">
                     <div className="flex gap-2">
                       <button onClick={() => fillScores(o.id)} className="text-xs text-abys-muted hover:text-abys-ink">
-                        Sıfırla
+                        {t(locale, "options.reset")}
                       </button>
                       <button
                         onClick={() => removeOption(o.id)}
                         disabled={options.length <= 2}
                         className="text-xs text-abys-muted hover:text-abys-critical disabled:opacity-30"
                       >
-                        Kaldır
+                        {t(locale, "options.remove")}
                       </button>
                     </div>
                   </td>
@@ -348,21 +380,23 @@ export default function OptionsPage() {
             disabled={busy || criteria.length === 0 || options.length < 2}
             className="mt-4 text-sm rounded-full bg-abys-navy text-white px-5 py-2 hover:opacity-90 disabled:opacity-40"
           >
-            {busy ? "Değerlendiriliyor…" : "Değerlendir"}
+            {busy ? t(locale, "options.evaluating") : t(locale, "options.evaluate")}
           </button>
         </div>
 
         {result && (
           <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
-            <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">SONUÇ — AĞIRLIKLI SIRALAMA</p>
+            <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+              {t(locale, "options.resultHeading")}
+            </p>
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-abys-muted">
                   <th className="py-1 font-medium">#</th>
-                  <th className="py-1 font-medium">Seçenek</th>
-                  <th className="py-1 font-medium">Skor</th>
-                  <th className="py-1 font-medium">Pareto</th>
-                  <th className="py-1 font-medium">En güçlü / zayıf</th>
+                  <th className="py-1 font-medium">{t(locale, "options.colOption")}</th>
+                  <th className="py-1 font-medium">{t(locale, "options.colScore")}</th>
+                  <th className="py-1 font-medium">{t(locale, "options.colPareto")}</th>
+                  <th className="py-1 font-medium">{t(locale, "options.colBestWorst")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -373,12 +407,14 @@ export default function OptionsPage() {
                       {o.label}
                       {o.dominatedBy.length > 0 && (
                         <span className="block text-[11px] text-abys-muted">
-                          Baskın: {o.dominatedBy.map((id) => labelById.get(id) ?? id).join(", ")}
+                          {formatMessage(locale, "options.dominatedBy", {
+                            list: o.dominatedBy.map((id) => labelById.get(id) ?? id).join(", "),
+                          })}
                         </span>
                       )}
                     </td>
                     <td className="py-1 font-mono">{o.weightedScore}</td>
-                    <td className="py-1">{o.onParetoFrontier ? "Sınırda" : "—"}</td>
+                    <td className="py-1">{o.onParetoFrontier ? t(locale, "options.onFrontier") : "—"}</td>
                     <td className="py-1 text-xs">
                       {o.bestCriterion?.label ?? "—"} / {o.worstCriterion?.label ?? "—"}
                     </td>
@@ -393,16 +429,18 @@ export default function OptionsPage() {
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
           <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
             <div>
-              <p className="text-xs tracking-widest text-abys-muted font-semibold">KAYNAK TAHSİSİ · OPTİMİZASYON</p>
+              <p className="text-xs tracking-widest text-abys-muted font-semibold">
+                {t(locale, "options.allocationHeading")}
+              </p>
               <p className="text-[11px] text-abys-muted mt-1">
-                Kapasiteleri ve birim tüketimleri tanımlayın. Çözücü yalnızca verilen sayısal model altında en yüksek toplam katkıyı arar.
+                {t(locale, "options.allocationDescription")}
               </p>
             </div>
             <button
               onClick={addOptimizationOption}
               className="text-xs rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft"
             >
-              + Tahsis
+              {t(locale, "options.addAllocation")}
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
@@ -430,13 +468,13 @@ export default function OptionsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-abys-muted">
-                  <th className="py-1 pr-2 font-medium">Tahsis</th>
-                  <th className="py-1 px-2 font-medium">Min</th>
-                  <th className="py-1 px-2 font-medium">Maks</th>
-                  <th className="py-1 px-2 font-medium">Birim değer</th>
+                  <th className="py-1 pr-2 font-medium">{t(locale, "options.colAllocation")}</th>
+                  <th className="py-1 px-2 font-medium">{t(locale, "options.colMin")}</th>
+                  <th className="py-1 px-2 font-medium">{t(locale, "options.colMax")}</th>
+                  <th className="py-1 px-2 font-medium">{t(locale, "options.colUnitValue")}</th>
                   {optResources.map((resource) => (
                     <th key={resource.id} className="py-1 px-2 font-medium">
-                      {resource.unit}/birim
+                      {formatMessage(locale, "options.perUnit", { unit: resource.unit })}
                     </th>
                   ))}
                   <th className="py-1 font-medium" />
@@ -450,7 +488,7 @@ export default function OptionsPage() {
                         value={option.label}
                         onChange={(event) => updateOptimizationOption(option.id, { label: event.target.value })}
                         className="w-40 rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-sm"
-                        aria-label="Tahsis adı"
+                        aria-label={t(locale, "options.allocationName")}
                       />
                     </td>
                     <td className="py-1 px-2">
@@ -508,7 +546,7 @@ export default function OptionsPage() {
                         disabled={optOptions.length <= 1}
                         className="text-xs text-abys-muted hover:text-abys-critical disabled:opacity-30"
                       >
-                        Kaldır
+                        {t(locale, "options.remove")}
                       </button>
                     </td>
                   </tr>
@@ -521,27 +559,32 @@ export default function OptionsPage() {
             disabled={optBusy || optOptions.length === 0}
             className="mt-4 text-sm rounded-full bg-abys-navy text-white px-5 py-2 hover:opacity-90 disabled:opacity-40"
           >
-            {optBusy ? "Optimize ediliyor…" : "Optimal tahsisi hesapla"}
+            {optBusy ? t(locale, "options.optimizing") : t(locale, "options.optimize")}
           </button>
           {optimization && (
             <div className="mt-4 rounded-xl border border-abys-accent/25 bg-white/70 p-4 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-sm text-abys-ink">
                   {optimization.status === "optimal"
-                    ? "Optimal tahsis"
+                    ? t(locale, "options.statusOptimal")
                     : optimization.status === "feasible"
-                      ? "Uygulanabilir tahsis (arama sınırı)"
-                      : "Uygulanabilir tahsis yok"}
+                      ? t(locale, "options.statusFeasible")
+                      : t(locale, "options.statusInfeasible")}
                 </p>
                 <span className="rounded-full bg-abys-accent-soft px-2 py-0.5 text-[10px] text-abys-accent">
-                  {optimization.objective.label}: {optimization.objectiveValue.toLocaleString("tr-TR")} {optimization.objective.unit}
+                  {optimization.objective.label}:{" "}
+                  {optimization.objectiveValue.toLocaleString(locale)} {optimization.objective.unit}
                 </span>
               </div>
               {optimization.status === "infeasible" ? (
                 <div className="text-[11px] text-abys-warning">
                   {optimization.infeasibility.map((item) => (
                     <p key={item.resourceId}>
-                      {item.resourceId}: gereken {item.required.toLocaleString("tr-TR")} / kapasite {item.capacity.toLocaleString("tr-TR")}
+                      {formatMessage(locale, "options.infeasibleLine", {
+                        resource: item.resourceId,
+                        required: item.required.toLocaleString(locale),
+                        capacity: item.capacity.toLocaleString(locale),
+                      })}
                     </p>
                   ))}
                 </div>
@@ -549,14 +592,22 @@ export default function OptionsPage() {
                 <div className="space-y-1">
                   {optimization.allocations.map((allocation) => (
                     <p key={allocation.optionId} className="text-[11px] text-abys-muted">
-                      {allocation.label}: {allocation.units} birim · {allocation.value.toLocaleString("tr-TR")} {optimization.objective.unit}
+                      {formatMessage(locale, "options.allocationLine", {
+                        label: allocation.label,
+                        units: allocation.units,
+                        value: allocation.value.toLocaleString(locale),
+                        unit: optimization.objective.unit,
+                      })}
                     </p>
                   ))}
                 </div>
               )}
               <p className="text-[10px] text-abys-muted">{optimization.note}</p>
               <p className="text-[10px] text-abys-muted">
-                {optimization.method} · {optimization.nodesExplored.toLocaleString("tr-TR")} düğüm
+                {formatMessage(locale, "options.methodLine", {
+                  method: optimization.method,
+                  nodes: optimization.nodesExplored.toLocaleString(locale),
+                })}
               </p>
             </div>
           )}
