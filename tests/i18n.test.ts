@@ -46,6 +46,43 @@ describe("i18n kabuk sözlüğü", () => {
     expect(t("en", "nav.decisionLedger")).toBe("Decision Ledger");
   });
 
+  it("aksiyon ekranı anahtarları iki dilde dolu", () => {
+    const actionKeys: ShellKey[] = [
+      "actions.title",
+      "actions.subtitle",
+      "actions.empty",
+      "actions.overdueBadge",
+      "actions.loading",
+      "actions.unauthorized",
+      "actions.forbidden",
+      "actions.notFound",
+      "actions.pending",
+      "actions.succeeded",
+      "actions.failed",
+      "actions.attemptStatus",
+      "actions.executePrep",
+    ];
+    const keys = new Set(shellKeys());
+    for (const key of actionKeys) {
+      expect(keys.has(key)).toBe(true);
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("aksiyon metinleri Türkçe ve İngilizcede farklıdır", () => {
+    for (const key of [
+      "actions.title",
+      "actions.subtitle",
+      "actions.empty",
+      "actions.pending",
+      "actions.succeeded",
+      "actions.failed",
+    ] satisfies ShellKey[]) {
+      expect(t("tr", key)).not.toBe(t("en", key));
+    }
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });

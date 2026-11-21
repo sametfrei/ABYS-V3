@@ -1,9 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { ExecutionAttemptStatus } from "@/components/ExecutionAttemptStatus";
 import { PageHeader } from "@/components/PageHeader";
 import { overdueDays } from "@/lib/action-deadline";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 import { useSession } from "@/lib/use-session";
 
 /**
@@ -44,24 +52,33 @@ interface ExecutionIntent {
   created_at: string;
 }
 
-const STATUS_META: Record<string, { label: string; color: string }> = {
-  open: { label: "Açık", color: "var(--abys-muted, #8a8578)" },
-  in_progress: { label: "Yürütülüyor", color: "var(--abys-warning)" },
-  done: { label: "Tamamlandı", color: "var(--abys-healthy)" },
-  cancelled: { label: "İptal", color: "var(--abys-critical)" },
+interface LocalizedPanelError {
+  key: ShellKey;
+  serverMessage?: string;
+}
+
+const STATUS_META: Record<string, { labelKey: ShellKey; color: string }> = {
+  open: { labelKey: "actions.statusOpen", color: "var(--abys-muted, #8a8578)" },
+  in_progress: { labelKey: "actions.statusInProgress", color: "var(--abys-warning)" },
+  done: { labelKey: "actions.statusDone", color: "var(--abys-healthy)" },
+  cancelled: { labelKey: "actions.statusCancelled", color: "var(--abys-critical)" },
 };
 
-const DECISION_STATE_LABEL: Record<string, string> = {
-  draft: "Taslak",
-  under_review: "İnceleniyor",
-  awaiting_approval: "Onay bekliyor",
-  approved: "Onaylandı",
-  rejected: "Reddedildi",
-  in_execution: "Yürütmede",
-  completed: "Tamamlandı",
-  outcome_review: "Sonuç incelemesi",
-  closed: "Kapandı",
+const DECISION_STATE_LABEL: Record<string, ShellKey> = {
+  draft: "actions.decisionDraft",
+  under_review: "actions.decisionUnderReview",
+  awaiting_approval: "actions.decisionAwaitingApproval",
+  approved: "actions.decisionApproved",
+  rejected: "actions.decisionRejected",
+  in_execution: "actions.decisionInExecution",
+  completed: "actions.decisionCompleted",
+  outcome_review: "actions.decisionOutcomeReview",
+  closed: "actions.decisionClosed",
 };
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
 
 interface ActionSummaryCounts {
   open: number;
@@ -88,8 +105,9 @@ function newIntentKey(): string {
 
 export default function ActionsPage() {
   const session = useSession();
+  const locale = useLocale();
   const [actions, setActions] = useState<ActionRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ShellKey | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const load = useCallback(() => setReloadKey((k) => k + 1), []);
 
@@ -100,12 +118,12 @@ export default function ActionsPage() {
       .then(async (res) => {
         if (cancelled) return;
         if (res.status === 401) {
-          setError("Bu sayfa kurumsal oturum gerektirir. Lütfen giriş yapın.");
+          setError("actions.unauthorized");
           setActions([]);
           return;
         }
         if (!res.ok) {
-          setError("Aksiyonlar yüklenemedi.");
+          setError("actions.loadFailed");
           setActions([]);
           return;
         }
@@ -114,7 +132,7 @@ export default function ActionsPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          setError("Aksiyonlar yüklenemedi.");
+          setError("actions.loadFailed");
           setActions([]);
         }
       });
@@ -128,22 +146,25 @@ export default function ActionsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="AKSİYONLAR"
-        title="Kararların"
-        accent="yürütülmesi."
-        desc="Her aksiyon bir karara bağlıdır. İlerlemeyi güncelleyin, tamamlanınca gerçekleşen sonucu ve dersi kaydedin."
+        eyebrow={t(locale, "nav.actions").toLocaleUpperCase(locale)}
+        title={t(locale, "actions.title")}
+        accent={t(locale, "actions.titleAccent")}
+        desc={t(locale, "actions.subtitle")}
       />
       <div className="px-10 pb-16 max-w-3xl">
         {error && (
-          <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3 mb-4">{error}</p>
+          <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3 mb-4">
+            {t(locale, error)}
+          </p>
         )}
-        {actions === null && <p className="text-sm text-abys-muted">Yükleniyor…</p>}
+        {actions === null && (
+          <p className="text-sm text-abys-muted">{t(locale, "actions.loading")}</p>
+        )}
         {actions !== null && actions.length > 0 && summary && <ActionSummary counts={summary} />}
         {actions !== null && actions.length === 0 && !error && (
           <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-8 text-center">
             <p className="text-sm text-abys-muted">
-              Henüz aksiyon yok. Karar Merkezi&rsquo;nde bir öneriyi kabul edin —
-              onaylanan karar burada hesap verebilir bir aksiyona dönüşür.
+              {t(locale, "actions.empty")}
             </p>
           </div>
         )}
@@ -158,50 +179,77 @@ export default function ActionsPage() {
 }
 
 function ActionSummary({ counts }: { counts: ActionSummaryCounts }) {
+  const locale = useLocale();
   const activeCount = counts.open + counts.in_progress;
   const items = [
-    { key: "open", label: "Açık", hint: "Henüz başlamadı", value: counts.open },
-    { key: "in_progress", label: "Yürütülüyor", hint: "Devam ediyor", value: counts.in_progress },
-    { key: "done", label: "Tamamlandı", hint: "Tamamlanan iş", value: counts.done },
-    { key: "cancelled", label: "İptal", hint: "İptal edilen iş", value: counts.cancelled },
-  ];
+    {
+      key: "open",
+      labelKey: "actions.statusOpen",
+      hintKey: "actions.hintNotStarted",
+      value: counts.open,
+    },
+    {
+      key: "in_progress",
+      labelKey: "actions.statusInProgress",
+      hintKey: "actions.hintInProgress",
+      value: counts.in_progress,
+    },
+    {
+      key: "done",
+      labelKey: "actions.statusDone",
+      hintKey: "actions.hintDone",
+      value: counts.done,
+    },
+    {
+      key: "cancelled",
+      labelKey: "actions.statusCancelled",
+      hintKey: "actions.hintCancelled",
+      value: counts.cancelled,
+    },
+  ] as const;
 
   return (
     <section aria-labelledby="action-summary-heading" className="mb-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
         <h2 id="action-summary-heading" className="text-xs font-semibold tracking-widest text-abys-muted uppercase">
-          Yönetici özeti
+          {t(locale, "actions.summaryHeading")}
         </h2>
         <p className="text-xs text-abys-muted">
-          Açık iş: <span className="font-semibold text-abys-navy">{activeCount}</span>
-          {" "}· Tamamlanan iş: <span className="font-semibold text-abys-healthy">{counts.done}</span>
+          {t(locale, "actions.openWork")}: <span className="font-semibold text-abys-navy">{activeCount}</span>
+          {" "}· {t(locale, "actions.completedWork")}: <span className="font-semibold text-abys-healthy">{counts.done}</span>
         </p>
       </div>
       <dl className="grid grid-cols-2 sm:grid-cols-4 gap-3 m-0">
-        {items.map((item) => (
-          <div key={item.key} className="rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3">
-            <dt className="text-[11px] tracking-wide text-abys-muted uppercase">{item.label}</dt>
-            <dd className="font-serif text-2xl text-abys-navy m-0" aria-label={`${item.label}: ${item.value}`}>
-              {item.value}
-            </dd>
-            <p className="text-[11px] text-abys-muted m-0">{item.hint}</p>
-          </div>
-        ))}
+        {items.map((item) => {
+          const label = t(locale, item.labelKey);
+          return (
+            <div key={item.key} className="rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3">
+              <dt className="text-[11px] tracking-wide text-abys-muted uppercase">{label}</dt>
+              <dd className="font-serif text-2xl text-abys-navy m-0" aria-label={`${label}: ${item.value}`}>
+                {item.value}
+              </dd>
+              <p className="text-[11px] text-abys-muted m-0">{t(locale, item.hintKey)}</p>
+            </div>
+          );
+        })}
       </dl>
-      <p className="sr-only">
-        Açık iş, açık ve yürütülmekte olan aksiyonların toplamıdır; tamamlanan iş yalnızca tamamlandı durumundaki aksiyonları kapsar.
-      </p>
+      <p className="sr-only">{t(locale, "actions.summarySr")}</p>
     </section>
   );
 }
 
 function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () => void }) {
+  const locale = useLocale();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState(action.progress_note ?? "");
   const [showOutcome, setShowOutcome] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
   const meta = STATUS_META[action.status] ?? STATUS_META.open;
+  const decisionStateLabel = (state: string) => {
+    const key = DECISION_STATE_LABEL[state];
+    return key ? t(locale, key) : state;
+  };
 
   async function patch(status?: string) {
     setBusy(true);
@@ -217,13 +265,13 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
           | { error?: string; decisionState?: string }
           | null;
         const stateSuffix = payload?.decisionState
-          ? ` Karar durumu: ${DECISION_STATE_LABEL[payload.decisionState] ?? payload.decisionState}.`
+          ? ` ${t(locale, "actions.decisionState")}: ${decisionStateLabel(payload.decisionState)}.`
           : "";
-        throw new Error((payload?.error ?? "Aksiyon güncellenemedi.") + stateSuffix);
+        throw new Error((payload?.error ?? t(locale, "actions.updateFailed")) + stateSuffix);
       }
       onChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Aksiyon güncellenemedi.");
+      setError(err instanceof Error ? err.message : t(locale, "actions.updateFailed"));
     } finally {
       setBusy(false);
     }
@@ -237,31 +285,31 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
           className="text-[11px] font-semibold rounded-full px-2.5 py-1 whitespace-nowrap"
           style={{ color: meta.color, backgroundColor: `color-mix(in srgb, ${meta.color} 12%, transparent)` }}
         >
-          {meta.label}
+          {t(locale, meta.labelKey)}
         </span>
       </div>
       <p className="text-xs text-abys-muted mb-3">
-        Sorumlu: {action.owner} · Son tarih: {action.due_at ? new Date(action.due_at).toLocaleDateString("tr-TR") : "belirlenmedi"} · Köken karar: <span className="font-mono">{action.decision_id.slice(0, 8)}</span>
+        {t(locale, "actions.owner")}: {action.owner} · {t(locale, "actions.due")}: {action.due_at ? new Date(action.due_at).toLocaleDateString(locale) : t(locale, "actions.notSpecified")} · {t(locale, "actions.originDecision")}: <span className="font-mono">{action.decision_id.slice(0, 8)}</span>
       </p>
       {overdueDays(action.due_at, action.status) !== null && (
         <p
           className="text-[11px] font-semibold mb-2 rounded-full inline-block px-2 py-0.5"
           style={{ color: "var(--abys-critical)", backgroundColor: "var(--abys-critical-soft)" }}
         >
-          Vadesi geçti · {overdueDays(action.due_at, action.status)} gün
+          {t(locale, "actions.overdueBadge")} · {overdueDays(action.due_at, action.status)} {t(locale, "actions.days")}
         </p>
       )}
       <p className="text-xs text-abys-muted mb-3">
-        Karar durumu: {DECISION_STATE_LABEL[action.decision_state] ?? action.decision_state} ·{" "}
-        {action.event_count} yürütme olayı
+        {t(locale, "actions.decisionState")}: {decisionStateLabel(action.decision_state)} ·{" "}
+        {action.event_count} {t(locale, "actions.executionEvents")}
         {action.last_event_at && (
           <>
-            {" "}· Son olay: {action.last_event_by} / {new Date(action.last_event_at).toLocaleString("tr-TR")}
+            {" "}· {t(locale, "actions.lastEvent")}: {action.last_event_by} / {new Date(action.last_event_at).toLocaleString(locale)}
           </>
         )}
       </p>
       <p className="text-[11px] text-abys-muted mb-3">
-        İlgili risk: <span className="font-mono">{action.related_risk_id ? action.related_risk_id : "risk referansı yok"}</span>
+        {t(locale, "actions.relatedRisk")}: <span className="font-mono">{action.related_risk_id ? action.related_risk_id : t(locale, "actions.noRiskReference")}</span>
       </p>
       {error && <p className="text-xs text-abys-critical mb-3">{error}</p>}
 
@@ -269,37 +317,37 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={2}
-        placeholder="İlerleme notu…"
+        placeholder={t(locale, "actions.progressNote")}
         className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 mb-3 focus:outline-none focus:ring-2 focus:ring-abys-accent"
       />
 
       <div className="flex flex-wrap gap-2">
         {action.status === "open" && (
           <button onClick={() => patch("in_progress")} disabled={busy} className="text-xs rounded-full bg-abys-navy text-white px-3 py-1.5 hover:opacity-90 disabled:opacity-50">
-            Yürütmeye al
+            {t(locale, "actions.startProgress")}
           </button>
         )}
         {action.status === "in_progress" && (
           <button onClick={() => patch("done")} disabled={busy} className="text-xs rounded-full bg-abys-healthy text-white px-3 py-1.5 hover:opacity-90 disabled:opacity-50">
-            Tamamlandı işaretle
+            {t(locale, "actions.markDone")}
           </button>
         )}
         {(action.status === "open" || action.status === "in_progress") && (
           <button onClick={() => patch("cancelled")} disabled={busy} className="text-xs rounded-full border border-abys-critical/30 text-abys-critical px-3 py-1.5 hover:bg-abys-critical-soft disabled:opacity-50">
-            İptal et
+            {t(locale, "actions.cancel")}
           </button>
         )}
         <button onClick={() => patch(action.status)} disabled={busy || !note.trim() || action.status === "done" || action.status === "cancelled"} className="text-xs rounded-full border border-abys-ink/15 px-3 py-1.5 hover:bg-white/60 disabled:opacity-50">
-          Notu kaydet
+          {t(locale, "actions.saveNote")}
         </button>
         {action.status === "done" && (
           <button onClick={() => setShowOutcome((v) => !v)} className="text-xs rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1.5 hover:bg-abys-accent-soft">
-            {showOutcome ? "Sonuç formunu kapat" : "Sonuç & ders kaydet"}
+            {showOutcome ? t(locale, "actions.closeOutcome") : t(locale, "actions.saveOutcome")}
           </button>
         )}
         {(action.status === "open" || action.status === "in_progress") && (
           <button onClick={() => setShowExecution((v) => !v)} className="text-xs rounded-full border border-abys-navy/25 text-abys-navy px-3 py-1.5 hover:bg-white/60">
-            {showExecution ? "Hazırlığı kapat" : "Yürütme hazırlığı"}
+            {showExecution ? t(locale, "actions.closePreparation") : t(locale, "actions.executePrep")}
           </button>
         )}
       </div>
@@ -311,20 +359,21 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
 }
 
 function ExecutionIntentPanel({ actionId }: { actionId: string }) {
+  const locale = useLocale();
   const [intents, setIntents] = useState<ExecutionIntent[]>([]);
   const [summary, setSummary] = useState("");
   const [targetSystem, setTargetSystem] = useState("");
   const [mode, setMode] = useState<"manual" | "system">("manual");
   const [idempotencyKey, setIdempotencyKey] = useState(newIntentKey);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<LocalizedPanelError | null>(null);
 
   async function load() {
     const res = await fetch(`/api/actions/execution-intents?actionId=${encodeURIComponent(actionId)}`, {
       cache: "no-store",
     });
     if (!res.ok) {
-      setError("Yürütme hazırlıkları yüklenemedi.");
+      setError({ key: "actions.prepLoadFailed" });
       return;
     }
     const payload = (await res.json()) as { intents?: ExecutionIntent[] };
@@ -342,7 +391,7 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
         if (!cancelled) setIntents(Array.isArray(payload.intents) ? payload.intents : []);
       })
       .catch(() => {
-        if (!cancelled) setError("Yürütme hazırlıkları yüklenemedi.");
+        if (!cancelled) setError({ key: "actions.prepLoadFailed" });
       });
     return () => {
       cancelled = true;
@@ -367,12 +416,15 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
       });
       if (!res.ok) {
         const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Yürütme hazırlığı oluşturulamadı.");
+        throw new Error(payload?.error ?? t(locale, "actions.prepCreateFailed"));
       }
       setSummary("");
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Yürütme hazırlığı oluşturulamadı.");
+      setError({
+        key: "actions.prepCreateFailed",
+        serverMessage: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setBusy(false);
     }
@@ -389,12 +441,15 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
       });
       if (!res.ok) {
         const payload = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(payload?.error ?? "Yürütme hazırlığı onaylanamadı.");
+        throw new Error(payload?.error ?? t(locale, "actions.prepApproveFailed"));
       }
       setIdempotencyKey(newIntentKey());
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Yürütme hazırlığı onaylanamadı.");
+      setError({
+        key: "actions.prepApproveFailed",
+        serverMessage: err instanceof Error ? err.message : undefined,
+      });
     } finally {
       setBusy(false);
     }
@@ -402,10 +457,10 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
 
   return (
     <div className="mt-4 pt-4 border-t border-abys-cream-border space-y-2">
-      <p className="text-xs font-semibold text-abys-muted">YÜRÜTME HAZIRLIĞI</p>
-      <p className="text-[11px] text-abys-muted">
-        Bu adım dış sistemde işlem yapmaz. Yalnızca insan onaylı, idempotent niyet kaydı oluşturur.
+      <p className="text-xs font-semibold text-abys-muted uppercase">
+        {t(locale, "actions.executePrep")}
       </p>
+      <p className="text-[11px] text-abys-muted">{t(locale, "actions.prepDescription")}</p>
       <div className="flex flex-wrap gap-2">
         {(["manual", "system"] as const).map((value) => (
           <button
@@ -413,26 +468,28 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
             onClick={() => setMode(value)}
             className={`text-xs rounded-full px-3 py-1.5 border ${mode === value ? "bg-abys-navy text-white border-abys-navy" : "border-abys-ink/15 hover:bg-white/60"}`}
           >
-            {value === "manual" ? "Manuel" : "Sistem"}
+            {value === "manual" ? t(locale, "actions.modeManual") : t(locale, "actions.modeSystem")}
           </button>
         ))}
       </div>
       <input
         value={targetSystem}
         onChange={(e) => setTargetSystem(e.target.value)}
-        placeholder="Hedef sistem (opsiyonel, ör. ERP)"
+        placeholder={t(locale, "actions.targetSystemPlaceholder")}
         className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
       />
       <textarea
         value={summary}
         onChange={(e) => setSummary(e.target.value)}
         rows={2}
-        placeholder="Ne yapılacak? (dış çağrı yapılmayacak)"
+        placeholder={t(locale, "actions.summaryPlaceholder")}
         className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
       />
-      {error && <p className="text-xs text-abys-critical">{error}</p>}
+      {error && (
+        <p className="text-xs text-abys-critical">{error.serverMessage ?? t(locale, error.key)}</p>
+      )}
       <button onClick={prepare} disabled={busy || !summary.trim()} className="text-xs rounded-full bg-abys-navy text-white px-4 py-1.5 hover:opacity-90 disabled:opacity-50">
-        {busy ? "Kaydediliyor…" : "Hazırlığı kaydet"}
+        {busy ? t(locale, "actions.saving") : t(locale, "actions.savePreparation")}
       </button>
       {intents.length > 0 && (
         <ul className="space-y-1 list-none p-0 m-0 pt-2">
@@ -441,19 +498,23 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <span className="text-abys-ink">{intent.summary}</span>
                 <span className="text-abys-muted">
-                  {intent.status === "prepared" ? "Onay bekliyor" : intent.status === "approved" ? "Onaylandı" : "İptal"}
+                  {intent.status === "prepared"
+                    ? t(locale, "actions.intentPrepared")
+                    : intent.status === "approved"
+                      ? t(locale, "actions.intentApproved")
+                      : t(locale, "actions.intentCancelled")}
                 </span>
               </div>
               <p className="mt-0.5 text-[11px] text-abys-muted">
-                {intent.mode === "manual" ? "Manuel" : "Sistem"}
+                {intent.mode === "manual" ? t(locale, "actions.modeManual") : t(locale, "actions.modeSystem")}
                 {intent.target_system ? ` · ${intent.target_system}` : ""}
                 {" "}· {intent.prepared_by_name}
-                {intent.approved_by_name ? ` · onay: ${intent.approved_by_name}` : ""}
+                {intent.approved_by_name ? ` · ${t(locale, "actions.approvedBy")}: ${intent.approved_by_name}` : ""}
               </p>
               <ExecutionAttemptStatus key={`${intent.id}:${intent.status}`} intentId={intent.id} />
               {intent.status === "prepared" && (
                 <button onClick={() => approve(intent.id)} disabled={busy} className="mt-1 text-[11px] rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1 hover:bg-abys-accent-soft disabled:opacity-50">
-                  İnsan onayı ver
+                  {t(locale, "actions.approveHuman")}
                 </button>
               )}
             </li>
@@ -465,6 +526,7 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
 }
 
 function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () => void }) {
+  const locale = useLocale();
   const [result, setResult] = useState<"improved" | "unchanged" | "worsened">("improved");
   const [outNote, setOutNote] = useState("");
   const [lesson, setLesson] = useState("");
@@ -473,7 +535,7 @@ function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () =>
 
   async function save() {
     if (!outNote.trim()) {
-      setErr("Sonuç açıklaması gerekli.");
+      setErr(t(locale, "actions.outcomeRequired"));
       return;
     }
     setBusy(true);
@@ -485,7 +547,7 @@ function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () =>
     });
     setBusy(false);
     if (!res.ok) {
-      setErr((await res.json().catch(() => null))?.error ?? "Sonuç kaydedilemedi.");
+      setErr((await res.json().catch(() => null))?.error ?? t(locale, "actions.outcomeSaveFailed"));
       return;
     }
     onDone();
@@ -493,7 +555,9 @@ function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () =>
 
   return (
     <div className="mt-4 pt-4 border-t border-abys-cream-border space-y-2">
-      <p className="text-xs font-semibold text-abys-muted">GERÇEKLEŞEN SONUÇ</p>
+      <p className="text-xs font-semibold text-abys-muted uppercase">
+        {t(locale, "actions.outcomeHeading")}
+      </p>
       <div className="flex gap-2">
         {(["improved", "unchanged", "worsened"] as const).map((r) => (
           <button
@@ -501,15 +565,19 @@ function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () =>
             onClick={() => setResult(r)}
             className={`text-xs rounded-full px-3 py-1.5 border ${result === r ? "bg-abys-navy text-white border-abys-navy" : "border-abys-ink/15 hover:bg-white/60"}`}
           >
-            {r === "improved" ? "İyileşti" : r === "unchanged" ? "Değişmedi" : "Kötüleşti"}
+            {r === "improved"
+              ? t(locale, "actions.outcomeImproved")
+              : r === "unchanged"
+                ? t(locale, "actions.outcomeUnchanged")
+                : t(locale, "actions.outcomeWorsened")}
           </button>
         ))}
       </div>
-      <textarea value={outNote} onChange={(e) => setOutNote(e.target.value)} rows={2} placeholder="Ne oldu? (ör. rötar 34 dk yerine 12 dk)" className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent" />
-      <textarea value={lesson} onChange={(e) => setLesson(e.target.value)} rows={2} placeholder="Kurumsal ders (opsiyonel — sonraki analizlere beslenir)" className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent" />
+      <textarea value={outNote} onChange={(e) => setOutNote(e.target.value)} rows={2} placeholder={t(locale, "actions.outcomeNotePlaceholder")} className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent" />
+      <textarea value={lesson} onChange={(e) => setLesson(e.target.value)} rows={2} placeholder={t(locale, "actions.lessonPlaceholder")} className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent" />
       {err && <p className="text-xs text-abys-critical">{err}</p>}
       <button onClick={save} disabled={busy} className="text-xs rounded-full bg-abys-accent text-white px-4 py-1.5 hover:opacity-90 disabled:opacity-50">
-        {busy ? "Kaydediliyor…" : "Sonucu ve dersi kaydet"}
+        {busy ? t(locale, "actions.saving") : t(locale, "actions.saveOutcomeFull")}
       </button>
     </div>
   );
