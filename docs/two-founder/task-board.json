@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T20:05:00Z",
+  "updatedAt": "2026-11-21T20:20:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1236,6 +1236,43 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Completeness, validity, uniqueness and freshness are derived only from stored KPI rows, each with its sample size; no score is invented when data is absent.",
       "evidence": "9 unit tests + 4 API tests; smoke 43/43 with the new endpoint returning 4 dimensions; build lists the route; tsc/eslint clean."
+    },
+    {
+      "id": "TB-061",
+      "commit": "a046792",
+      "title": "Score sampling disclosure",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-integration-engineer"
+      ],
+      "files": [
+        "src/app/api/data-quality/score/route.ts",
+        "tests/data-quality-score-api.test.ts",
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The score response states whether the observation window was truncated (sampled + sampleLimit) so consumers never imply a full-history score.",
+      "evidence": "API test asserts sampled=false and sampleLimit=1000 on 6 rows; smoke prints the sampling state; tsc/eslint clean."
+    },
+    {
+      "id": "TB-062",
+      "commit": "baf18c6",
+      "title": "Quality score panel in UI",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "data-integration-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/data-quality/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The data quality screen shows overall score, weakest dimension, four dimension rows with samples, total rows and a truncation warning; null scores show 'insufficient data' rather than zero.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 91 files/817 tests (9 skipped), eslint/tsc/build clean, smoke 43/43."
     }
   ]
 }
