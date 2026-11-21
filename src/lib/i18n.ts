@@ -849,7 +849,63 @@ export type ShellKey =
   | "dataQuality.score.dimension.completeness"
   | "dataQuality.score.dimension.validity"
   | "dataQuality.score.dimension.uniqueness"
-  | "dataQuality.score.dimension.freshness";
+  | "dataQuality.score.dimension.freshness"
+  | "reports.eyebrow"
+  | "reports.title"
+  | "reports.titleAccent"
+  | "reports.subtitle"
+  | "reports.subtitleTais"
+  | "reports.dailyHeading"
+  | "reports.empty"
+  | "reports.downloadPdf"
+  | "reports.delete"
+  | "reports.printHeader"
+  | "reports.percent"
+  | "reports.tais.error"
+  | "reports.tais.loading"
+  | "reports.tais.executiveHeading"
+  | "reports.tais.opsSummary"
+  | "reports.tais.activeTasks"
+  | "reports.tais.overdueTasks"
+  | "reports.tais.slaCompliance"
+  | "reports.tais.openComplaints"
+  | "reports.tais.serviceBreakdown"
+  | "reports.tais.colService"
+  | "reports.tais.colTotal"
+  | "reports.tais.colOpen"
+  | "reports.tais.colOverdue"
+  | "reports.tais.customerContract"
+  | "reports.tais.noRenewals"
+  | "reports.tais.colCustomer"
+  | "reports.tais.colRenewal"
+  | "reports.tais.colValue"
+  | "reports.tais.slaStatus"
+  | "reports.tais.slaSummary"
+  | "reports.tais.overdueSummary"
+  | "reports.tais.complaintQuality"
+  | "reports.tais.complaintSummary"
+  | "reports.tais.recurringSummary"
+  | "reports.tais.workload"
+  | "reports.tais.colTeam"
+  | "reports.tais.colCapacity"
+  | "reports.tais.colUtilization"
+  | "reports.tais.decisionSummary"
+  | "reports.tais.mainDecision"
+  | "reports.tais.noMainDecision"
+  | "reports.kpi.heading"
+  | "reports.kpi.source"
+  | "reports.counselor.heading"
+  | "reports.counselor.colName"
+  | "reports.counselor.colAssigned"
+  | "reports.counselor.colSales"
+  | "reports.counselor.colAmount"
+  | "reports.counselor.assignedLabel"
+  | "reports.counselor.salesLabel"
+  | "reports.counselor.amountLabel"
+  | "reports.counselor.conversionLabel"
+  | "reports.status.open"
+  | "reports.status.in_progress"
+  | "reports.status.done";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -2298,6 +2354,89 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "dataQuality.score.dimension.validity": { tr: "Geçerlilik", en: "Validity" },
   "dataQuality.score.dimension.uniqueness": { tr: "Tekillik", en: "Uniqueness" },
   "dataQuality.score.dimension.freshness": { tr: "Tazelik", en: "Freshness" },
+  "reports.eyebrow": { tr: "RAPORLAR", en: "REPORTS" },
+  "reports.title": { tr: "Kayıtlı", en: "Saved" },
+  "reports.titleAccent": { tr: "raporlar.", en: "reports." },
+  "reports.subtitle": {
+    tr: "Tüm KPI'lar ve otomatik üretilen günlük analizler burada.",
+    en: "All KPIs and automatically generated daily analyses are here.",
+  },
+  "reports.subtitleTais": {
+    tr: "TAIS operasyon, müşteri, sözleşme, SLA, ekip, kalite, karar ve aksiyon raporları.",
+    en: "TAIS operations, customer, contract, SLA, team, quality, decision and action reports.",
+  },
+  "reports.dailyHeading": { tr: "GÜNLÜK ANALİZ RAPORLARI", en: "DAILY ANALYSIS REPORTS" },
+  "reports.empty": {
+    tr: "Henüz kaydedilmiş rapor yok. Integrations > CSV Import'tan veri yükleyip risk değerlendirmesi yaptığınızda ya da Analysis sayfasında \"Rapor olarak kaydet\" dediğinizde buraya eklenir.",
+    en: "No saved reports yet. They are added here when you upload data and run a risk assessment in Integrations > CSV Import, or choose \"Save as report\" on the Analysis page.",
+  },
+  "reports.downloadPdf": { tr: "PDF olarak indir", en: "Download as PDF" },
+  "reports.delete": { tr: "Sil", en: "Delete" },
+  "reports.printHeader": { tr: "ABYS — RAPOR", en: "ABYS — REPORT" },
+  "reports.percent": { tr: "%{value}", en: "{value}%" },
+  "reports.tais.error": { tr: "TAIS rapor verileri yüklenemedi.", en: "TAIS report data could not be loaded." },
+  "reports.tais.loading": { tr: "TAIS raporları yükleniyor…", en: "Loading TAIS reports…" },
+  "reports.tais.executiveHeading": { tr: "TAIS OPERASYON RAPORLARI", en: "TAIS OPERATIONS REPORTS" },
+  "reports.tais.opsSummary": { tr: "OPERASYON ÖZETİ", en: "OPERATIONS SUMMARY" },
+  "reports.tais.activeTasks": { tr: "Aktif görev", en: "Active tasks" },
+  "reports.tais.overdueTasks": { tr: "Geciken görev", en: "Overdue tasks" },
+  "reports.tais.slaCompliance": { tr: "SLA uyumu", en: "SLA compliance" },
+  "reports.tais.openComplaints": { tr: "Açık şikâyet", en: "Open complaints" },
+  "reports.tais.serviceBreakdown": { tr: "HİZMET TÜRÜ KIRILIMI", en: "SERVICE TYPE BREAKDOWN" },
+  "reports.tais.colService": { tr: "Hizmet", en: "Service" },
+  "reports.tais.colTotal": { tr: "Toplam", en: "Total" },
+  "reports.tais.colOpen": { tr: "Açık", en: "Open" },
+  "reports.tais.colOverdue": { tr: "Geciken", en: "Overdue" },
+  "reports.tais.customerContract": { tr: "MÜŞTERİ / SÖZLEŞME GÖRÜNÜMÜ", en: "CUSTOMER / CONTRACT VIEW" },
+  "reports.tais.noRenewals": { tr: "Yaklaşan yenileme kaydı yok.", en: "No upcoming renewals." },
+  "reports.tais.colCustomer": { tr: "Müşteri", en: "Customer" },
+  "reports.tais.colRenewal": { tr: "Yenileme", en: "Renewal" },
+  "reports.tais.colValue": { tr: "Değer", en: "Value" },
+  "reports.tais.slaStatus": { tr: "SLA DURUMU", en: "SLA STATUS" },
+  "reports.tais.slaSummary": {
+    tr: "%{pct} uyum · {count} görev SLA penceresinde.",
+    en: "{pct}% compliance · {count} tasks within the SLA window.",
+  },
+  "reports.tais.overdueSummary": {
+    tr: "{count} görev gecikmiş durumda.",
+    en: "{count} tasks are overdue.",
+  },
+  "reports.tais.complaintQuality": { tr: "ŞİKÂYET VE KALİTE", en: "COMPLAINTS AND QUALITY" },
+  "reports.tais.complaintSummary": {
+    tr: "{complaints} açık şikâyet · {quality} açık kalite kaydı.",
+    en: "{complaints} open complaints · {quality} open quality records.",
+  },
+  "reports.tais.recurringSummary": {
+    tr: "{count} müşteride tekrarlanan şikâyet deseni.",
+    en: "Recurring complaint pattern on {count} customers.",
+  },
+  "reports.tais.workload": { tr: "EKİP İŞ YÜKÜ", en: "TEAM WORKLOAD" },
+  "reports.tais.colTeam": { tr: "Ekip", en: "Team" },
+  "reports.tais.colCapacity": { tr: "Kapasite", en: "Capacity" },
+  "reports.tais.colUtilization": { tr: "Kullanım", en: "Utilization" },
+  "reports.tais.decisionSummary": { tr: "KARAR VE AKSİYON ÖZETİ", en: "DECISION AND ACTION SUMMARY" },
+  "reports.tais.mainDecision": {
+    tr: "{title} · {risks} bağlı risk · {evidence} kanıt",
+    en: "{title} · {risks} linked risks · {evidence} evidence items",
+  },
+  "reports.tais.noMainDecision": { tr: "Bekleyen ana karar yok.", en: "No pending main decision." },
+  "reports.kpi.heading": { tr: "TÜM KPI'LAR", en: "ALL KPIs" },
+  "reports.kpi.source": {
+    tr: "Kaynak: {file} · {start} – {end}",
+    en: "Source: {file} · {start} – {end}",
+  },
+  "reports.counselor.heading": { tr: "SATIŞ DANIŞMANLARI ({count})", en: "SALES COUNSELORS ({count})" },
+  "reports.counselor.colName": { tr: "DANIŞMAN", en: "COUNSELOR" },
+  "reports.counselor.colAssigned": { tr: "ATANAN", en: "ASSIGNED" },
+  "reports.counselor.colSales": { tr: "SATIŞ", en: "SALES" },
+  "reports.counselor.colAmount": { tr: "TUTAR", en: "AMOUNT" },
+  "reports.counselor.assignedLabel": { tr: "Atanan Başvuru", en: "Assigned Leads" },
+  "reports.counselor.salesLabel": { tr: "Satış Sayısı", en: "Sales Count" },
+  "reports.counselor.amountLabel": { tr: "Satış Tutarı", en: "Sales Amount" },
+  "reports.counselor.conversionLabel": { tr: "Dönüşüm Oranı", en: "Conversion Rate" },
+  "reports.status.open": { tr: "açık", en: "open" },
+  "reports.status.in_progress": { tr: "devam ediyor", en: "in progress" },
+  "reports.status.done": { tr: "tamamlandı", en: "done" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
