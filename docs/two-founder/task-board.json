@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T16:55:00Z",
+  "updatedAt": "2026-11-21T17:00:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1006,6 +1006,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "GET /api/audit includes prev_hash and entry_hash so the UI hash column is populated and operators can spot chain breaks.",
       "evidence": "New test writes an audit event and asserts a 64-hex entry_hash and non-null prev_hash in the API response; data-route-validation 18/18; full suite and smoke green."
+    },
+    {
+      "id": "TB-049",
+      "commit": "6749d62",
+      "title": "Forecast snapshot calibration CSV export",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "src/lib/forecast-snapshot-csv.ts",
+        "src/app/api/forecast/snapshots/export/route.ts",
+        "tests/forecast-snapshot-csv.test.ts",
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Authorized users download a tenant-scoped CSV of up to 200 snapshots with evaluation columns; pending snapshots leave evaluation fields empty.",
+      "evidence": "Unit tests 4/4 (header order, pending blanks, comma escaping, empty ledger); smoke 39/39 with a live text/csv response; build lists the route."
     }
   ]
 }
