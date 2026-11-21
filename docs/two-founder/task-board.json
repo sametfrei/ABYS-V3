@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T22:13:31Z",
+  "updatedAt": "2026-11-21T22:25:41Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1554,6 +1554,24 @@
       "commit": "47f1aa3",
       "title": "Decision causal chain, trace modal and options TR/EN localization",
       "acceptanceCriteria": "Causal panel, trace modal, options panel, option rows and uncertainty levels render in TR and EN."
+    },
+    {
+      "id": "TB-079",
+      "commit": "ea4bd8b",
+      "title": "KPI data screen TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/kpi/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Header, metric entry form, bulk paste, metric list, latest-points table, delete actions and all validation/error/empty states render in TR and EN; dates and numbers follow the active locale.",
+      "evidence": "Founder B gates: tsc clean, eslint clean, i18n 20/20, full suite 822 passed (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
