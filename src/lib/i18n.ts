@@ -454,7 +454,77 @@ export type ShellKey =
   | "ledger.outcome"
   | "ledger.lesson"
   | "ledger.percentBaseZero"
-  | "ledger.rateNoSample";
+  | "ledger.rateNoSample"
+  | "audit.eyebrow"
+  | "audit.title"
+  | "audit.titleAccent"
+  | "audit.subtitle"
+  | "audit.limitLabel"
+  | "audit.limitOption"
+  | "audit.verify"
+  | "audit.verifying"
+  | "audit.eventsHeading"
+  | "audit.loading"
+  | "audit.empty"
+  | "audit.unauthorized"
+  | "audit.forbidden"
+  | "audit.invalidRequest"
+  | "audit.loadFailed"
+  | "audit.loadFailedHttp"
+  | "audit.verifyMissing"
+  | "audit.verifyFailed"
+  | "audit.chainValid"
+  | "audit.chainInvalid"
+  | "audit.checkedSkipped"
+  | "audit.firstBroken"
+  | "audit.tableTime"
+  | "audit.tableActor"
+  | "audit.tableType"
+  | "audit.tableSummary"
+  | "audit.tableDetail"
+  | "audit.tableHash"
+  | "audit.type.login"
+  | "audit.type.sessions_revoked"
+  | "audit.type.session_revoked"
+  | "audit.type.password_changed"
+  | "audit.type.user_created"
+  | "audit.type.user_updated"
+  | "audit.type.api_key_created"
+  | "audit.type.api_key_revoked"
+  | "audit.type.business_profile_confirmed"
+  | "audit.type.connector_config_created"
+  | "audit.type.connector_schedule_updated"
+  | "audit.type.connector_sync_completed"
+  | "audit.type.connector_sync_failed"
+  | "audit.type.connector_sync_succeeded"
+  | "audit.type.bitrix24_connection_test"
+  | "audit.type.data_ingested"
+  | "audit.type.events_ingested"
+  | "audit.type.document_ingested"
+  | "audit.type.data_quality_quarantined"
+  | "audit.type.data_quality_resolved"
+  | "audit.type.decision_ledger_exported"
+  | "audit.type.decision_state_updated"
+  | "audit.type.decision_made"
+  | "audit.type.decision_signal_linked"
+  | "audit.type.action_created"
+  | "audit.type.action_transition"
+  | "audit.type.execution_intent_prepared"
+  | "audit.type.execution_intent_approved"
+  | "audit.type.causal_link_created"
+  | "audit.type.causal_link_status_updated"
+  | "audit.type.forecast_snapshot_created"
+  | "audit.type.forecast_snapshots_captured"
+  | "audit.type.kpi_point_deleted"
+  | "audit.type.kpi_values_recorded"
+  | "audit.type.local_migration"
+  | "audit.type.outcome_recorded"
+  | "audit.type.scenario_saved"
+  | "audit.type.survivorship_policy_updated"
+  | "audit.type.tais_decisions_seed"
+  | "audit.type.tais_seed"
+  | "audit.type.tais_seed_reset"
+  | "audit.type.webhook_secret_rotated";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -1298,6 +1368,103 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.lesson": { tr: "Ders:", en: "Lesson:" },
   "ledger.percentBaseZero": { tr: "taban sıfır", en: "zero baseline" },
   "ledger.rateNoSample": { tr: "örnek yok", en: "no samples" },
+  "audit.eyebrow": { tr: "DENETİM", en: "AUDIT" },
+  "audit.title": { tr: "Denetim", en: "Audit" },
+  "audit.titleAccent": { tr: "günlüğü.", en: "log." },
+  "audit.subtitle": {
+    tr: "Kurumunuzdaki kritik işlemler hash zinciriyle kayıt altına alınır. Bu ekran salt okunurdur.",
+    en: "Critical operations in your organization are recorded in a hash chain. This screen is read-only.",
+  },
+  "audit.limitLabel": { tr: "GÖSTERİLECEK OLAY", en: "EVENTS TO SHOW" },
+  "audit.limitOption": { tr: "Son {count} olay", en: "Last {count} events" },
+  "audit.verify": { tr: "Zinciri doğrula", en: "Verify chain" },
+  "audit.verifying": { tr: "Doğrulanıyor…", en: "Verifying…" },
+  "audit.eventsHeading": { tr: "DENETİM OLAYLARI", en: "AUDIT EVENTS" },
+  "audit.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "audit.empty": {
+    tr: "Kayıtlı denetim olayı bulunmuyor.",
+    en: "No audit events recorded.",
+  },
+  "audit.unauthorized": {
+    tr: "Bu ekranı görmek için oturum açmanız gerekiyor.",
+    en: "You must sign in to view this screen.",
+  },
+  "audit.forbidden": {
+    tr: "Bu ekranı görüntülemek için yetkiniz yok.",
+    en: "You do not have permission to view this screen.",
+  },
+  "audit.invalidRequest": { tr: "Geçersiz istek.", en: "Invalid request." },
+  "audit.loadFailed": {
+    tr: "Denetim olayları yüklenemedi.",
+    en: "Audit events could not be loaded.",
+  },
+  "audit.loadFailedHttp": {
+    tr: "Denetim verisi yüklenemedi (HTTP {status}).",
+    en: "Audit data could not be loaded (HTTP {status}).",
+  },
+  "audit.verifyMissing": {
+    tr: "Doğrulama sonucu alınamadı.",
+    en: "Verification result was not received.",
+  },
+  "audit.verifyFailed": {
+    tr: "Zincir doğrulanamadı.",
+    en: "The chain could not be verified.",
+  },
+  "audit.chainValid": { tr: "Zincir geçerli.", en: "Chain is valid." },
+  "audit.chainInvalid": { tr: "Zincir geçersiz.", en: "Chain is invalid." },
+  "audit.checkedSkipped": {
+    tr: "Kontrol edilen: {checked} olay · Atlanan: {skipped}",
+    en: "Checked: {checked} events · Skipped: {skipped}",
+  },
+  "audit.firstBroken": { tr: "İlk bozulma:", en: "First break:" },
+  "audit.tableTime": { tr: "Tarih / saat", en: "Date / time" },
+  "audit.tableActor": { tr: "Aktör", en: "Actor" },
+  "audit.tableType": { tr: "Tür", en: "Type" },
+  "audit.tableSummary": { tr: "Özet", en: "Summary" },
+  "audit.tableDetail": { tr: "Ayrıntı", en: "Detail" },
+  "audit.tableHash": { tr: "Hash", en: "Hash" },
+  "audit.type.login": { tr: "Oturum açma", en: "Sign-in" },
+  "audit.type.sessions_revoked": { tr: "Oturumlar iptal edildi", en: "Sessions revoked" },
+  "audit.type.session_revoked": { tr: "Oturum iptal edildi", en: "Session revoked" },
+  "audit.type.password_changed": { tr: "Parola değiştirildi", en: "Password changed" },
+  "audit.type.user_created": { tr: "Kullanıcı oluşturuldu", en: "User created" },
+  "audit.type.user_updated": { tr: "Kullanıcı güncellendi", en: "User updated" },
+  "audit.type.api_key_created": { tr: "API anahtarı oluşturuldu", en: "API key created" },
+  "audit.type.api_key_revoked": { tr: "API anahtarı iptal edildi", en: "API key revoked" },
+  "audit.type.business_profile_confirmed": { tr: "İş bağlamı onaylandı", en: "Business profile confirmed" },
+  "audit.type.connector_config_created": { tr: "Bağlantı yapılandırması oluşturuldu", en: "Connector configuration created" },
+  "audit.type.connector_schedule_updated": { tr: "Bağlantı zamanlaması güncellendi", en: "Connector schedule updated" },
+  "audit.type.connector_sync_completed": { tr: "Bağlantı senkronu tamamlandı", en: "Connector sync completed" },
+  "audit.type.connector_sync_failed": { tr: "Bağlantı senkronu başarısız", en: "Connector sync failed" },
+  "audit.type.connector_sync_succeeded": { tr: "Bağlantı senkronu başarılı", en: "Connector sync succeeded" },
+  "audit.type.bitrix24_connection_test": { tr: "Bitrix24 bağlantı testi", en: "Bitrix24 connection test" },
+  "audit.type.data_ingested": { tr: "Veri alındı", en: "Data ingested" },
+  "audit.type.events_ingested": { tr: "Süreç olayları alındı", en: "Process events ingested" },
+  "audit.type.document_ingested": { tr: "Belge alındı", en: "Document ingested" },
+  "audit.type.data_quality_quarantined": { tr: "Veri kalitesi karantinası", en: "Data quality quarantined" },
+  "audit.type.data_quality_resolved": { tr: "Veri kalitesi sorunu çözüldü", en: "Data quality issue resolved" },
+  "audit.type.decision_ledger_exported": { tr: "Karar defteri dışa aktarıldı", en: "Decision ledger exported" },
+  "audit.type.decision_state_updated": { tr: "Karar durumu güncellendi", en: "Decision state updated" },
+  "audit.type.decision_made": { tr: "Karar verildi", en: "Decision made" },
+  "audit.type.decision_signal_linked": { tr: "Karar sinyali bağlandı", en: "Decision signal linked" },
+  "audit.type.action_created": { tr: "Aksiyon oluşturuldu", en: "Action created" },
+  "audit.type.action_transition": { tr: "Aksiyon durumu değişti", en: "Action transitioned" },
+  "audit.type.execution_intent_prepared": { tr: "Yürütme niyeti hazırlandı", en: "Execution intent prepared" },
+  "audit.type.execution_intent_approved": { tr: "Yürütme niyeti onaylandı", en: "Execution intent approved" },
+  "audit.type.causal_link_created": { tr: "Nedensel bağlantı oluşturuldu", en: "Causal link created" },
+  "audit.type.causal_link_status_updated": { tr: "Nedensel bağlantı durumu güncellendi", en: "Causal link status updated" },
+  "audit.type.forecast_snapshot_created": { tr: "Tahmin anlık görüntüsü oluşturuldu", en: "Forecast snapshot created" },
+  "audit.type.forecast_snapshots_captured": { tr: "Tahmin anlık görüntüleri alındı", en: "Forecast snapshots captured" },
+  "audit.type.kpi_point_deleted": { tr: "KPI noktası silindi", en: "KPI point deleted" },
+  "audit.type.kpi_values_recorded": { tr: "KPI değerleri kaydedildi", en: "KPI values recorded" },
+  "audit.type.local_migration": { tr: "Yerel veri göçü", en: "Local migration" },
+  "audit.type.outcome_recorded": { tr: "Sonuç kaydedildi", en: "Outcome recorded" },
+  "audit.type.scenario_saved": { tr: "Senaryo kaydedildi", en: "Scenario saved" },
+  "audit.type.survivorship_policy_updated": { tr: "Baskın kayıt politikası güncellendi", en: "Survivorship policy updated" },
+  "audit.type.tais_decisions_seed": { tr: "TAIS karar verisi yüklendi", en: "TAIS decision fixture seeded" },
+  "audit.type.tais_seed": { tr: "TAIS verisi yüklendi", en: "TAIS fixture seeded" },
+  "audit.type.tais_seed_reset": { tr: "TAIS verisi sıfırlandı", en: "TAIS fixture reset" },
+  "audit.type.webhook_secret_rotated": { tr: "Webhook sırrı yenilendi", en: "Webhook secret rotated" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
