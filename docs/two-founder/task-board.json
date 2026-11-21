@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T22:31:41Z",
+  "updatedAt": "2026-11-21T22:45:28Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1590,6 +1590,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Header, question input, submit states, example chips, statement labels, source lines and sources heading render in TR and EN. Example prompts still send the canonical Turkish text the server matcher expects.",
       "evidence": "Founder B gates: tsc clean, eslint clean, i18n 21/21, full suite 824 passed (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-081",
+      "commit": "f163cba",
+      "title": "Quality score metric-label filter",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "backend-engineer",
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/data-quality/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/data-quality-score-api.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Quality score panel offers an 'all metrics' option plus every KPI label, refetches /api/data-quality/score with the selected label, and resetting restores org-wide scores. API label scoping is covered by a test.",
+      "evidence": "Founder B gates: tsc clean, eslint clean, API score tests 5/5, full suite 825 passed (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
