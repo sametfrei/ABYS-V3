@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T17:50:00Z",
+  "updatedAt": "2026-11-21T18:15:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1104,6 +1104,42 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Snapshot listing accepts limit 1..200 and rejects invalid values with 400; the shared parser is named generically since both list routes use it.",
       "evidence": "forecast-snapshots 7/7 and decision-ledger 9/9; tsc/eslint/build clean; smoke 39/39."
+    },
+    {
+      "id": "TB-054",
+      "commit": "0aea84d",
+      "title": "Data quality screen TR/EN",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "data-integration-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/data-quality/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Quarantine list, statuses, actions and notifications resolve through the dictionary; technical codes stay untranslated.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 88 files/793 tests (9 skipped), eslint/tsc/build clean, smoke 41/41."
+    },
+    {
+      "id": "TB-055",
+      "commit": "cc005f7",
+      "title": "Audit export security tests",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-auditor",
+        "test-automation-engineer"
+      ],
+      "files": [
+        "tests/audit-export.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Audit CSV export rejects unauthenticated (401) and view_audit-less (403) callers, validates limit, and never leaks another org's events.",
+      "evidence": "5 tests pass: 401, 403 via hasPermission('analyst','view_audit')===false, five invalid limits, CSV headers plus export audit event, and cross-tenant isolation both ways."
     }
   ]
 }
