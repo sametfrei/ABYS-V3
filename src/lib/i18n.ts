@@ -909,6 +909,103 @@ export type ShellKey =
   | "ledger.exportCsv"
   | "audit.exportCsv"
   | "forecast.exportCsv"
+  | "discovery.eyebrow"
+  | "discovery.title"
+  | "discovery.titleAccent"
+  | "discovery.subtitle"
+  | "discovery.loadFailed"
+  | "discovery.loadFailedHttp"
+  | "discovery.analyzing"
+  | "discovery.priorityRange"
+  | "discovery.priorityUnique"
+  | "discovery.selectPack"
+  | "discovery.profileCurrent"
+  | "discovery.confirmFailed"
+  | "discovery.primaryHeading"
+  | "discovery.confidence"
+  | "discovery.subsectorPrefix"
+  | "discovery.score"
+  | "discovery.requiresConfirmation"
+  | "discovery.diversified"
+  | "discovery.evidenceHeading"
+  | "discovery.noEvidence"
+  | "discovery.noSignal"
+  | "discovery.connectLink"
+  | "discovery.connectHintBefore"
+  | "discovery.kpiLink"
+  | "discovery.connectHintAfter"
+  | "discovery.contextHeading"
+  | "discovery.confirmedProfile"
+  | "discovery.noConfirmedProfile"
+  | "discovery.confirmedAt"
+  | "discovery.confirmedSubsector"
+  | "discovery.profileStale"
+  | "discovery.versionedBadge"
+  | "discovery.packLabel"
+  | "discovery.packPlaceholder"
+  | "discovery.subsectorLabel"
+  | "discovery.subsectorGeneral"
+  | "discovery.confirmHint"
+  | "discovery.confirming"
+  | "discovery.confirm"
+  | "discovery.alternativesHeading"
+  | "discovery.kpiHeading"
+  | "discovery.kpiEmpty"
+  | "discovery.colStatus"
+  | "discovery.colFormula"
+  | "discovery.colMissing"
+  | "discovery.availability.available"
+  | "discovery.availability.partial"
+  | "discovery.availability.unavailable"
+  | "discovery.schemaHeading"
+  | "discovery.schemaEmpty"
+  | "discovery.recordCount"
+  | "discovery.graphHeading"
+  | "discovery.graphCounts"
+  | "discovery.unresolved"
+  | "discovery.multiSource"
+  | "discovery.strongIdentity"
+  | "discovery.sourceScoped"
+  | "discovery.graphEmpty"
+  | "discovery.goldenHeading"
+  | "discovery.goldenEmpty"
+  | "discovery.goldenMeta"
+  | "discovery.conflicts"
+  | "discovery.consistent"
+  | "discovery.policyApplied"
+  | "discovery.freshnessApplied"
+  | "discovery.goldenNote"
+  | "discovery.policyHeading"
+  | "discovery.policyHint"
+  | "discovery.policyEntityAria"
+  | "discovery.policyNoSources"
+  | "discovery.sourceMeta"
+  | "discovery.sourcePolicyUpdated"
+  | "discovery.sourceNoPolicy"
+  | "discovery.priorityLabel"
+  | "discovery.policySaving"
+  | "discovery.policySave"
+  | "discovery.twinHeading"
+  | "discovery.twinAsOf"
+  | "discovery.twinEmpty"
+  | "discovery.twinCanonical"
+  | "discovery.twinOrders"
+  | "discovery.twinRisks"
+  | "discovery.twinNoFinancials"
+  | "discovery.twinFinancialLine"
+  | "discovery.twinUnclassified"
+  | "discovery.twinHistorical"
+  | "discovery.twinCurrent"
+  | "discovery.twinAge"
+  | "discovery.twinMinutes"
+  | "discovery.twinStale"
+  | "discovery.twinFresh"
+  | "discovery.inputsHeading"
+  | "discovery.inputsEntities"
+  | "discovery.inputsNone"
+  | "discovery.inputsSummary"
+  | "discovery.missingHeading"
+  | "discovery.catalogLine"
   | "organization.eyebrow"
   | "organization.title"
   | "organization.titleAccent"
@@ -2689,6 +2786,103 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
+  "discovery.eyebrow": { tr: "İŞ KEŞFİ", en: "BUSINESS DISCOVERY" },
+  "discovery.title": { tr: "ABYS şirketinizi", en: "ABYS knows" },
+  "discovery.titleAccent": { tr: "tanıyor", en: "your company" },
+  "discovery.subtitle": { tr: "Bağlı sistemlerin yapısından sektör, alt sektör ve iş modeli çıkarımı; kanıtlarla ve güven düzeyiyle. KPI önerileri yalnızca gerekli alanlar mevcutsa kullanılabilir sayılır.", en: "Inference of sector, subsector and business model from connected systems, with evidence and confidence. KPI suggestions count as available only when the required fields exist." },
+  "discovery.loadFailed": { tr: "Keşif analizi yüklenemedi.", en: "Discovery analysis could not be loaded." },
+  "discovery.loadFailedHttp": { tr: "Keşif analizi yüklenemedi (HTTP {status}).", en: "Discovery analysis could not be loaded (HTTP {status})." },
+  "discovery.analyzing": { tr: "Analiz ediliyor…", en: "Analyzing…" },
+  "discovery.priorityRange": { tr: "Kaynak öncelikleri 1–1000 arasında tam sayı olmalı.", en: "Source priorities must be integers between 1 and 1000." },
+  "discovery.priorityUnique": { tr: "Kaynak öncelikleri birbirinden farklı olmalı.", en: "Source priorities must be distinct." },
+  "discovery.selectPack": { tr: "Onaylamak için bir sektör paketi seçin.", en: "Select an industry pack to confirm." },
+  "discovery.profileCurrent": { tr: "Bu veri kümesi için onaylı profil zaten güncel.", en: "The confirmed profile is already current for this dataset." },
+  "discovery.confirmFailed": { tr: "Onaylama başarısız.", en: "Confirmation failed." },
+  "discovery.primaryHeading": { tr: "BİRİNCİL SINIFLANDIRMA", en: "PRIMARY CLASSIFICATION" },
+  "discovery.confidence": { tr: "Güven %{value}", en: "Confidence {value}%" },
+  "discovery.subsectorPrefix": { tr: "Alt sektör: {label} · ", en: "Subsector: {label} · " },
+  "discovery.score": { tr: "Skor {score}/100", en: "Score {score}/100" },
+  "discovery.requiresConfirmation": { tr: "Güven düşük veya sınıflandırmalar birbirine yakın. Yönetici onayı gerekir; ABYS bu sınıflandırmayı kritik bir varsayım olarak otomatik uygulamaz.", en: "Confidence is low or the classifications are close. Manager approval is required; ABYS does not apply this classification automatically as a critical assumption." },
+  "discovery.diversified": { tr: "Birden fazla iş kolu sinyali var; holding/çok iş kollu yapı olarak değerlendirilmeli.", en: "Multiple lines-of-business signals exist; treat it as a holding/multi-business structure." },
+  "discovery.evidenceHeading": { tr: "KANITLAR", en: "EVIDENCE" },
+  "discovery.noEvidence": { tr: "Yapısal sinyal bulunamadı.", en: "No structural signal found." },
+  "discovery.noSignal": { tr: "Henüz sınıflandırma için yeterli yapısal sinyal yok.", en: "Not enough structural signal to classify yet." },
+  "discovery.connectLink": { tr: "Sistem Bağlantıları", en: "System Connections" },
+  "discovery.connectHintBefore": { tr: "üzerinden ERP/CRM bağlayın veya", en: "connect an ERP/CRM there or" },
+  "discovery.kpiLink": { tr: "KPI Verisi", en: "KPI Data" },
+  "discovery.connectHintAfter": { tr: "ekleyin.", en: "add some." },
+  "discovery.contextHeading": { tr: "İŞ BAĞLAMI", en: "BUSINESS CONTEXT" },
+  "discovery.confirmedProfile": { tr: "Onaylı profil v{version}: {pack} v{packVersion}", en: "Confirmed profile v{version}: {pack} v{packVersion}" },
+  "discovery.noConfirmedProfile": { tr: "Henüz onaylanmış iş profili yok. Aşağıdaki seçim yalnızca öneridir.", en: "No confirmed business profile yet. The selection below is a suggestion only." },
+  "discovery.confirmedAt": { tr: "Onay: {at} · Güven %{confidence}{subsector}", en: "Confirmed: {at} · Confidence {confidence}%{subsector}" },
+  "discovery.confirmedSubsector": { tr: " · Alt sektör {id}", en: " · Subsector {id}" },
+  "discovery.profileStale": { tr: "Kaynak veri, onaylı profilden sonra değişti. Yeni sınıflandırmayı gözden geçirip profili yeniden onaylayın; eski profil sessizce güncellenmez.", en: "Source data changed after the confirmed profile. Review the new classification and re-confirm; the old profile is never updated silently." },
+  "discovery.versionedBadge": { tr: "sürümlü · denetlenebilir", en: "versioned · auditable" },
+  "discovery.packLabel": { tr: "Sektör paketi", en: "Industry pack" },
+  "discovery.packPlaceholder": { tr: "Seçin", en: "Select" },
+  "discovery.subsectorLabel": { tr: "Alt sektör (isteğe bağlı)", en: "Subsector (optional)" },
+  "discovery.subsectorGeneral": { tr: "Genel", en: "General" },
+  "discovery.confirmHint": { tr: "Onay, seçili paketin KPI tanımlarını kayıt defterine ekler. Elle yazılmış aynı adlı tanımlar korunur.", en: "Confirmation adds the selected pack's KPI definitions to the registry. Manually written definitions with the same name are preserved." },
+  "discovery.confirming": { tr: "Onaylanıyor…", en: "Confirming…" },
+  "discovery.confirm": { tr: "Profili onayla ve KPI’ları etkinleştir", en: "Confirm profile and enable KPIs" },
+  "discovery.alternativesHeading": { tr: "ALTERNATİF SINIFLANDIRMALAR", en: "ALTERNATIVE CLASSIFICATIONS" },
+  "discovery.kpiHeading": { tr: "ÖNERİLEN KPI ÇERÇEVESİ", en: "SUGGESTED KPI FRAMEWORK" },
+  "discovery.kpiEmpty": { tr: "Sınıflandırma oluşmadığı için KPI önerisi yok.", en: "No KPI suggestion because no classification was produced." },
+  "discovery.colStatus": { tr: "Durum", en: "Status" },
+  "discovery.colFormula": { tr: "Formül", en: "Formula" },
+  "discovery.colMissing": { tr: "Eksik alanlar", en: "Missing fields" },
+  "discovery.availability.available": { tr: "Kullanılabilir", en: "Available" },
+  "discovery.availability.partial": { tr: "Kısmi", en: "Partial" },
+  "discovery.availability.unavailable": { tr: "Veri yok", en: "No data" },
+  "discovery.schemaHeading": { tr: "GÖZLENEN KANONİK ŞEMA", en: "OBSERVED CANONICAL SCHEMA" },
+  "discovery.schemaEmpty": { tr: "Bağlı kaynaklardan eşlenmiş alan yok.", en: "No mapped fields from connected sources." },
+  "discovery.recordCount": { tr: "({count} kayıt)", en: "({count} records)" },
+  "discovery.graphHeading": { tr: "SEMANTİK GRAFİK TEMELİ", en: "SEMANTIC GRAPH FOUNDATION" },
+  "discovery.graphCounts": { tr: "{nodes} düğüm · {edges} ilişki", en: "{nodes} nodes · {edges} relationships" },
+  "discovery.unresolved": { tr: "{count} referans hedefi kaynakta çözülemedi.", en: "{count} reference targets could not be resolved at the source." },
+  "discovery.multiSource": { tr: "Çok kaynaklı varlık", en: "Multi-source entity" },
+  "discovery.strongIdentity": { tr: "Güçlü kimlik", en: "Strong identity" },
+  "discovery.sourceScoped": { tr: "Kaynağa özgü", en: "Source-scoped" },
+  "discovery.graphEmpty": { tr: "Grafik için kanonik kayıt yok.", en: "No canonical records for the graph." },
+  "discovery.goldenHeading": { tr: "ALTIN KAYIT KONTROLÜ", en: "GOLDEN RECORD CHECK" },
+  "discovery.goldenEmpty": { tr: "Çok kaynaklı kanonik varlık henüz yok.", en: "No multi-source canonical entity yet." },
+  "discovery.goldenMeta": { tr: "{entity} · {sources} kaynak · {records} kayıt", en: "{entity} · {sources} sources · {records} records" },
+  "discovery.conflicts": { tr: "{count} çelişki", en: "{count} conflicts" },
+  "discovery.consistent": { tr: "Tutarlı", en: "Consistent" },
+  "discovery.policyApplied": { tr: "Onaylı kaynak güven sırası uygulanıyor.", en: "Approved source trust order applied." },
+  "discovery.freshnessApplied": { tr: "Kaynak güncelliği kullanılıyor.", en: "Source freshness used." },
+  "discovery.goldenNote": { tr: "Kaynak kayıtları değiştirilmez; alan seçimi ve kaynağı izlenebilir biçimde raporlanır.", en: "Source records are not modified; field selection and its source are reported traceably." },
+  "discovery.policyHeading": { tr: "ALTIN KAYIT GÜVEN SIRASI", en: "GOLDEN RECORD TRUST ORDER" },
+  "discovery.policyHint": { tr: "Alan çakıştığında düşük sayılı kaynak önce gelir. Kaynak kayıtları değiştirilmez.", en: "When fields conflict the lower-numbered source wins. Source records are not modified." },
+  "discovery.policyEntityAria": { tr: "Altın kayıt varlık türü", en: "Golden record entity type" },
+  "discovery.policyNoSources": { tr: "Bu varlık türü için kaynak konnektör yok. Önce Sistem Bağlantıları ekranından bir kaynak tanımlayın.", en: "No source connector for this entity type. Define a source in System Connections first." },
+  "discovery.sourceMeta": { tr: "{id} · konfig v{version}{policy}", en: "{id} · config v{version}{policy}" },
+  "discovery.sourcePolicyUpdated": { tr: " · son güncelleme {by} / {at}", en: " · last update {by} / {at}" },
+  "discovery.sourceNoPolicy": { tr: " · henüz onaylı sıra yok", en: " · no approved order yet" },
+  "discovery.priorityLabel": { tr: "Öncelik", en: "Priority" },
+  "discovery.policySaving": { tr: "Kaydediliyor…", en: "Saving…" },
+  "discovery.policySave": { tr: "Güven sırasını onayla", en: "Approve trust order" },
+  "discovery.twinHeading": { tr: "DİJİTAL İKİZ · DURUM", en: "DIGITAL TWIN · STATE" },
+  "discovery.twinAsOf": { tr: "Geçmiş an", en: "Historical as-of" },
+  "discovery.twinEmpty": { tr: "Kurumsal durum projeksiyonu henüz oluşmadı.", en: "The enterprise state projection does not exist yet." },
+  "discovery.twinCanonical": { tr: "Kanonik varlık", en: "Canonical entities" },
+  "discovery.twinOrders": { tr: "Sipariş", en: "Orders" },
+  "discovery.twinRisks": { tr: "Açık risk sinyali", en: "Open risk signals" },
+  "discovery.twinNoFinancials": { tr: "Sınıflandırılmış finansal tutar yok.", en: "No classified financial amounts." },
+  "discovery.twinFinancialLine": { tr: "{currency}: sipariş {orders} · fatura {invoices}", en: "{currency}: orders {orders} · invoices {invoices}" },
+  "discovery.twinUnclassified": { tr: "{count} tutar para birimi olmadığı için toplama katılmadı.", en: "{count} amounts were excluded from totals because they have no currency." },
+  "discovery.twinHistorical": { tr: "Geçmiş görünüm: {at} · ", en: "Historical view: {at} · " },
+  "discovery.twinCurrent": { tr: "Güncel görünüm · ", en: "Current view · " },
+  "discovery.twinAge": { tr: "Veri yaşı: {age}", en: "Data age: {age}" },
+  "discovery.twinMinutes": { tr: "{value} dk", en: "{value} min" },
+  "discovery.twinStale": { tr: " · eşik aşıldı", en: " · threshold exceeded" },
+  "discovery.twinFresh": { tr: " · taze", en: " · fresh" },
+  "discovery.inputsHeading": { tr: "GİRDİLER", en: "INPUTS" },
+  "discovery.inputsEntities": { tr: "Varlık kayıtları:", en: "Entity records:" },
+  "discovery.inputsNone": { tr: "yok", en: "none" },
+  "discovery.inputsSummary": { tr: "Eşlenmiş alan: {fields} · KPI etiketi: {labels} · Kayıtlı sektör: {sector}", en: "Mapped fields: {fields} · KPI labels: {labels} · Registered sector: {sector}" },
+  "discovery.missingHeading": { tr: "EKSİK BİLGİ", en: "MISSING INFORMATION" },
+  "discovery.catalogLine": { tr: "Katalog: {list}", en: "Catalog: {list}" },
   "organization.eyebrow": { tr: "ORGANİZASYON", en: "ORGANIZATION" },
   "organization.title": { tr: "Şirket ve", en: "Companies and" },
   "organization.titleAccent": { tr: "şubeler.", en: "branches." },

@@ -1,8 +1,37 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function availabilityLabel(locale: Locale, code: string): string {
+  const key = `discovery.availability.${code}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? code : label;
+}
 
 interface Ranking {
   packId: string;
@@ -126,12 +155,6 @@ interface Discovery {
   provenance: { engine: string; note: string };
 }
 
-const AVAILABILITY_LABEL: Record<string, string> = {
-  available: "Kullanılabilir",
-  partial: "Kısmi",
-  unavailable: "Veri yok",
-};
-
 const AVAILABILITY_STYLE: Record<string, string> = {
   available: "bg-abys-healthy-soft text-abys-healthy",
   partial: "bg-abys-warning-soft text-abys-warning",
@@ -152,12 +175,13 @@ const POLICY_ENTITIES = [
   "event",
 ];
 
-function formatDateTime(value: string): string {
+function formatDateTime(locale: Locale, value: string): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("tr-TR");
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString(locale);
 }
 
 export default function DiscoveryPage() {
+  const locale = useLocale();
   const [data, setData] = useState<Discovery | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -177,7 +201,10 @@ export default function DiscoveryPage() {
   async function loadDiscovery() {
     const res = await fetch("/api/discovery", { cache: "no-store" });
     const body = await res.json();
-    if (!res.ok) throw new Error(body.error ?? `Keşif analizi yüklenemedi (HTTP ${res.status}).`);
+    if (!res.ok) throw new Error(
+        body.error ??
+          formatMessage(readLocale(), "discovery.loadFailedHttp", { status: res.status })
+      );
     const discovery = body as Discovery;
     setData(discovery);
     setPackId(discovery.confirmedProfile?.industryPackId ?? discovery.primary?.packId ?? "");
@@ -208,7 +235,10 @@ export default function DiscoveryPage() {
           );
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Keşif analizi yüklenemedi.");
+        if (!cancelled)
+            setError(
+              err instanceof Error ? err.message : t(readLocale(), "discovery.loadFailed")
+            );
       }
     })();
     return () => {
@@ -280,12 +310,12 @@ export default function DiscoveryPage() {
         const raw = policyDrafts[source.id] ?? String(index + 1);
         const priority = Number(raw);
         if (!Number.isInteger(priority) || priority < 1 || priority > 1000) {
-          throw new Error("Kaynak öncelikleri 1–1000 arasında tam sayı olmalı.");
+          throw new Error(t(readLocale(), "discovery.priorityRange"));
         }
         return { sourceConfigId: source.id, priority };
       });
       if (new Set(priorities.map((item) => item.priority)).size !== priorities.length) {
-        throw new Error("Kaynak öncelikleri birbirinden farklı olmalı.");
+        throw new Error(t(readLocale(), "discovery.priorityUnique"));
       }
       const res = await fetch("/api/survivorship-policies", {
         method: "PUT",
@@ -313,7 +343,7 @@ export default function DiscoveryPage() {
 
   async function confirmProfile() {
     if (!packId) {
-      setError("Onaylamak için bir sektör paketi seçin.");
+      setError(t(readLocale(), "discovery.selectPack"));
       return;
     }
     setBusy(true);
@@ -333,13 +363,15 @@ export default function DiscoveryPage() {
       if (!res.ok) throw new Error(body.error ?? `Onaylama başarısız (HTTP ${res.status}).`);
       setMessage(
         body.idempotent
-          ? "Bu veri kümesi için onaylı profil zaten güncel."
+          ? t(readLocale(), "discovery.profileCurrent")
           : `Profil v${body.profile.version} onaylandı; ${body.activation.createdCount} KPI etkinleştirildi, ` +
             `${body.activation.preservedCount} mevcut tanım korundu.`
       );
       await loadDiscovery();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Onaylama başarısız.");
+      setError(
+          err instanceof Error ? err.message : t(readLocale(), "discovery.confirmFailed")
+        );
     } finally {
       setBusy(false);
     }
@@ -348,10 +380,10 @@ export default function DiscoveryPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="İŞ KESFİ"
-        title="ABYS şirketinizi"
-        accent="tanıyor"
-        desc="Bağlı sistemlerin yapısından sektör, alt sektör ve iş modeli çıkarımı; kanıtlarla ve güven düzeyiyle. KPI önerileri yalnızca gerekli alanlar mevcutsa kullanılabilir sayılır."
+        eyebrow={t(locale, "discovery.eyebrow")}
+        title={t(locale, "discovery.title")}
+        accent={t(locale, "discovery.titleAccent")}
+        desc={t(locale, "discovery.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-4xl space-y-5">
@@ -365,7 +397,7 @@ export default function DiscoveryPage() {
             {message}
           </p>
         )}
-        {!data && !error && <p className="text-sm text-abys-muted">Analiz ediliyor…</p>}
+        {!data && !error && <p className="text-sm text-abys-muted">{t(locale, "discovery.analyzing")}</p>}
 
         {data && (
           <>
@@ -373,29 +405,40 @@ export default function DiscoveryPage() {
               {data.primary ? (
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-xs tracking-widest text-abys-accent font-semibold">BİRİNCİL SINIFLANDIRMA</p>
-                    <span className="text-[11px] text-abys-muted">Güven %{data.confidence}</span>
+                    <p className="text-xs tracking-widest text-abys-accent font-semibold">
+                      {t(locale, "discovery.primaryHeading")}
+                    </p>
+                    <span className="text-[11px] text-abys-muted">
+                      {formatMessage(locale, "discovery.confidence", { value: data.confidence })}
+                    </span>
                   </div>
                   <p className="font-serif text-2xl text-abys-navy mt-1">{data.primary.label}</p>
                   <p className="text-sm text-abys-muted">
-                    {data.primary.subsector ? `Alt sektör: ${data.primary.subsector.label} · ` : ""}
-                    Skor {data.primary.score}/100
+                    {data.primary.subsector
+                      ? formatMessage(locale, "discovery.subsectorPrefix", {
+                          label: data.primary.subsector.label,
+                        })
+                      : ""}
+                    {formatMessage(locale, "discovery.score", { score: data.primary.score })}
                   </p>
                   {data.requiresConfirmation && (
                     <p className="mt-2 rounded-lg bg-abys-warning-soft px-3 py-2 text-xs text-abys-warning">
-                      Güven düşük veya sınıflandırmalar birbirine yakın. Yönetici onayı gerekir; ABYS bu sınıflandırmayı
-                      kritik bir varsayım olarak otomatik uygulamaz.
+                      {t(locale, "discovery.requiresConfirmation")}
                     </p>
                   )}
                   {data.diversified && (
                     <p className="mt-2 text-xs text-abys-muted">
-                      Birden fazla iş kolu sinyali var; holding/çok iş kollu yapı olarak değerlendirilmeli.
+                      {t(locale, "discovery.diversified")}
                     </p>
                   )}
-                  <p className="text-[11px] tracking-widest text-abys-muted font-semibold mt-4 mb-1">KANITLAR</p>
+                  <p className="text-[11px] tracking-widest text-abys-muted font-semibold mt-4 mb-1">
+                    {t(locale, "discovery.evidenceHeading")}
+                  </p>
                   <ul className="space-y-0.5 list-none p-0 m-0">
                     {data.primary.evidence.length === 0 ? (
-                      <li className="text-xs text-abys-muted">Yapısal sinyal bulunamadı.</li>
+                      <li className="text-xs text-abys-muted">
+                        {t(locale, "discovery.noEvidence")}
+                      </li>
                     ) : (
                       data.primary.evidence.map((e, i) => (
                         <li key={i} className="text-xs text-abys-ink">
@@ -407,16 +450,18 @@ export default function DiscoveryPage() {
                 </>
               ) : (
                 <>
-                  <p className="text-sm text-abys-ink">Henüz sınıflandırma için yeterli yapısal sinyal yok.</p>
+                  <p className="text-sm text-abys-ink">
+                    {t(locale, "discovery.noSignal")}
+                  </p>
                   <p className="text-xs text-abys-muted mt-1">
                     <Link href="/dashboard/connectors" className="text-abys-accent hover:underline">
-                      Sistem Bağlantıları
+                      {t(locale, "discovery.connectLink")}
                     </Link>{" "}
-                    üzerinden ERP/CRM bağlayın veya{" "}
+                    {t(locale, "discovery.connectHintBefore")}{" "}
                     <Link href="/dashboard/kpi" className="text-abys-accent hover:underline">
-                      KPI Verisi
+                      {t(locale, "discovery.kpiLink")}
                     </Link>{" "}
-                    ekleyin.
+                    {t(locale, "discovery.connectHintAfter")}
                   </p>
                 </>
               )}
@@ -425,33 +470,44 @@ export default function DiscoveryPage() {
             <div className="rounded-xl border border-abys-accent/25 bg-white/70 p-5 space-y-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <p className="text-xs tracking-widest text-abys-accent font-semibold">İŞ BAĞLAMI</p>
+                  <p className="text-xs tracking-widest text-abys-accent font-semibold">
+                    {t(locale, "discovery.contextHeading")}
+                  </p>
                   <p className="text-sm text-abys-ink mt-1">
                     {data.confirmedProfile
-                      ? `Onaylı profil v${data.confirmedProfile.version}: ${data.confirmedProfile.industryPackId} v${data.confirmedProfile.industryPackVersion}`
-                      : "Henüz onaylanmış iş profili yok. Aşağıdaki seçim yalnızca öneridir."}
+                      ? formatMessage(locale, "discovery.confirmedProfile", {
+                          version: data.confirmedProfile.version,
+                          pack: data.confirmedProfile.industryPackId,
+                          packVersion: data.confirmedProfile.industryPackVersion,
+                        })
+                      : t(locale, "discovery.noConfirmedProfile")}
                   </p>
                   {data.confirmedProfile && (
                     <p className="text-[11px] text-abys-muted mt-1">
-                      Onay: {new Date(data.confirmedProfile.createdAt).toLocaleString("tr-TR")} · Güven %
-                      {data.confirmedProfile.confidence}
-                      {data.confirmedProfile.subsectorId ? ` · Alt sektör ${data.confirmedProfile.subsectorId}` : ""}
+                      {formatMessage(locale, "discovery.confirmedAt", {
+                        at: new Date(data.confirmedProfile.createdAt).toLocaleString(locale),
+                        confidence: data.confirmedProfile.confidence,
+                        subsector: data.confirmedProfile.subsectorId
+                          ? formatMessage(locale, "discovery.confirmedSubsector", {
+                              id: data.confirmedProfile.subsectorId,
+                            })
+                          : "",
+                      })}
                     </p>
                   )}
                   {data.profileIsStale && (
                     <p className="mt-2 rounded-lg bg-abys-warning-soft px-3 py-2 text-xs text-abys-warning">
-                      Kaynak veri, onaylı profilden sonra değişti. Yeni sınıflandırmayı gözden geçirip profili yeniden
-                      onaylayın; eski profil sessizce güncellenmez.
+                      {t(locale, "discovery.profileStale")}
                     </p>
                   )}
                 </div>
                 <span className="text-[10px] rounded-full bg-abys-accent-soft px-2 py-1 text-abys-accent">
-                  sürümlü · denetlenebilir
+                  {t(locale, "discovery.versionedBadge")}
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <label className="text-xs text-abys-muted">
-                  Sektör paketi
+                  {t(locale, "discovery.packLabel")}
                   <select
                     value={packId}
                     onChange={(event) => {
@@ -460,7 +516,7 @@ export default function DiscoveryPage() {
                     }}
                     className="mt-1 w-full text-sm rounded-lg border border-abys-cream-border bg-white/80 px-3 py-2"
                   >
-                    <option value="">Seçin</option>
+                    <option value="">{t(locale, "discovery.packPlaceholder")}</option>
                     {data.catalog.map((pack) => (
                       <option key={pack.id} value={pack.id}>
                         {pack.label} · v{pack.version}
@@ -469,13 +525,13 @@ export default function DiscoveryPage() {
                   </select>
                 </label>
                 <label className="text-xs text-abys-muted">
-                  Alt sektör (isteğe bağlı)
+                  {t(locale, "discovery.subsectorLabel")}
                   <select
                     value={subsectorId}
                     onChange={(event) => setSubsectorId(event.target.value)}
                     className="mt-1 w-full text-sm rounded-lg border border-abys-cream-border bg-white/80 px-3 py-2"
                   >
-                    <option value="">Genel</option>
+                    <option value="">{t(locale, "discovery.subsectorGeneral")}</option>
                     {(data.catalog.find((pack) => pack.id === packId)?.subsectors ?? []).map((sub) => (
                       <option key={sub.id} value={sub.id}>
                         {sub.label}
@@ -486,21 +542,23 @@ export default function DiscoveryPage() {
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="text-[11px] text-abys-muted">
-                  Onay, seçili paketin KPI tanımlarını kayıt defterine ekler. Elle yazılmış aynı adlı tanımlar korunur.
+                  {t(locale, "discovery.confirmHint")}
                 </p>
                 <button
                   onClick={() => void confirmProfile()}
                   disabled={busy || !packId}
                   className="text-sm rounded-full bg-abys-navy text-white px-5 py-2 hover:opacity-90 disabled:opacity-40"
                 >
-                  {busy ? "Onaylanıyor…" : "Profili onayla ve KPI’ları etkinleştir"}
+                  {busy ? t(locale, "discovery.confirming") : t(locale, "discovery.confirm")}
                 </button>
               </div>
             </div>
 
             {data.rankings.length > 1 && (
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
-                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">ALTERNATİF SINIFLANDIRMALAR</p>
+                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+                  {t(locale, "discovery.alternativesHeading")}
+                </p>
                 <ul className="space-y-1 list-none p-0 m-0">
                   {data.rankings.map((r) => (
                     <li key={r.packId} className="flex items-center justify-between text-sm text-abys-ink">
@@ -513,17 +571,19 @@ export default function DiscoveryPage() {
             )}
 
             <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 overflow-x-auto">
-              <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">ÖNERİLEN KPI ÇERÇEVESİ</p>
+              <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+                {t(locale, "discovery.kpiHeading")}
+              </p>
               {data.kpis.length === 0 ? (
-                <p className="text-sm text-abys-muted">Sınıflandırma oluşmadığı için KPI önerisi yok.</p>
+                <p className="text-sm text-abys-muted">{t(locale, "discovery.kpiEmpty")}</p>
               ) : (
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-xs text-abys-muted">
                       <th className="py-1 font-medium">KPI</th>
-                      <th className="py-1 font-medium">Durum</th>
-                      <th className="py-1 font-medium">Formül</th>
-                      <th className="py-1 font-medium">Eksik alanlar</th>
+                      <th className="py-1 font-medium">{t(locale, "discovery.colStatus")}</th>
+                      <th className="py-1 font-medium">{t(locale, "discovery.colFormula")}</th>
+                      <th className="py-1 font-medium">{t(locale, "discovery.colMissing")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -537,7 +597,7 @@ export default function DiscoveryPage() {
                         </td>
                         <td className="py-1">
                           <span className={`text-[10px] rounded-full px-2 py-0.5 ${AVAILABILITY_STYLE[k.availability]}`}>
-                            {AVAILABILITY_LABEL[k.availability]}
+                            {availabilityLabel(locale, k.availability)}
                           </span>
                         </td>
                         <td className="py-1 text-xs text-abys-muted max-w-[220px]">{k.kpi.formula}</td>
@@ -553,15 +613,19 @@ export default function DiscoveryPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
-                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">GÖZLENEN KANONİK ŞEMA</p>
+                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+                  {t(locale, "discovery.schemaHeading")}
+                </p>
                 {data.observedSchema.length === 0 ? (
-                  <p className="text-sm text-abys-muted">Bağlı kaynaklardan eşlenmiş alan yok.</p>
+                  <p className="text-sm text-abys-muted">{t(locale, "discovery.schemaEmpty")}</p>
                 ) : (
                   <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                     {data.observedSchema.map((entity) => (
                       <div key={entity.entity}>
                         <p className="text-sm text-abys-ink">
-                          {entity.entity} <span className="text-[11px] text-abys-muted">({entity.records} kayıt)</span>
+                          {entity.entity} <span className="text-[11px] text-abys-muted">
+                          {formatMessage(locale, "discovery.recordCount", { count: entity.records })}
+                        </span>
                         </p>
                         <p className="text-[11px] text-abys-muted">
                           {entity.fields
@@ -579,39 +643,48 @@ export default function DiscoveryPage() {
                 )}
               </div>
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
-                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">SEMANTİK GRAFİK TEMELİ</p>
+                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+                  {t(locale, "discovery.graphHeading")}
+                </p>
                 <p className="font-serif text-2xl text-abys-navy">
-                  {data.graphSummary.coverage.nodeCount} düğüm · {data.graphSummary.coverage.edgeCount} ilişki
+                  {formatMessage(locale, "discovery.graphCounts", {
+                    nodes: data.graphSummary.coverage.nodeCount,
+                    edges: data.graphSummary.coverage.edgeCount,
+                  })}
                 </p>
                 <p className="text-xs text-abys-muted mt-1">
-                  {data.graphSummary.coverage.unresolvedNodeCount} referans hedefi kaynakta çözülemedi.
+                  {formatMessage(locale, "discovery.unresolved", {
+                    count: data.graphSummary.coverage.unresolvedNodeCount,
+                  })}
                 </p>
                 <div className="mt-3 grid grid-cols-3 gap-2 text-center">
                   <div className="rounded-lg bg-white/60 px-2 py-2">
                     <p className="font-serif text-lg text-abys-navy">{data.graphSummary.coverage.multiSourceNodeCount}</p>
-                    <p className="text-[10px] text-abys-muted">Çok kaynaklı varlık</p>
+                    <p className="text-[10px] text-abys-muted">{t(locale, "discovery.multiSource")}</p>
                   </div>
                   <div className="rounded-lg bg-white/60 px-2 py-2">
                     <p className="font-serif text-lg text-abys-navy">{data.graphSummary.resolution.strongLinkRecords}</p>
-                    <p className="text-[10px] text-abys-muted">Güçlü kimlik</p>
+                    <p className="text-[10px] text-abys-muted">{t(locale, "discovery.strongIdentity")}</p>
                   </div>
                   <div className="rounded-lg bg-white/60 px-2 py-2">
                     <p className="font-serif text-lg text-abys-navy">{data.graphSummary.resolution.sourceScopedRecords}</p>
-                    <p className="text-[10px] text-abys-muted">Kaynağa özgü</p>
+                    <p className="text-[10px] text-abys-muted">{t(locale, "discovery.sourceScoped")}</p>
                   </div>
                 </div>
                 <p className="text-[10px] text-abys-muted mt-2">{data.graphSummary.resolution.linkStrategy}</p>
                 <p className="text-[11px] text-abys-muted mt-3">
                   {data.graphSummary.entities.length === 0
-                    ? "Grafik için kanonik kayıt yok."
+                    ? t(locale, "discovery.graphEmpty")
                     : data.graphSummary.entities.map((entity) => `${entity.entity}=${entity.count}`).join(" · ")}
                 </p>
                 <p className="text-[10px] text-abys-muted mt-2">{data.graphSummary.provenance.note}</p>
               </div>
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
-                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">ALTIN KAYIT KONTROLÜ</p>
+                <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+                  {t(locale, "discovery.goldenHeading")}
+                </p>
                 {goldenRecords.length === 0 ? (
-                  <p className="text-sm text-abys-muted">Çok kaynaklı kanonik varlık henüz yok.</p>
+                  <p className="text-sm text-abys-muted">{t(locale, "discovery.goldenEmpty")}</p>
                 ) : (
                   <div className="space-y-3">
                     {goldenRecords.map((record) => (
@@ -620,7 +693,11 @@ export default function DiscoveryPage() {
                           <div>
                             <p className="text-sm text-abys-ink">{record.label}</p>
                             <p className="text-[10px] text-abys-muted">
-                              {record.entity} · {record.sourceCount} kaynak · {record.recordCount} kayıt
+                              {formatMessage(locale, "discovery.goldenMeta", {
+                                entity: record.entity,
+                                sources: record.sourceCount,
+                                records: record.recordCount,
+                              })}
                             </p>
                           </div>
                           <span className={`rounded-full px-2 py-0.5 text-[10px] ${
@@ -628,33 +705,41 @@ export default function DiscoveryPage() {
                               ? "bg-abys-warning-soft text-abys-warning"
                               : "bg-abys-healthy-soft text-abys-healthy"
                           }`}>
-                            {record.conflictCount > 0 ? `${record.conflictCount} çelişki` : "Tutarlı"}
+                            {record.conflictCount > 0
+                              ? formatMessage(locale, "discovery.conflicts", {
+                                  count: record.conflictCount,
+                                })
+                              : t(locale, "discovery.consistent")}
                           </span>
                         </div>
                         <p className="text-[10px] text-abys-muted mt-1">
-                          {record.policyApplied ? "Onaylı kaynak güven sırası uygulanıyor." : "Kaynak güncelliği kullanılıyor."}
+                          {record.policyApplied
+                            ? t(locale, "discovery.policyApplied")
+                            : t(locale, "discovery.freshnessApplied")}
                         </p>
                       </div>
                     ))}
                   </div>
                 )}
                 <p className="text-[10px] text-abys-muted mt-3">
-                  Kaynak kayıtları değiştirilmez; alan seçimi ve kaynağı izlenebilir biçimde raporlanır.
+                  {t(locale, "discovery.goldenNote")}
                 </p>
               </div>
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p className="text-xs tracking-widest text-abys-muted font-semibold">ALTIN KAYIT GÜVEN SIRASI</p>
+                    <p className="text-xs tracking-widest text-abys-muted font-semibold">
+                      {t(locale, "discovery.policyHeading")}
+                    </p>
                     <p className="text-[11px] text-abys-muted mt-1">
-                      Alan çakıştığında düşük sayılı kaynak önce gelir. Kaynak kayıtları değiştirilmez.
+                      {t(locale, "discovery.policyHint")}
                     </p>
                   </div>
                   <select
                     value={policyEntity}
                     onChange={(event) => setPolicyEntity(event.target.value)}
                     className="rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-xs text-abys-ink"
-                    aria-label="Altın kayıt varlık türü"
+                    aria-label={t(locale, "discovery.policyEntityAria")}
                   >
                     {POLICY_ENTITIES.map((entity) => (
                       <option key={entity} value={entity}>
@@ -665,7 +750,7 @@ export default function DiscoveryPage() {
                 </div>
                 {entitySources.length === 0 ? (
                   <p className="text-sm text-abys-muted mt-3">
-                    Bu varlık türü için kaynak konnektör yok. Önce Sistem Bağlantıları ekranından bir kaynak tanımlayın.
+                    {t(locale, "discovery.policyNoSources")}
                   </p>
                 ) : (
                   <div className="mt-3 space-y-2">
@@ -676,14 +761,20 @@ export default function DiscoveryPage() {
                           <div>
                             <p className="text-sm text-abys-ink">{source.name}</p>
                             <p className="text-[10px] text-abys-muted">
-                              {source.id} · konfig v{source.configVersion}
-                              {existingPolicy
-                                ? ` · son güncelleme ${existingPolicy.updatedBy} / ${formatDateTime(existingPolicy.updatedAt)}`
-                                : " · henüz onaylı sıra yok"}
+                              {formatMessage(locale, "discovery.sourceMeta", {
+                                id: source.id,
+                                version: source.configVersion,
+                                policy: existingPolicy
+                                  ? formatMessage(locale, "discovery.sourcePolicyUpdated", {
+                                      by: existingPolicy.updatedBy,
+                                      at: formatDateTime(locale, existingPolicy.updatedAt),
+                                    })
+                                  : t(locale, "discovery.sourceNoPolicy"),
+                              })}
                             </p>
                           </div>
                           <label className="flex items-center gap-2 text-[11px] text-abys-muted">
-                            Öncelik
+                            {t(locale, "discovery.priorityLabel")}
                             <input
                               type="number"
                               min={1}
@@ -704,16 +795,18 @@ export default function DiscoveryPage() {
                       disabled={policyBusy}
                       className="rounded-full bg-abys-navy px-4 py-1.5 text-xs text-white hover:opacity-90 disabled:opacity-40"
                     >
-                      {policyBusy ? "Kaydediliyor…" : "Güven sırasını onayla"}
+                      {policyBusy ? t(locale, "discovery.policySaving") : t(locale, "discovery.policySave")}
                     </button>
                   </div>
                 )}
               </div>
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <p className="text-xs tracking-widest text-abys-muted font-semibold">DİJİTAL İKİZ · DURUM</p>
+                  <p className="text-xs tracking-widest text-abys-muted font-semibold">
+                    {t(locale, "discovery.twinHeading")}
+                  </p>
                   <label className="text-[10px] text-abys-muted">
-                    Geçmiş an{" "}
+                    {t(locale, "discovery.twinAsOf")}{" "}
                     <input
                       type="datetime-local"
                       value={twinAsOf}
@@ -727,46 +820,62 @@ export default function DiscoveryPage() {
                   </label>
                 </div>
                 {!digitalTwin ? (
-                  <p className="text-sm text-abys-muted">Kurumsal durum projeksiyonu henüz oluşmadı.</p>
+                  <p className="text-sm text-abys-muted">{t(locale, "discovery.twinEmpty")}</p>
                 ) : (
                   <>
                     <div className="grid grid-cols-3 gap-2 text-center">
                       <div className="rounded-lg bg-white/60 px-2 py-2">
                         <p className="font-serif text-lg text-abys-navy">{digitalTwin.coverage.canonicalEntities}</p>
-                        <p className="text-[10px] text-abys-muted">Kanonik varlık</p>
+                        <p className="text-[10px] text-abys-muted">{t(locale, "discovery.twinCanonical")}</p>
                       </div>
                       <div className="rounded-lg bg-white/60 px-2 py-2">
                         <p className="font-serif text-lg text-abys-navy">{digitalTwin.operations.orderCount}</p>
-                        <p className="text-[10px] text-abys-muted">Sipariş</p>
+                        <p className="text-[10px] text-abys-muted">{t(locale, "discovery.twinOrders")}</p>
                       </div>
                       <div className="rounded-lg bg-white/60 px-2 py-2">
                         <p className="font-serif text-lg text-abys-navy">{digitalTwin.risks.length}</p>
-                        <p className="text-[10px] text-abys-muted">Açık risk sinyali</p>
+                        <p className="text-[10px] text-abys-muted">{t(locale, "discovery.twinRisks")}</p>
                       </div>
                     </div>
                     <div className="mt-3 space-y-1">
                       {digitalTwin.financials.byCurrency.length === 0 ? (
-                        <p className="text-[11px] text-abys-muted">Sınıflandırılmış finansal tutar yok.</p>
+                        <p className="text-[11px] text-abys-muted">{t(locale, "discovery.twinNoFinancials")}</p>
                       ) : (
                         digitalTwin.financials.byCurrency.map((currency) => (
                           <p key={currency.currency} className="text-[11px] text-abys-muted">
-                            {currency.currency}: sipariş {currency.orderValue.toLocaleString("tr-TR")} · fatura{" "}
-                            {currency.invoiceValue.toLocaleString("tr-TR")}
+                            {formatMessage(locale, "discovery.twinFinancialLine", {
+                              currency: currency.currency,
+                              orders: currency.orderValue.toLocaleString(locale),
+                              invoices: currency.invoiceValue.toLocaleString(locale),
+                            })}
                           </p>
                         ))
                       )}
                       {digitalTwin.financials.unclassifiedValueCount > 0 && (
                         <p className="text-[10px] text-abys-warning">
-                          {digitalTwin.financials.unclassifiedValueCount} tutar para birimi olmadığı için toplama katılmadı.
+                          {formatMessage(locale, "discovery.twinUnclassified", {
+                            count: digitalTwin.financials.unclassifiedValueCount,
+                          })}
                         </p>
                       )}
                     </div>
                     <p className="text-[10px] text-abys-muted mt-2">
                       {digitalTwin.coverage.mode === "historical"
-                        ? `Geçmiş görünüm: ${formatDateTime(digitalTwin.coverage.asOf)} · `
-                        : "Güncel görünüm · "}
-                      Veri yaşı: {digitalTwin.freshness.ageMinutes === null ? "—" : `${digitalTwin.freshness.ageMinutes} dk`}
-                      {digitalTwin.freshness.stale ? " · eşik aşıldı" : " · taze"}
+                        ? formatMessage(locale, "discovery.twinHistorical", {
+                            at: formatDateTime(locale, digitalTwin.coverage.asOf),
+                          })
+                        : t(locale, "discovery.twinCurrent")}
+                      {formatMessage(locale, "discovery.twinAge", {
+                        age:
+                          digitalTwin.freshness.ageMinutes === null
+                            ? "—"
+                            : formatMessage(locale, "discovery.twinMinutes", {
+                                value: digitalTwin.freshness.ageMinutes,
+                              }),
+                      })}
+                      {digitalTwin.freshness.stale
+                        ? t(locale, "discovery.twinStale")
+                        : t(locale, "discovery.twinFresh")}
                     </p>
                     {digitalTwin.risks.slice(0, 3).map((risk) => (
                       <p key={`${risk.code}:${risk.title}`} className={`text-[10px] mt-1 ${risk.severity === "critical" ? "text-abys-warning" : "text-abys-muted"}`}>
@@ -780,22 +889,29 @@ export default function DiscoveryPage() {
             </div>
 
             <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 text-xs text-abys-muted space-y-1">
-              <p className="text-[11px] tracking-widest font-semibold">GİRDİLER</p>
+              <p className="text-[11px] tracking-widest font-semibold">
+                {t(locale, "discovery.inputsHeading")}
+              </p>
               <p>
-                Varlık kayıtları:{" "}
+                {t(locale, "discovery.inputsEntities")}{" "}
                 {Object.keys(data.inputs.entities).length === 0
-                  ? "yok"
+                  ? t(locale, "discovery.inputsNone")
                   : Object.entries(data.inputs.entities)
                       .map(([e, n]) => `${e}=${n}`)
                       .join(", ")}
               </p>
               <p>
-                Eşlenmiş alan: {data.inputs.fieldCount} · KPI etiketi: {data.inputs.kpiLabelCount} · Kayıtlı sektör:{" "}
-                {data.inputs.sectorId ?? "—"}
+                {formatMessage(locale, "discovery.inputsSummary", {
+                  fields: data.inputs.fieldCount,
+                  labels: data.inputs.kpiLabelCount,
+                  sector: data.inputs.sectorId ?? "—",
+                })}
               </p>
               {data.missingInformation.length > 0 && (
                 <>
-                  <p className="pt-2 text-[11px] tracking-widest font-semibold">EKSİK BİLGİ</p>
+                  <p className="pt-2 text-[11px] tracking-widest font-semibold">
+                    {t(locale, "discovery.missingHeading")}
+                  </p>
                   <ul className="space-y-0.5">
                     {data.missingInformation.map((m, i) => (
                       <li key={i}>• {m}</li>
@@ -806,7 +922,9 @@ export default function DiscoveryPage() {
               <p className="pt-2">{data.note}</p>
               <p>{data.provenance.note}</p>
               <p>
-                Katalog: {data.catalog.map((c) => `${c.label} v${c.version}`).join(" · ")}
+                {formatMessage(locale, "discovery.catalogLine", {
+                  list: data.catalog.map((c) => `${c.label} v${c.version}`).join(" · "),
+                })}
               </p>
             </div>
           </>
