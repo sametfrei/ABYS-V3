@@ -1,7 +1,40 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function severityLabel(locale: Locale, severity: string): string {
+  const key = `organization.severity.${severity}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? severity : label;
+}
+
+function kindLabel(locale: Locale, kind: OrgRow["kind"]): string {
+  return t(locale, `organization.kind.${kind}` as ShellKey);
+}
 
 interface OrgRow {
   id: string;
@@ -43,19 +76,6 @@ interface PriorityDecision {
   createdAt: string;
 }
 
-const SEVERITY_LABEL: Record<string, string> = {
-  critical: "KRİTİK",
-  high: "YÜKSEK",
-  medium: "ORTA",
-  low: "DÜŞÜK",
-};
-
-const KIND_LABEL: Record<OrgRow["kind"], string> = {
-  group: "Holding",
-  company: "Şirket",
-  branch: "Şube",
-};
-
 const EMPTY_TOTALS: Totals = {
   openSignals: 0,
   openDecisions: 0,
@@ -68,6 +88,7 @@ const EMPTY_TOTALS: Totals = {
  * (kök her zaman oturumdan gelir); başka holding/şube verisi görünmez.
  */
 export default function OrganizationPage() {
+  const locale = useLocale();
   const [orgs, setOrgs] = useState<OrgRow[]>([]);
   const [metrics, setMetrics] = useState<Record<string, ConsolidationRow>>({});
   const [totals, setTotals] = useState<Totals>(EMPTY_TOTALS);
@@ -85,8 +106,8 @@ export default function OrganizationPage() {
           fetch("/api/organizations/consolidation", { cache: "no-store" }),
         ]);
         if (!orgRes.ok) {
-          if (orgRes.status === 401) throw new Error("Bu sayfa için oturum gerekir.");
-          if (orgRes.status === 403) throw new Error("Organizasyon görünümü için yetkiniz yok.");
+          if (orgRes.status === 401) throw new Error(t(readLocale(), "organization.sessionRequired"));
+          if (orgRes.status === 403) throw new Error(t(readLocale(), "organization.forbidden"));
           throw new Error(`Organizasyon verisi yüklenemedi (HTTP ${orgRes.status}).`);
         }
         const orgData = (await orgRes.json()) as {
@@ -110,7 +131,9 @@ export default function OrganizationPage() {
         setTotals(conData.totals ?? EMPTY_TOTALS);
         setTopDecisions(Array.isArray(conData.topDecisions) ? conData.topDecisions : []);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Yükleme başarısız.");
+        if (!cancelled) setError(
+          err instanceof Error ? err.message : t(readLocale(), "organization.loadFailed")
+        );
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -123,15 +146,17 @@ export default function OrganizationPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="ORGANİZASYON"
-        title="Şirket ve"
-        accent="şubeler."
-        desc="Oturumunuzun bağlı olduğu organizasyon ağacı ve konsolide açık iş yükü. Kapsam sunucu oturumundan belirlenir."
+        eyebrow={t(locale, "organization.eyebrow")}
+        title={t(locale, "organization.title")}
+        accent={t(locale, "organization.titleAccent")}
+        desc={t(locale, "organization.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-4xl">
         {loading ? (
-          <p className="text-sm text-abys-muted" role="status">Yükleniyor…</p>
+          <p className="text-sm text-abys-muted" role="status">
+            {t(locale, "organization.loading")}
+          </p>
         ) : error ? (
           <p role="alert" className="rounded-xl border border-abys-critical/40 bg-abys-critical-soft px-4 py-3 text-sm text-abys-critical">
             {error}
@@ -140,16 +165,18 @@ export default function OrganizationPage() {
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
               {[
-                ["Açık risk", totals.openSignals],
-                ["Açık karar", totals.openDecisions],
-                ["Açık aksiyon", totals.openActions],
-                ["Gecikmiş aksiyon", totals.overdueActions],
+                ["organization.totals.signals", totals.openSignals],
+                ["organization.totals.decisions", totals.openDecisions],
+                ["organization.totals.actions", totals.openActions],
+                ["organization.totals.overdue", totals.overdueActions],
               ].map(([label, value]) => (
                 <div
                   key={String(label)}
                   className="rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3"
                 >
-                  <p className="text-[11px] tracking-wide text-abys-muted uppercase">{label}</p>
+                  <p className="text-[11px] tracking-wide text-abys-muted uppercase">
+                    {t(locale, label as ShellKey)}
+                  </p>
                   <p className="font-serif text-2xl text-abys-navy">{String(value)}</p>
                 </div>
               ))}
@@ -161,7 +188,7 @@ export default function OrganizationPage() {
                   id="top-decisions-title"
                   className="text-xs tracking-widest text-abys-muted font-semibold mb-3"
                 >
-                  BUGÜNÜN ÖNCELİKLİ KARARLARI
+                  {t(locale, "organization.topDecisions")}
                 </h2>
                 <ol className="space-y-2 list-none p-0 m-0">
                   {topDecisions.map((decision, index) => (
@@ -182,9 +209,13 @@ export default function OrganizationPage() {
                                 : "bg-abys-cream text-abys-ink"
                             }`}
                           >
-                            {SEVERITY_LABEL[decision.severity] ?? decision.severity}
+                            {severityLabel(locale, decision.severity)}
                           </span>
-                          <span className="text-abys-muted">Güven: %{decision.confidence}</span>
+                          <span className="text-abys-muted">
+                            {formatMessage(locale, "organization.confidence", {
+                              value: decision.confidence,
+                            })}
+                          </span>
                         </div>
                       </div>
                       <p className="text-xs text-abys-muted mt-1">{decision.orgName}</p>
@@ -195,7 +226,7 @@ export default function OrganizationPage() {
             )}
 
             {orgs.length === 0 ? (
-              <p className="text-sm text-abys-muted">Organizasyon kaydı bulunamadı.</p>
+              <p className="text-sm text-abys-muted">{t(locale, "organization.empty")}</p>
             ) : (
               <ul className="space-y-2 list-none p-0 m-0">
                 {orgs.map((org) => {
@@ -216,12 +247,12 @@ export default function OrganizationPage() {
                             {org.name}
                             {org.id === rootOrgId && (
                               <span className="ml-2 rounded-full bg-abys-accent/10 px-2 py-0.5 text-[10px] font-semibold text-abys-accent">
-                                KÖK
+                                {t(locale, "organization.rootBadge")}
                               </span>
                             )}
                           </p>
                           <p className="text-xs text-abys-muted">
-                            {KIND_LABEL[org.kind]}
+                            {kindLabel(locale, org.kind)}
                             {org.code ? ` · ${org.code}` : ""}
                             {org.country ? ` · ${org.country}` : ""}
                             {` · ${org.currency}`}
@@ -229,12 +260,21 @@ export default function OrganizationPage() {
                         </div>
                         {m && (
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-abys-muted">
-                            <span>Risk: <b className="text-abys-ink">{m.openSignals}</b></span>
-                            <span>Karar: <b className="text-abys-ink">{m.openDecisions}</b></span>
-                            <span>Aksiyon: <b className="text-abys-ink">{m.openActions}</b></span>
+                            <span>
+                              {t(locale, "organization.metric.signals")}{" "}
+                              <b className="text-abys-ink">{m.openSignals}</b>
+                            </span>
+                            <span>
+                              {t(locale, "organization.metric.decisions")}{" "}
+                              <b className="text-abys-ink">{m.openDecisions}</b>
+                            </span>
+                            <span>
+                              {t(locale, "organization.metric.actions")}{" "}
+                              <b className="text-abys-ink">{m.openActions}</b>
+                            </span>
                             {m.overdueActions > 0 && (
                               <span className="text-abys-critical">
-                                Gecikmiş: <b>{m.overdueActions}</b>
+                                {t(locale, "organization.metric.overdue")} <b>{m.overdueActions}</b>
                               </span>
                             )}
                           </div>

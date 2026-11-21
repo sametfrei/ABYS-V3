@@ -909,6 +909,33 @@ export type ShellKey =
   | "ledger.exportCsv"
   | "audit.exportCsv"
   | "forecast.exportCsv"
+  | "organization.eyebrow"
+  | "organization.title"
+  | "organization.titleAccent"
+  | "organization.subtitle"
+  | "organization.sessionRequired"
+  | "organization.forbidden"
+  | "organization.loadFailed"
+  | "organization.loading"
+  | "organization.empty"
+  | "organization.topDecisions"
+  | "organization.confidence"
+  | "organization.rootBadge"
+  | "organization.totals.signals"
+  | "organization.totals.decisions"
+  | "organization.totals.actions"
+  | "organization.totals.overdue"
+  | "organization.metric.signals"
+  | "organization.metric.decisions"
+  | "organization.metric.actions"
+  | "organization.metric.overdue"
+  | "organization.severity.critical"
+  | "organization.severity.high"
+  | "organization.severity.medium"
+  | "organization.severity.low"
+  | "organization.kind.group"
+  | "organization.kind.company"
+  | "organization.kind.branch"
   | "options.eyebrow"
   | "options.title"
   | "options.titleAccent"
@@ -2662,6 +2689,33 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
+  "organization.eyebrow": { tr: "ORGANİZASYON", en: "ORGANIZATION" },
+  "organization.title": { tr: "Şirket ve", en: "Companies and" },
+  "organization.titleAccent": { tr: "şubeler.", en: "branches." },
+  "organization.subtitle": { tr: "Oturumunuzun bağlı olduğu organizasyon ağacı ve konsolide açık iş yükü. Kapsam sunucu oturumundan belirlenir.", en: "The organization tree your session belongs to and the consolidated open workload. Scope comes from the server session." },
+  "organization.sessionRequired": { tr: "Bu sayfa için oturum gerekir.", en: "This page requires a session." },
+  "organization.forbidden": { tr: "Organizasyon görünümü için yetkiniz yok.", en: "You are not authorized for the organization view." },
+  "organization.loadFailed": { tr: "Yükleme başarısız.", en: "Loading failed." },
+  "organization.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "organization.empty": { tr: "Organizasyon kaydı bulunamadı.", en: "No organization records found." },
+  "organization.topDecisions": { tr: "BUGÜNÜN ÖNCELİKLİ KARARLARI", en: "TODAY'S PRIORITY DECISIONS" },
+  "organization.confidence": { tr: "Güven: %{value}", en: "Confidence: {value}%" },
+  "organization.rootBadge": { tr: "KÖK", en: "ROOT" },
+  "organization.totals.signals": { tr: "Açık risk", en: "Open risks" },
+  "organization.totals.decisions": { tr: "Açık karar", en: "Open decisions" },
+  "organization.totals.actions": { tr: "Açık aksiyon", en: "Open actions" },
+  "organization.totals.overdue": { tr: "Gecikmiş aksiyon", en: "Overdue actions" },
+  "organization.metric.signals": { tr: "Risk:", en: "Risk:" },
+  "organization.metric.decisions": { tr: "Karar:", en: "Decision:" },
+  "organization.metric.actions": { tr: "Aksiyon:", en: "Action:" },
+  "organization.metric.overdue": { tr: "Gecikmiş:", en: "Overdue:" },
+  "organization.severity.critical": { tr: "KRİTİK", en: "CRITICAL" },
+  "organization.severity.high": { tr: "YÜKSEK", en: "HIGH" },
+  "organization.severity.medium": { tr: "ORTA", en: "MEDIUM" },
+  "organization.severity.low": { tr: "DÜŞÜK", en: "LOW" },
+  "organization.kind.group": { tr: "Holding", en: "Group" },
+  "organization.kind.company": { tr: "Şirket", en: "Company" },
+  "organization.kind.branch": { tr: "Şube", en: "Branch" },
   "options.eyebrow": { tr: "KARAR SEÇENEKLERİ", en: "DECISION OPTIONS" },
   "options.title": { tr: "Hangi seçenek,", en: "Which option," },
   "options.titleAccent": { tr: "hangi ödünleşimle?", en: "at what trade-off?" },
