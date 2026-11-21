@@ -457,9 +457,15 @@ describe("Konnektör API'si", () => {
     const runsBody = (await runs.json()) as {
       runs: { status: string }[];
       records: { entity: string; count: number }[];
+      health: { consecutiveFailures: number; retryRecommended: boolean; failureKind: string };
     };
     expect(runsBody.runs).toHaveLength(2);
     expect(runsBody.records[0]).toEqual({ entity: "customer", count: 1 });
+    expect(runsBody.health).toMatchObject({
+      consecutiveFailures: 0,
+      retryRecommended: false,
+      failureKind: "unknown",
+    });
   });
 
   it("aynı konnektör için ikinci eşzamanlı run başlatmaz", async () => {

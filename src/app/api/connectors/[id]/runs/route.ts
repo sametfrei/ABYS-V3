@@ -9,6 +9,7 @@ import {
   listSyncRuns,
 } from "@/lib/db/repos/connectors";
 import { getConnectorPromotionCounts } from "@/lib/db/repos/connector-promotion";
+import { classifyConnectorError, summarizeConnectorRuns } from "@/lib/connector-run-health";
 
 /** GET — konnektörün son senkron çalıştırmaları ve kanonik kayıt sayıları. */
 export async function GET(
@@ -32,5 +33,11 @@ export async function GET(
     getConnectorPromotionCounts(session.orgId, configRow.id),
   ]);
 
-  return NextResponse.json({ runs, records, promotion });
+  const health = summarizeConnectorRuns(runs);
+  return NextResponse.json({
+    runs,
+    records,
+    promotion,
+    health: { ...health, failureKind: classifyConnectorError(health.lastErrorMessage) },
+  });
 }
