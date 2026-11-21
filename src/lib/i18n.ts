@@ -255,6 +255,10 @@ export type ShellKey =
   | "connectors.syncIssue"
   | "connectors.syncIssueNoError"
   | "connectors.retry"
+  | "connectors.retryAdviceRateLimit"
+  | "connectors.retryAdviceTransient"
+  | "connectors.retryAdviceAuth"
+  | "connectors.retryAdviceManual"
   | "connectors.records"
   | "connectors.none"
   | "connectors.intelligenceTransfer"
@@ -786,6 +790,22 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     en: "{count} consecutive sync failures",
   },
   "connectors.retry": { tr: "Yeniden dene", en: "Retry" },
+  "connectors.retryAdviceRateLimit": {
+    tr: "Sağlayıcı oran sınırı uyguladı; kısa bir beklemeden sonra yeniden deneyin.",
+    en: "The provider applied a rate limit; wait briefly, then retry.",
+  },
+  "connectors.retryAdviceTransient": {
+    tr: "Geçici bir hata görünüyor; yeniden denemek güvenli.",
+    en: "This looks transient; retrying is safe.",
+  },
+  "connectors.retryAdviceAuth": {
+    tr: "Kimlik/izin hatası; yeniden denemek düzeltmez, bağlantı ayarını güncelleyin.",
+    en: "Authentication/authorization failure; retrying will not help — update the connection settings.",
+  },
+  "connectors.retryAdviceManual": {
+    tr: "Hata sınıflandırılamadı; çalıştırma geçmişini inceleyip elle karar verin.",
+    en: "The failure could not be classified; review the run history and decide manually.",
+  },
   "connectors.records": { tr: "Kayıtlar", en: "Records" },
   "connectors.none": { tr: "yok", en: "none" },
   "connectors.intelligenceTransfer": {

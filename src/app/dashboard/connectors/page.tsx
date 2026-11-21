@@ -2,7 +2,11 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { summarizeConnectorRuns } from "@/lib/connector-run-health";
+import {
+  classifyConnectorError,
+  retryAdvice,
+  summarizeConnectorRuns,
+} from "@/lib/connector-run-health";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -941,6 +945,16 @@ export default function ConnectorsPage() {
                         {(() => {
                           const health = summarizeConnectorRuns(detail.runs);
                           if (health.consecutiveFailures === 0) return null;
+                          const kind = classifyConnectorError(health.lastErrorMessage);
+                          const advice = retryAdvice(kind);
+                          const adviceKey =
+                            kind === "rate_limit"
+                              ? "connectors.retryAdviceRateLimit"
+                              : advice === "backoff"
+                                ? "connectors.retryAdviceTransient"
+                                : advice === "fix_config"
+                                  ? "connectors.retryAdviceAuth"
+                                  : "connectors.retryAdviceManual";
                           const note = health.lastErrorMessage
                             ? formatMessage(locale, "connectors.syncIssue", {
                                 count: health.consecutiveFailures,
@@ -955,13 +969,18 @@ export default function ConnectorsPage() {
                               className="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-red-700"
                             >
                               <span>{note}</span>
-                              <button
-                                onClick={() => void sync(c.id)}
-                                disabled={busy}
-                                className="rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-medium text-white hover:opacity-90 disabled:opacity-40"
-                              >
-                                {t(locale, "connectors.retry")}
-                              </button>
+                              <span className="basis-full text-[10px] text-red-600/90">
+                                {t(locale, adviceKey)}
+                              </span>
+                              {advice === "backoff" && (
+                                <button
+                                  onClick={() => void sync(c.id)}
+                                  disabled={busy}
+                                  className="rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-medium text-white hover:opacity-90 disabled:opacity-40"
+                                >
+                                  {t(locale, "connectors.retry")}
+                                </button>
+                              )}
                             </div>
                           );
                         })()}
