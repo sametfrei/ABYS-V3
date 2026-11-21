@@ -90,7 +90,7 @@ Durum ölçeği:
 | Denetim hash zinciri | E2E (test) | Mevcut çözüm korunuyor; seq yaması uygulanmadı |
 | Kontrollü migration yürütme | E2E (test) | Onay gerektiren migration 18 uygulanmadan bekletilir; sonraki migration'lar bağımsız uygulanır; `GET /api/health` bekleyen onayı raporlar |
 | Çoklu şirket/şube hiyerarşisi + konsolidasyon | E2E (test) | `/api/organizations*` |
-| TR/EN i18n | Kısmi | Uygulama kabuğu (gezinme, oturum, çıkış), giriş, aksiyon, bağlantı, tahmin, karar defteri, denetim, ayarlar, veri kalitesi, sinyaller ve süreç ekranları TR/EN; sunucu çerezden dili okur (`curl -H 'Cookie: abys_lang=en' /login` → EN); seçim çerez + localStorage ile kalıcı (`abys_lang`); `src/lib/i18n.ts`, `src/lib/navigation.ts`, `tests/i18n.test.ts`. İçerik ekranları henüz Türkçe — kalan çeviri ayrı iş |
+| TR/EN i18n | Kısmi | Tüm `/dashboard/*` ekranları ve Yönetim Komuta Merkezi TR/EN; sunucu çerezden dili okur (`curl -H 'Cookie: abys_lang=en' /login` → EN); seçim çerez + localStorage ile kalıcı (`abys_lang`); `src/lib/i18n.ts`, `src/lib/navigation.ts`, `tests/i18n.test.ts`. Sunucu tarafı içerik/API yanıt metinleri ve Ask ABYS eşleştiricisi Türkçe kalır — kalan çeviri ayrı iş |
 | Production build | E2E (test) | `npm run build` başarılı: TypeScript, 94 route/sayfa derlemesi ve statik üretim tamamlandı |
 | Tarayıcı E2E | Tarayıcı bekliyor | Otomatik browser doğrulaması bu oturumda yapılmadı |
 

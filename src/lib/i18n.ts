@@ -1443,7 +1443,75 @@ export type ShellKey =
   | "ask.example.pest"
   | "ask.example.catering"
   | "ask.example.decision"
-  | "ask.example.taisHealth";
+  | "ask.example.taisHealth"
+  | "commandCenter.heading"
+  | "commandCenter.lastActivity"
+  | "commandCenter.noActivity"
+  | "commandCenter.focusKickerRecommended"
+  | "commandCenter.focusKickerNext"
+  | "commandCenter.briefDetail"
+  | "commandCenter.ctaReviewDecision"
+  | "commandCenter.ctaDecisionCenter"
+  | "commandCenter.focusDecisionTitle"
+  | "commandCenter.focusDecisionDetail"
+  | "commandCenter.focusSignalTitle"
+  | "commandCenter.focusSignalDetail"
+  | "commandCenter.ctaReviewSignals"
+  | "commandCenter.focusActionTitle"
+  | "commandCenter.focusActionDetail"
+  | "commandCenter.ctaReviewActions"
+  | "commandCenter.focusOutcomeTitle"
+  | "commandCenter.focusOutcomeDetail"
+  | "commandCenter.ctaReviewOutcome"
+  | "commandCenter.sourceDecision"
+  | "commandCenter.sourceSignal"
+  | "commandCenter.sourceAction"
+  | "commandCenter.sourceOutcome"
+  | "commandCenter.metaConfidence"
+  | "commandCenter.metaSeverity"
+  | "commandCenter.statusInProgress"
+  | "commandCenter.statusOpen"
+  | "commandCenter.metaStatusOwner"
+  | "commandCenter.focusHeading"
+  | "commandCenter.focusSubheading"
+  | "commandCenter.developmentsHeading"
+  | "commandCenter.viewAll"
+  | "commandCenter.statDecisions"
+  | "commandCenter.statSignals"
+  | "commandCenter.statActions"
+  | "commandCenter.statImproved"
+  | "commandCenter.blockDecisions"
+  | "commandCenter.emptyDecisions"
+  | "commandCenter.blockSignals"
+  | "commandCenter.emptySignals"
+  | "commandCenter.blockActions"
+  | "commandCenter.blockActionsOverdue"
+  | "commandCenter.emptyActions"
+  | "commandCenter.blockOutcomes"
+  | "commandCenter.emptyOutcomes"
+  | "commandCenter.briefHeading"
+  | "commandCenter.briefConfidence"
+  | "commandCenter.briefCurrent"
+  | "commandCenter.briefImpact"
+  | "commandCenter.briefNext"
+  | "commandCenter.briefRecommended"
+  | "commandCenter.briefRationale"
+  | "commandCenter.briefCalibration"
+  | "commandCenter.evidenceHeading"
+  | "commandCenter.calibrationMeasured"
+  | "commandCenter.calibrationInsufficient"
+  | "commandCenter.calibrationNoteOverconfident"
+  | "commandCenter.calibrationNoteAligned"
+  | "commandCenter.calibrationNoteUnderconfident"
+  | "commandCenter.reliabilityVerified"
+  | "commandCenter.reliabilityEstimated"
+  | "commandCenter.reliabilityUnknown"
+  | "commandCenter.severityCritical"
+  | "commandCenter.severityWarning"
+  | "commandCenter.severityInfo"
+  | "commandCenter.outcomeImproved"
+  | "commandCenter.outcomeUnchanged"
+  | "commandCenter.outcomeWorsened";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -3561,6 +3629,74 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ask.example.catering": { tr: "Catering operasyonunda bugün risk var mı?", en: "Is there a risk in catering operations today?" },
   "ask.example.decision": { tr: "Yönetimin bugün vermesi gereken karar nedir?", en: "What decision should leadership make today?" },
   "ask.example.taisHealth": { tr: "TAIS'in genel operasyon sağlığı nedir?", en: "What is TAIS's overall operations health?" },
+  "commandCenter.heading": { tr: "YÖNETİM KOMUTA MERKEZİ", en: "EXECUTIVE COMMAND CENTER" },
+  "commandCenter.lastActivity": { tr: "Son faaliyet: {time}", en: "Last activity: {time}" },
+  "commandCenter.noActivity": { tr: "Faaliyet yok", en: "No activity" },
+  "commandCenter.focusKickerRecommended": { tr: "ÖNERİLEN AKSİYON", en: "RECOMMENDED ACTION" },
+  "commandCenter.focusKickerNext": { tr: "SIRADAKİ ADIM", en: "NEXT STEP" },
+  "commandCenter.briefDetail": { tr: "En kritik açık vaka: {condition}", en: "Most critical open case: {condition}" },
+  "commandCenter.ctaReviewDecision": { tr: "Kararı incele ve karar ver", en: "Review the case and decide" },
+  "commandCenter.ctaDecisionCenter": { tr: "Karar Merkezi'ne git", en: "Go to Decision Center" },
+  "commandCenter.focusDecisionTitle": { tr: "En kritik açık kararı inceleyin: {title}", en: "Review the most critical open decision: {title}" },
+  "commandCenter.focusDecisionDetail": { tr: "{severity} öncelik · güven %{confidence}", en: "{severity} priority · confidence {confidence}%" },
+  "commandCenter.focusSignalTitle": { tr: "En yüksek öncelikli sinyali inceleyin: {title}", en: "Review the highest-priority signal: {title}" },
+  "commandCenter.focusSignalDetail": { tr: "{severity} seviye açık sinyal", en: "{severity} level open signal" },
+  "commandCenter.ctaReviewSignals": { tr: "Sinyalleri incele", en: "Review signals" },
+  "commandCenter.focusActionTitle": { tr: "Açık aksiyonun durumunu kontrol edin: {title}", en: "Check the status of the open action: {title}" },
+  "commandCenter.focusActionDetail": { tr: "Sorumlu: {owner}", en: "Owner: {owner}" },
+  "commandCenter.ctaReviewActions": { tr: "Aksiyonları incele", en: "Review actions" },
+  "commandCenter.focusOutcomeTitle": { tr: "Son ölçülen sonucu ve kurumsal dersi gözden geçirin.", en: "Review the most recent measured outcome and institutional lesson." },
+  "commandCenter.focusOutcomeDetail": { tr: "{outcome} olarak kaydedildi.", en: "Recorded as {outcome}." },
+  "commandCenter.ctaReviewOutcome": { tr: "Sonuç kaydını incele", en: "Review the outcome record" },
+  "commandCenter.sourceDecision": { tr: "Karar", en: "Decision" },
+  "commandCenter.sourceSignal": { tr: "Sinyal", en: "Signal" },
+  "commandCenter.sourceAction": { tr: "Aksiyon", en: "Action" },
+  "commandCenter.sourceOutcome": { tr: "Sonuç", en: "Outcome" },
+  "commandCenter.metaConfidence": { tr: "{severity} · güven %{confidence}", en: "{severity} · confidence {confidence}%" },
+  "commandCenter.metaSeverity": { tr: "{severity} seviye", en: "{severity} level" },
+  "commandCenter.statusInProgress": { tr: "Yürütülüyor", en: "In progress" },
+  "commandCenter.statusOpen": { tr: "Açık", en: "Open" },
+  "commandCenter.metaStatusOwner": { tr: "{status} · {owner}", en: "{status} · {owner}" },
+  "commandCenter.focusHeading": { tr: "30 SANİYELİK ODAK", en: "30-SECOND FOCUS" },
+  "commandCenter.focusSubheading": { tr: "Önce karar, sonra yürütme", en: "Decision first, execution second" },
+  "commandCenter.developmentsHeading": { tr: "ÖNE ÇIKAN GELİŞMELER", en: "PROMINENT DEVELOPMENTS" },
+  "commandCenter.viewAll": { tr: "tümü →", en: "all →" },
+  "commandCenter.statDecisions": { tr: "Dikkat bekleyen karar", en: "Decisions awaiting attention" },
+  "commandCenter.statSignals": { tr: "Kritik / uyarı sinyal", en: "Critical / warning signals" },
+  "commandCenter.statActions": { tr: "Açık aksiyon", en: "Open actions" },
+  "commandCenter.statImproved": { tr: "İyileşme sağlanan sonuç", en: "Outcomes improved" },
+  "commandCenter.blockDecisions": { tr: "Onayınızı bekleyen kararlar", en: "Decisions awaiting your approval" },
+  "commandCenter.emptyDecisions": { tr: "Bekleyen karar yok.", en: "No pending decisions." },
+  "commandCenter.blockSignals": { tr: "Öne çıkan riskler ve sinyaller", en: "Top risks and signals" },
+  "commandCenter.emptySignals": { tr: "Açık sinyal yok.", en: "No open signals." },
+  "commandCenter.blockActions": { tr: "Yürütmedeki aksiyonlar", en: "Actions in execution" },
+  "commandCenter.blockActionsOverdue": { tr: "Yürütmedeki aksiyonlar · {count} geciken", en: "Actions in execution · {count} overdue" },
+  "commandCenter.emptyActions": { tr: "Açık aksiyon yok.", en: "No open actions." },
+  "commandCenter.blockOutcomes": { tr: "Son ölçülen sonuçlar", en: "Latest measured outcomes" },
+  "commandCenter.emptyOutcomes": { tr: "Henüz sonuç kaydı yok.", en: "No outcome records yet." },
+  "commandCenter.briefHeading": { tr: "YÖNETİCİ BRİFİNGİ · EN KRİTİK VAKA", en: "EXECUTIVE BRIEFING · MOST CRITICAL CASE" },
+  "commandCenter.briefConfidence": { tr: "Güven %{confidence}", en: "Confidence {confidence}%" },
+  "commandCenter.briefCurrent": { tr: "Mevcut durum", en: "Current condition" },
+  "commandCenter.briefImpact": { tr: "İş etkisi", en: "Business impact" },
+  "commandCenter.briefNext": { tr: "Aksiyon alınmazsa", en: "If no action is taken" },
+  "commandCenter.briefRecommended": { tr: "Önerilen aksiyon", en: "Recommended action" },
+  "commandCenter.briefRationale": { tr: "Güven gerekçesi", en: "Confidence rationale" },
+  "commandCenter.briefCalibration": { tr: "Geçmiş kalibrasyon", en: "Past calibration" },
+  "commandCenter.evidenceHeading": { tr: "KANIT", en: "EVIDENCE" },
+  "commandCenter.calibrationMeasured": { tr: "Geçmişte bu güven düzeyinde ({count} sonuç) iyileşme %{rate} · {note}", en: "At this confidence level historically ({count} outcomes) improvement {rate}% · {note}" },
+  "commandCenter.calibrationInsufficient": { tr: "Kalibrasyon için kanıt yetersiz · bu kovada {count}/{threshold} sonuç", en: "Not enough evidence for calibration · {count}/{threshold} outcomes in this bucket" },
+  "commandCenter.calibrationNoteOverconfident": { tr: "geçmişte bu güven düzeyi fazla iyimser çıktı", en: "this confidence level proved too optimistic in the past" },
+  "commandCenter.calibrationNoteAligned": { tr: "geçmişte bu güven düzeyi tutarlı çıktı", en: "this confidence level proved consistent in the past" },
+  "commandCenter.calibrationNoteUnderconfident": { tr: "geçmişte bu güven düzeyi temkinli kaldı", en: "this confidence level stayed cautious in the past" },
+  "commandCenter.reliabilityVerified": { tr: "doğrulanmış", en: "verified" },
+  "commandCenter.reliabilityEstimated": { tr: "tahmini", en: "estimated" },
+  "commandCenter.reliabilityUnknown": { tr: "bilinmiyor", en: "unknown" },
+  "commandCenter.severityCritical": { tr: "Kritik", en: "Critical" },
+  "commandCenter.severityWarning": { tr: "Uyarı", en: "Warning" },
+  "commandCenter.severityInfo": { tr: "Bilgi", en: "Info" },
+  "commandCenter.outcomeImproved": { tr: "İyileşti", en: "Improved" },
+  "commandCenter.outcomeUnchanged": { tr: "Değişmedi", en: "Unchanged" },
+  "commandCenter.outcomeWorsened": { tr: "Kötüleşti", en: "Worsened" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

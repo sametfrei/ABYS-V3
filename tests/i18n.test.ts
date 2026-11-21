@@ -217,6 +217,18 @@ describe("i18n kabuk sözlüğü", () => {
     expect(t("tr", "ask.sourcesHeading")).toContain("{count}");
   });
 
+  it("komuta merkezi anahtarları iki dilde dolu ve farklı", () => {
+    const keys = shellKeys().filter((key) => key.startsWith("commandCenter."));
+    expect(keys.length).toBeGreaterThan(60);
+    for (const key of keys) {
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+    expect(t("tr", "commandCenter.heading")).toBe("YÖNETİM KOMUTA MERKEZİ");
+    expect(t("en", "commandCenter.heading")).toBe("EXECUTIVE COMMAND CENTER");
+    expect(t("tr", "commandCenter.blockActionsOverdue")).toContain("{count}");
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });

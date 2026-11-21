@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { ForecastPreview } from "@/components/ForecastPreview";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 /**
  * Yönetim Komuta Merkezi paneli (Faz 4). Oturumdayken dashboard'ın en üstünde
@@ -63,10 +71,10 @@ const SEV_COLOR: Record<string, string> = {
   healthy: "var(--abys-healthy)",
 };
 
-const SEV_LABEL: Record<string, string> = {
-  critical: "Kritik",
-  warning: "Uyarı",
-  info: "Bilgi",
+const SEV_LABEL: Record<string, ShellKey> = {
+  critical: "commandCenter.severityCritical",
+  warning: "commandCenter.severityWarning",
+  info: "commandCenter.severityInfo",
 };
 
 const SEV_PRIORITY: Record<string, number> = {
@@ -75,11 +83,36 @@ const SEV_PRIORITY: Record<string, number> = {
   info: 2,
 };
 
-const OUTCOME_LABEL: Record<string, string> = {
-  improved: "İyileşti",
-  unchanged: "Değişmedi",
-  worsened: "Kötüleşti",
+const OUTCOME_LABEL: Record<string, ShellKey> = {
+  improved: "commandCenter.outcomeImproved",
+  unchanged: "commandCenter.outcomeUnchanged",
+  worsened: "commandCenter.outcomeWorsened",
 };
+
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function severityLabel(locale: Locale, severity: string): string {
+  const key = SEV_LABEL[severity];
+  return key ? t(locale, key) : severity;
+}
+
+function outcomeLabel(locale: Locale, result: string): string {
+  const key = OUTCOME_LABEL[result];
+  return key ? t(locale, key) : result;
+}
 
 interface FocusAction {
   kicker: string;
@@ -98,74 +131,84 @@ interface Development {
   color: string;
 }
 
-function buildFocus(data: CommandData): FocusAction | null {
+function buildFocus(data: CommandData, locale: Locale): FocusAction | null {
   if (data.brief?.recommendedAction) {
     return {
-      kicker: "ÖNERİLEN AKSİYON",
+      kicker: t(locale, "commandCenter.focusKickerRecommended"),
       title: data.brief.recommendedAction,
-      detail: `En kritik açık vaka: ${data.brief.currentCondition}`,
+      detail: formatMessage(locale, "commandCenter.briefDetail", { condition: data.brief.currentCondition }),
       href: "/dashboard/decisions",
-      cta: "Kararı incele ve karar ver",
+      cta: t(locale, "commandCenter.ctaReviewDecision"),
     };
   }
 
   const decision = data.decisions[0];
   if (decision) {
     return {
-      kicker: "SIRADAKİ ADIM",
-      title: `En kritik açık kararı inceleyin: ${decision.title}`,
-      detail: `${SEV_LABEL[decision.severity] ?? decision.severity} öncelik · güven %${decision.confidence}`,
+      kicker: t(locale, "commandCenter.focusKickerNext"),
+      title: formatMessage(locale, "commandCenter.focusDecisionTitle", { title: decision.title }),
+      detail: formatMessage(locale, "commandCenter.focusDecisionDetail", {
+        severity: severityLabel(locale, decision.severity),
+        confidence: decision.confidence,
+      }),
       href: "/dashboard/decisions",
-      cta: "Karar Merkezi'ne git",
+      cta: t(locale, "commandCenter.ctaDecisionCenter"),
     };
   }
 
   const signal = data.signals.top[0];
   if (signal) {
     return {
-      kicker: "SIRADAKİ ADIM",
-      title: `En yüksek öncelikli sinyali inceleyin: ${signal.title}`,
-      detail: `${SEV_LABEL[signal.severity] ?? signal.severity} seviye açık sinyal`,
+      kicker: t(locale, "commandCenter.focusKickerNext"),
+      title: formatMessage(locale, "commandCenter.focusSignalTitle", { title: signal.title }),
+      detail: formatMessage(locale, "commandCenter.focusSignalDetail", {
+        severity: severityLabel(locale, signal.severity),
+      }),
       href: "/dashboard/alerts",
-      cta: "Sinyalleri incele",
+      cta: t(locale, "commandCenter.ctaReviewSignals"),
     };
   }
 
   const action = data.actions.open[0];
   if (action) {
     return {
-      kicker: "SIRADAKİ ADIM",
-      title: `Açık aksiyonun durumunu kontrol edin: ${action.title}`,
-      detail: `Sorumlu: ${action.owner}`,
+      kicker: t(locale, "commandCenter.focusKickerNext"),
+      title: formatMessage(locale, "commandCenter.focusActionTitle", { title: action.title }),
+      detail: formatMessage(locale, "commandCenter.focusActionDetail", { owner: action.owner }),
       href: "/dashboard/actions",
-      cta: "Aksiyonları incele",
+      cta: t(locale, "commandCenter.ctaReviewActions"),
     };
   }
 
   const outcome = data.outcomes[0];
   if (outcome) {
     return {
-      kicker: "SIRADAKİ ADIM",
-      title: "Son ölçülen sonucu ve kurumsal dersi gözden geçirin.",
-      detail: `${OUTCOME_LABEL[outcome.result] ?? outcome.result} olarak kaydedildi.`,
+      kicker: t(locale, "commandCenter.focusKickerNext"),
+      title: t(locale, "commandCenter.focusOutcomeTitle"),
+      detail: formatMessage(locale, "commandCenter.focusOutcomeDetail", {
+        outcome: outcomeLabel(locale, outcome.result),
+      }),
       href: "/dashboard/memory",
-      cta: "Sonuç kaydını incele",
+      cta: t(locale, "commandCenter.ctaReviewOutcome"),
     };
   }
 
   return null;
 }
 
-function buildDevelopments(data: CommandData): Development[] {
+function buildDevelopments(data: CommandData, locale: Locale): Development[] {
   const decisions = data.decisions.filter((decision) => decision.id !== data.brief?.caseId);
   const candidates: { priority: number; development: Development }[] = [
     ...decisions.map((decision, index) => ({
       priority: (SEV_PRIORITY[decision.severity] ?? 3) + index / 100,
       development: {
         key: `decision:${decision.id}`,
-        source: "Karar",
+        source: t(locale, "commandCenter.sourceDecision"),
         title: decision.title,
-        meta: `${SEV_LABEL[decision.severity] ?? decision.severity} · güven %${decision.confidence}`,
+        meta: formatMessage(locale, "commandCenter.metaConfidence", {
+          severity: severityLabel(locale, decision.severity),
+          confidence: decision.confidence,
+        }),
         href: "/dashboard/decisions",
         color: SEV_COLOR[decision.severity] ?? SEV_COLOR.info,
       },
@@ -174,9 +217,11 @@ function buildDevelopments(data: CommandData): Development[] {
       priority: (SEV_PRIORITY[signal.severity] ?? 3) + 0.5 + index / 100,
       development: {
         key: `signal:${signal.id}`,
-        source: "Sinyal",
+        source: t(locale, "commandCenter.sourceSignal"),
         title: signal.title,
-        meta: `${SEV_LABEL[signal.severity] ?? signal.severity} seviye`,
+        meta: formatMessage(locale, "commandCenter.metaSeverity", {
+          severity: severityLabel(locale, signal.severity),
+        }),
         href: "/dashboard/alerts",
         color: SEV_COLOR[signal.severity] ?? SEV_COLOR.info,
       },
@@ -185,9 +230,12 @@ function buildDevelopments(data: CommandData): Development[] {
       priority: 4 + index / 100,
       development: {
         key: `action:${action.id}`,
-        source: "Aksiyon",
+        source: t(locale, "commandCenter.sourceAction"),
         title: action.title,
-        meta: `${action.status === "in_progress" ? "Yürütülüyor" : "Açık"} · ${action.owner}`,
+        meta: formatMessage(locale, "commandCenter.metaStatusOwner", {
+          status: t(locale, action.status === "in_progress" ? "commandCenter.statusInProgress" : "commandCenter.statusOpen"),
+          owner: action.owner,
+        }),
         href: "/dashboard/actions",
         color: action.status === "in_progress" ? SEV_COLOR.warning : SEV_COLOR.info,
       },
@@ -196,9 +244,9 @@ function buildDevelopments(data: CommandData): Development[] {
       priority: 5 + index / 100,
       development: {
         key: `outcome:${index}`,
-        source: "Sonuç",
+        source: t(locale, "commandCenter.sourceOutcome"),
         title: outcome.lesson || outcome.note,
-        meta: OUTCOME_LABEL[outcome.result] ?? outcome.result,
+        meta: outcomeLabel(locale, outcome.result),
         href: "/dashboard/memory",
         color:
           outcome.result === "improved"
@@ -217,6 +265,7 @@ function buildDevelopments(data: CommandData): Development[] {
 }
 
 export function CommandCenter() {
+  const locale = useLocale();
   const [data, setData] = useState<CommandData | null | "none">(null);
 
   useEffect(() => {
@@ -241,36 +290,43 @@ export function CommandCenter() {
   const warnCount = data.signals.bySeverity.warning ?? 0;
   const openActions = (data.actions.byStatus.open ?? 0) + (data.actions.byStatus.in_progress ?? 0);
   const improved = data.outcomes.filter((o) => o.result === "improved").length;
-  const focus = buildFocus(data);
-  const developments = buildDevelopments(data);
+  const focus = buildFocus(data, locale);
+  const developments = buildDevelopments(data, locale);
 
   return (
     <section aria-labelledby="command-center-heading" className="mb-10 rounded-2xl border border-abys-cream-border bg-abys-cream/60 p-6">
       <div className="flex items-center justify-between mb-5">
-        <h2 id="command-center-heading" className="text-xs tracking-widest text-abys-muted font-semibold">YÖNETİM KOMUTA MERKEZİ</h2>
+        <h2 id="command-center-heading" className="text-xs tracking-widest text-abys-muted font-semibold">{t(locale, "commandCenter.heading")}</h2>
         <span className="text-[11px] text-abys-muted">
           {data.lastActivityAt
-            ? `Son faaliyet: ${new Date(data.lastActivityAt).toLocaleString("tr-TR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
-            : "Faaliyet yok"}
+            ? formatMessage(locale, "commandCenter.lastActivity", {
+                time: new Date(data.lastActivityAt).toLocaleString(locale, {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              })
+            : t(locale, "commandCenter.noActivity")}
         </span>
       </div>
 
-      {(focus || developments.length > 0) && <FocusPanel focus={focus} developments={developments} />}
+      {(focus || developments.length > 0) && <FocusPanel locale={locale} focus={focus} developments={developments} />}
 
       {/* Yapılandırılmış yönetici brifingi — en kritik açık vaka (izlenebilir) */}
-      {data.brief && <ExecutiveBrief brief={data.brief} calibration={data.calibration} />}
+      {data.brief && <ExecutiveBrief locale={locale} brief={data.brief} calibration={data.calibration} />}
 
       {/* Özet şerit — 30 saniyelik kavrama */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
-        <Stat label="Dikkat bekleyen karar" value={data.decisions.length} href="/dashboard/decisions" tone={data.decisions.length > 0 ? "warning" : "healthy"} />
-        <Stat label="Kritik / uyarı sinyal" value={`${critCount} / ${warnCount}`} href="/dashboard/alerts" tone={critCount > 0 ? "critical" : warnCount > 0 ? "warning" : "healthy"} />
-        <Stat label="Açık aksiyon" value={openActions} href="/dashboard/actions" tone={openActions > 0 ? "warning" : "healthy"} />
-        <Stat label="İyileşme sağlanan sonuç" value={improved} href="/dashboard/memory" tone="healthy" />
+        <Stat label={t(locale, "commandCenter.statDecisions")} value={data.decisions.length} href="/dashboard/decisions" tone={data.decisions.length > 0 ? "warning" : "healthy"} />
+        <Stat label={t(locale, "commandCenter.statSignals")} value={`${critCount} / ${warnCount}`} href="/dashboard/alerts" tone={critCount > 0 ? "critical" : warnCount > 0 ? "warning" : "healthy"} />
+        <Stat label={t(locale, "commandCenter.statActions")} value={openActions} href="/dashboard/actions" tone={openActions > 0 ? "warning" : "healthy"} />
+        <Stat label={t(locale, "commandCenter.statImproved")} value={improved} href="/dashboard/memory" tone="healthy" />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Dikkat bekleyen kararlar */}
-        <Block title="Onayınızı bekleyen kararlar" href="/dashboard/decisions" empty={data.decisions.length === 0} emptyText="Bekleyen karar yok.">
+        <Block title={t(locale, "commandCenter.blockDecisions")} href="/dashboard/decisions" empty={data.decisions.length === 0} emptyText={t(locale, "commandCenter.emptyDecisions")} viewAll={t(locale, "commandCenter.viewAll")}>
           {data.decisions.map((d) => (
             <li key={d.id} className="flex items-start gap-2 text-sm">
               <Dot color={SEV_COLOR[d.severity] ?? SEV_COLOR.info} />
@@ -281,7 +337,7 @@ export function CommandCenter() {
         </Block>
 
         {/* En önemli sinyaller */}
-        <Block title="Öne çıkan riskler ve sinyaller" href="/dashboard/alerts" empty={data.signals.top.length === 0} emptyText="Açık sinyal yok.">
+        <Block title={t(locale, "commandCenter.blockSignals")} href="/dashboard/alerts" empty={data.signals.top.length === 0} emptyText={t(locale, "commandCenter.emptySignals")} viewAll={t(locale, "commandCenter.viewAll")}>
           {data.signals.top.map((s) => (
             <li key={s.id} className="flex items-start gap-2 text-sm">
               <Dot color={SEV_COLOR[s.severity] ?? SEV_COLOR.info} />
@@ -294,12 +350,13 @@ export function CommandCenter() {
         <Block
           title={
             data.actions.overdueCount
-              ? `Yürütmedeki aksiyonlar · ${data.actions.overdueCount} geciken`
-              : "Yürütmedeki aksiyonlar"
+              ? formatMessage(locale, "commandCenter.blockActionsOverdue", { count: data.actions.overdueCount })
+              : t(locale, "commandCenter.blockActions")
           }
           href="/dashboard/actions"
           empty={data.actions.open.length === 0}
-          emptyText="Açık aksiyon yok."
+          emptyText={t(locale, "commandCenter.emptyActions")}
+          viewAll={t(locale, "commandCenter.viewAll")}
         >
           {data.actions.open.map((a) => (
             <li key={a.id} className="flex items-start gap-2 text-sm">
@@ -311,7 +368,7 @@ export function CommandCenter() {
         </Block>
 
         {/* Son ölçülen sonuçlar */}
-        <Block title="Son ölçülen sonuçlar" href="/dashboard/memory" empty={data.outcomes.length === 0} emptyText="Henüz sonuç kaydı yok.">
+        <Block title={t(locale, "commandCenter.blockOutcomes")} href="/dashboard/memory" empty={data.outcomes.length === 0} emptyText={t(locale, "commandCenter.emptyOutcomes")} viewAll={t(locale, "commandCenter.viewAll")}>
           {data.outcomes.map((o, i) => (
             <li key={i} className="flex items-start gap-2 text-sm">
               <Dot color={o.result === "improved" ? SEV_COLOR.healthy : o.result === "worsened" ? SEV_COLOR.critical : SEV_COLOR.info} />
@@ -327,14 +384,14 @@ export function CommandCenter() {
   );
 }
 
-function FocusPanel({ focus, developments }: { focus: FocusAction | null; developments: Development[] }) {
+function FocusPanel({ locale, focus, developments }: { locale: Locale; focus: FocusAction | null; developments: Development[] }) {
   return (
     <section aria-labelledby="command-focus-heading" className="mb-6 rounded-xl border border-abys-accent/25 bg-white/70 p-5">
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 id="command-focus-heading" className="text-[11px] tracking-widest text-abys-accent font-semibold">
-          30 SANİYELİK ODAK
+          {t(locale, "commandCenter.focusHeading")}
         </h3>
-        <span className="text-[11px] text-abys-muted">Önce karar, sonra yürütme</span>
+        <span className="text-[11px] text-abys-muted">{t(locale, "commandCenter.focusSubheading")}</span>
       </div>
       <div className={`grid grid-cols-1 gap-5 ${focus && developments.length > 0 ? "lg:grid-cols-[1fr_1.15fr]" : ""}`}>
         {focus && (
@@ -349,7 +406,7 @@ function FocusPanel({ focus, developments }: { focus: FocusAction | null; develo
         )}
         {developments.length > 0 && (
           <div>
-            <p className="text-[10px] tracking-widest text-abys-muted font-semibold mb-2">ÖNE ÇIKAN GELİŞMELER</p>
+            <p className="text-[10px] tracking-widest text-abys-muted font-semibold mb-2">{t(locale, "commandCenter.developmentsHeading")}</p>
             <ol className="space-y-1 list-none p-0 m-0">
               {developments.map((development, index) => (
                 <li key={development.key}>
@@ -378,60 +435,71 @@ function FocusPanel({ focus, developments }: { focus: FocusAction | null; develo
   );
 }
 
-const RELIABILITY_LABEL: Record<string, string> = {
-  verified: "doğrulanmış",
-  estimated: "tahmini",
-  unknown: "bilinmiyor",
+const RELIABILITY_LABEL: Record<string, ShellKey> = {
+  verified: "commandCenter.reliabilityVerified",
+  estimated: "commandCenter.reliabilityEstimated",
+  unknown: "commandCenter.reliabilityUnknown",
 };
 
-const CALIBRATION_NOTE: Record<string, string> = {
-  overconfident: "geçmişte bu güven düzeyi fazla iyimser çıktı",
-  aligned: "geçmişte bu güven düzeyi tutarlı çıktı",
-  underconfident: "geçmişte bu güven düzeyi temkinli kaldı",
+const CALIBRATION_NOTE: Record<string, ShellKey> = {
+  overconfident: "commandCenter.calibrationNoteOverconfident",
+  aligned: "commandCenter.calibrationNoteAligned",
+  underconfident: "commandCenter.calibrationNoteUnderconfident",
 };
 
 function calibrationText(
   confidence: number,
-  calibration: CalibrationSummary | null | undefined
+  calibration: CalibrationSummary | null | undefined,
+  locale: Locale
 ): string | null {
   if (!calibration) return null;
   const bucket = calibration.buckets.find((item) => confidence >= item.min && confidence <= item.max);
   if (!bucket) return null;
   if (bucket.status === "measured" && bucket.direction && bucket.improvedRate !== null) {
-    return `Geçmişte bu güven düzeyinde (${bucket.withOutcome} sonuç) iyileşme %${(bucket.improvedRate * 100).toLocaleString("tr-TR", { maximumFractionDigits: 1 })} · ${CALIBRATION_NOTE[bucket.direction] ?? ""}`;
+    const noteKey = CALIBRATION_NOTE[bucket.direction];
+    return formatMessage(locale, "commandCenter.calibrationMeasured", {
+      count: bucket.withOutcome,
+      rate: (bucket.improvedRate * 100).toLocaleString(locale, { maximumFractionDigits: 1 }),
+      note: noteKey ? t(locale, noteKey) : "",
+    });
   }
-  return `Kalibrasyon için kanıt yetersiz · bu kovada ${bucket.withOutcome}/${calibration.threshold} sonuç`;
+  return formatMessage(locale, "commandCenter.calibrationInsufficient", {
+    count: bucket.withOutcome,
+    threshold: calibration.threshold,
+  });
 }
 
 function ExecutiveBrief({
+  locale,
   brief,
   calibration,
 }: {
+  locale: Locale;
   brief: Brief;
   calibration?: CalibrationSummary | null;
 }) {
-  const calibrationNote = calibrationText(brief.confidence, calibration);
+  const calibrationNote = calibrationText(brief.confidence, calibration, locale);
   return (
     <div className="mb-6 rounded-xl border border-abys-accent/25 bg-white/70 p-5">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] tracking-widest text-abys-accent font-semibold">YÖNETİCİ BRİFİNGİ · EN KRİTİK VAKA</p>
-        <span className="text-xs text-abys-muted">Güven %{brief.confidence}</span>
+        <p className="text-[11px] tracking-widest text-abys-accent font-semibold">{t(locale, "commandCenter.briefHeading")}</p>
+        <span className="text-xs text-abys-muted">{formatMessage(locale, "commandCenter.briefConfidence", { confidence: brief.confidence })}</span>
       </div>
       <div className="space-y-2.5 text-sm">
-        <BriefLine label="Mevcut durum" value={brief.currentCondition} />
-        {brief.businessImpact && <BriefLine label="İş etkisi" value={brief.businessImpact} />}
-        {brief.nextDevelopment && <BriefLine label="Aksiyon alınmazsa" value={brief.nextDevelopment} />}
-        {brief.recommendedAction && <BriefLine label="Önerilen aksiyon" value={brief.recommendedAction} accent />}
-        {brief.confidenceRationale && <BriefLine label="Güven gerekçesi" value={brief.confidenceRationale} muted />}
-        {calibrationNote && <BriefLine label="Geçmiş kalibrasyon" value={calibrationNote} muted />}
+        <BriefLine label={t(locale, "commandCenter.briefCurrent")} value={brief.currentCondition} />
+        {brief.businessImpact && <BriefLine label={t(locale, "commandCenter.briefImpact")} value={brief.businessImpact} />}
+        {brief.nextDevelopment && <BriefLine label={t(locale, "commandCenter.briefNext")} value={brief.nextDevelopment} />}
+        {brief.recommendedAction && <BriefLine label={t(locale, "commandCenter.briefRecommended")} value={brief.recommendedAction} accent />}
+        {brief.confidenceRationale && <BriefLine label={t(locale, "commandCenter.briefRationale")} value={brief.confidenceRationale} muted />}
+        {calibrationNote && <BriefLine label={t(locale, "commandCenter.briefCalibration")} value={calibrationNote} muted />}
       </div>
       {brief.topEvidence.length > 0 && (
         <div className="mt-3 pt-3 border-t border-abys-cream-border">
-          <p className="text-[11px] text-abys-muted font-semibold mb-1.5">KANIT</p>
+          <p className="text-[11px] text-abys-muted font-semibold mb-1.5">{t(locale, "commandCenter.evidenceHeading")}</p>
           <ul className="space-y-1">
             {brief.topEvidence.map((e, i) => (
               <li key={i} className="text-xs text-abys-ink flex items-start gap-2">
-                <span className="text-abys-muted shrink-0">[{RELIABILITY_LABEL[e.reliability] ?? e.reliability}]</span>
+                <span className="text-abys-muted shrink-0">[{RELIABILITY_LABEL[e.reliability] ? t(locale, RELIABILITY_LABEL[e.reliability]) : e.reliability}]</span>
                 <span>{e.fact}</span>
               </li>
             ))}
@@ -439,7 +507,7 @@ function ExecutiveBrief({
         </div>
       )}
       <Link href="/dashboard/decisions" className="inline-block mt-3 text-xs text-abys-accent hover:underline">
-        Kararı incele ve karar ver →
+        {t(locale, "commandCenter.ctaReviewDecision")} →
       </Link>
     </div>
   );
@@ -464,12 +532,12 @@ function Stat({ label, value, href, tone }: { label: string; value: string | num
   );
 }
 
-function Block({ title, href, empty, emptyText, children }: { title: string; href: string; empty: boolean; emptyText: string; children: React.ReactNode }) {
+function Block({ title, href, empty, emptyText, viewAll, children }: { title: string; href: string; empty: boolean; emptyText: string; viewAll: string; children: React.ReactNode }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold text-abys-navy">{title}</p>
-        <Link href={href} className="text-[11px] text-abys-accent hover:underline">tümü →</Link>
+        <Link href={href} className="text-[11px] text-abys-accent hover:underline">{viewAll}</Link>
       </div>
       {empty ? (
         <p className="text-sm text-abys-muted">{emptyText}</p>
