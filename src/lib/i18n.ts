@@ -939,6 +939,83 @@ export type ShellKey =
   | "decisions.severity.warning"
   | "decisions.severity.info"
   | "decisions.severity.healthy"
+  | "decisions.cancel"
+  | "decisions.yes"
+  | "decisions.no"
+  | "decisions.causal.heading"
+  | "decisions.causal.count"
+  | "decisions.causal.addLink"
+  | "decisions.causal.empty"
+  | "decisions.causal.loadFailed"
+  | "decisions.causal.addFailed"
+  | "decisions.causal.methodUnset"
+  | "decisions.causal.dataQuality"
+  | "decisions.causal.uncertainty"
+  | "decisions.causal.confidenceUnit"
+  | "decisions.causal.methodAria"
+  | "decisions.causal.sampleAria"
+  | "decisions.causal.dataQualityAria"
+  | "decisions.causal.uncertaintyAria"
+  | "decisions.causal.notePlaceholder"
+  | "decisions.causal.addButton"
+  | "decisions.causal.fromPlaceholder"
+  | "decisions.causal.toPlaceholder"
+  | "decisions.trace.button"
+  | "decisions.trace.title"
+  | "decisions.trace.loadFailed"
+  | "decisions.trace.modelRun"
+  | "decisions.trace.provider"
+  | "decisions.trace.policy"
+  | "decisions.trace.duration"
+  | "decisions.trace.outputValid"
+  | "decisions.trace.noRecord"
+  | "decisions.trace.derived"
+  | "decisions.trace.decision"
+  | "decisions.trace.reason"
+  | "decisions.trace.outcome"
+  | "decisions.trace.action"
+  | "decisions.trace.auditEvents"
+  | "decisions.relation.observed_correlation"
+  | "decisions.relation.inferred"
+  | "decisions.relation.expert_confirmed"
+  | "decisions.relation.data_confirmed"
+  | "decisions.relation.disputed"
+  | "decisions.causalMethod.randomized_controlled_trial"
+  | "decisions.causalMethod.quasi_experimental"
+  | "decisions.causalMethod.difference_in_differences"
+  | "decisions.causalMethod.instrumental_variable"
+  | "decisions.causalMethod.regression_adjustment"
+  | "decisions.causalMethod.observational"
+  | "decisions.causalMethod.expert_judgment"
+  | "decisions.level.high"
+  | "decisions.level.medium"
+  | "decisions.level.low"
+  | "decisions.options.noAction"
+  | "decisions.options.saveFailed"
+  | "decisions.choice.accepted"
+  | "decisions.choice.rejected"
+  | "decisions.choice.modified"
+  | "decisions.options.feasibleHeading"
+  | "decisions.options.noFeasible"
+  | "decisions.options.infeasibleSummary"
+  | "decisions.options.acceptRecommended"
+  | "decisions.options.reject"
+  | "decisions.options.orPickAnother"
+  | "decisions.options.willAccept"
+  | "decisions.options.willApplyOther"
+  | "decisions.options.willReject"
+  | "decisions.options.reasonOptional"
+  | "decisions.options.reasonRequired"
+  | "decisions.options.save"
+  | "decisions.options.infeasibleBadge"
+  | "decisions.options.recommendedBadge"
+  | "decisions.options.constraint"
+  | "decisions.options.feasibility"
+  | "decisions.options.tradeoff"
+  | "decisions.options.expectedOutcome"
+  | "decisions.options.detailHide"
+  | "decisions.options.detailShow"
+  | "decisions.options.select"
   | "decisions.recommended"
   | "decisions.collapse"
   | "decisions.expand"
@@ -2875,6 +2952,83 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "decisions.severity.warning": { tr: "DİKKAT", en: "WARNING" },
   "decisions.severity.info": { tr: "BİLGİ", en: "INFO" },
   "decisions.severity.healthy": { tr: "SAĞLIKLI", en: "HEALTHY" },
+  "decisions.cancel": { tr: "Vazgeç", en: "Cancel" },
+  "decisions.yes": { tr: "Evet", en: "Yes" },
+  "decisions.no": { tr: "Hayır", en: "No" },
+  "decisions.causal.heading": { tr: "KÖK NEDEN ZİNCİRİ", en: "ROOT CAUSE CHAIN" },
+  "decisions.causal.count": { tr: "({count})", en: "({count})" },
+  "decisions.causal.addLink": { tr: "+ bağlantı ekle", en: "+ add link" },
+  "decisions.causal.empty": { tr: "Henüz kök neden bağlantısı eklenmedi.", en: "No root-cause links added yet." },
+  "decisions.causal.loadFailed": { tr: "Kök neden zinciri yüklenemedi.", en: "Root cause chain could not be loaded." },
+  "decisions.causal.addFailed": { tr: "Bağlantı eklenemedi.", en: "Link could not be added." },
+  "decisions.causal.methodUnset": { tr: "Yöntem belirtilmedi", en: "Method not specified" },
+  "decisions.causal.dataQuality": { tr: "veri kalitesi {level}", en: "data quality {level}" },
+  "decisions.causal.uncertainty": { tr: "belirsizlik {level}", en: "uncertainty {level}" },
+  "decisions.causal.confidenceUnit": { tr: "% güven", en: "% confidence" },
+  "decisions.causal.methodAria": { tr: "Kanıt yöntemi", en: "Evidence method" },
+  "decisions.causal.sampleAria": { tr: "Örneklem", en: "Sample size" },
+  "decisions.causal.dataQualityAria": { tr: "Veri kalitesi", en: "Data quality" },
+  "decisions.causal.uncertaintyAria": { tr: "Belirsizlik", en: "Uncertainty" },
+  "decisions.causal.notePlaceholder": { tr: "Not (isteğe bağlı)", en: "Note (optional)" },
+  "decisions.causal.addButton": { tr: "Bağlantı ekle", en: "Add link" },
+  "decisions.causal.fromPlaceholder": { tr: "Neden (A)", en: "Cause (A)" },
+  "decisions.causal.toPlaceholder": { tr: "Sonuç (B)", en: "Effect (B)" },
+  "decisions.trace.button": { tr: "🔍 Kökeni göster", en: "🔍 Show provenance" },
+  "decisions.trace.title": { tr: "Kanıt kökeni", en: "Evidence provenance" },
+  "decisions.trace.loadFailed": { tr: "İzlenebilirlik verisi yüklenemedi.", en: "Traceability data could not be loaded." },
+  "decisions.trace.modelRun": { tr: "MODEL KOŞUSU", en: "MODEL RUN" },
+  "decisions.trace.provider": { tr: "Sağlayıcı:", en: "Provider:" },
+  "decisions.trace.policy": { tr: "Politika:", en: "Policy:" },
+  "decisions.trace.duration": { tr: "Süre:", en: "Duration:" },
+  "decisions.trace.outputValid": { tr: "Çıktı geçerli mi:", en: "Output valid:" },
+  "decisions.trace.noRecord": { tr: "Kayıt yok.", en: "No record." },
+  "decisions.trace.derived": { tr: "BU VAKADAN DOĞANLAR", en: "DERIVED FROM THIS CASE" },
+  "decisions.trace.decision": { tr: "Karar:", en: "Decision:" },
+  "decisions.trace.reason": { tr: "Gerekçe: {reason}", en: "Rationale: {reason}" },
+  "decisions.trace.outcome": { tr: "Sonuç:", en: "Outcome:" },
+  "decisions.trace.action": { tr: "Aksiyon:", en: "Action:" },
+  "decisions.trace.auditEvents": { tr: "DENETİM OLAYLARI", en: "AUDIT EVENTS" },
+  "decisions.relation.observed_correlation": { tr: "Gözlemlenen korelasyon", en: "Observed correlation" },
+  "decisions.relation.inferred": { tr: "Çıkarım", en: "Inference" },
+  "decisions.relation.expert_confirmed": { tr: "Uzman onaylı", en: "Expert-confirmed" },
+  "decisions.relation.data_confirmed": { tr: "Veri ile doğrulanmış", en: "Data-confirmed" },
+  "decisions.relation.disputed": { tr: "Tartışmalı", en: "Disputed" },
+  "decisions.causalMethod.randomized_controlled_trial": { tr: "Randomize kontrollü deney", en: "Randomized controlled trial" },
+  "decisions.causalMethod.quasi_experimental": { tr: "Yarı deneysel", en: "Quasi-experimental" },
+  "decisions.causalMethod.difference_in_differences": { tr: "Farkların farkı", en: "Difference in differences" },
+  "decisions.causalMethod.instrumental_variable": { tr: "Araç değişken", en: "Instrumental variable" },
+  "decisions.causalMethod.regression_adjustment": { tr: "Regresyon düzeltmesi", en: "Regression adjustment" },
+  "decisions.causalMethod.observational": { tr: "Gözlemsel", en: "Observational" },
+  "decisions.causalMethod.expert_judgment": { tr: "Uzman görüşü", en: "Expert judgment" },
+  "decisions.level.high": { tr: "Yüksek", en: "High" },
+  "decisions.level.medium": { tr: "Orta", en: "Medium" },
+  "decisions.level.low": { tr: "Düşük", en: "Low" },
+  "decisions.options.noAction": { tr: "Aksiyon alınmadı", en: "No action taken" },
+  "decisions.options.saveFailed": { tr: "Karar kaydedilemedi.", en: "Decision could not be saved." },
+  "decisions.choice.accepted": { tr: "Öneri kabul edildi", en: "Recommendation accepted" },
+  "decisions.choice.rejected": { tr: "Öneri reddedildi", en: "Recommendation rejected" },
+  "decisions.choice.modified": { tr: "Değiştirilerek uygulandı", en: "Applied with changes" },
+  "decisions.options.feasibleHeading": { tr: "UYGULANABİLİR SEÇENEKLER — KISIT KONTROLÜNDEN GEÇTİ", en: "FEASIBLE OPTIONS — PASSED CONSTRAINT CHECK" },
+  "decisions.options.noFeasible": { tr: "Mevcut kısıtlar altında uygulanabilir seçenek bulunamadı — kısıt modelini gözden geçirin.", en: "No feasible option under the current constraints — review the constraint model." },
+  "decisions.options.infeasibleSummary": { tr: "Kısıtlara takılan {count} seçenek (gerekçesiyle)", en: "{count} options blocked by constraints (with reasons)" },
+  "decisions.options.acceptRecommended": { tr: "✓ Öneriyi kabul et", en: "✓ Accept recommendation" },
+  "decisions.options.reject": { tr: "Reddet", en: "Reject" },
+  "decisions.options.orPickAnother": { tr: "ya da yukarıdan farklı bir seçenek seçin", en: "or pick a different option above" },
+  "decisions.options.willAccept": { tr: "Öneri kabul edilecek:", en: "The recommendation will be accepted:" },
+  "decisions.options.willApplyOther": { tr: "Farklı seçenekle uygulanacak:", en: "A different option will be applied:" },
+  "decisions.options.willReject": { tr: "Öneri reddedilecek, aksiyon alınmayacak.", en: "The recommendation will be rejected and no action taken." },
+  "decisions.options.reasonOptional": { tr: "Gerekçe (isteğe bağlı) — ABYS bundan öğrenir", en: "Rationale (optional) — ABYS learns from it" },
+  "decisions.options.reasonRequired": { tr: "Gerekçe (zorunlu) — ABYS bir daha aynı hatayı yapmasın diye nedeninizi kaydeder", en: "Rationale (required) — ABYS records your reason so it does not repeat the mistake" },
+  "decisions.options.save": { tr: "Kararı kaydet", en: "Save decision" },
+  "decisions.options.infeasibleBadge": { tr: "UYGULANAMAZ", en: "NOT APPLICABLE" },
+  "decisions.options.recommendedBadge": { tr: "★ ABYS önerisi", en: "★ ABYS recommendation" },
+  "decisions.options.constraint": { tr: "Kısıt: {note}", en: "Constraint: {note}" },
+  "decisions.options.feasibility": { tr: "Uygulanabilirlik:", en: "Feasibility:" },
+  "decisions.options.tradeoff": { tr: "Trade-off:", en: "Trade-off:" },
+  "decisions.options.expectedOutcome": { tr: "Beklenen sonuç:", en: "Expected outcome:" },
+  "decisions.options.detailHide": { tr: "detay −", en: "details −" },
+  "decisions.options.detailShow": { tr: "detay +", en: "details +" },
+  "decisions.options.select": { tr: "Bunu seç", en: "Select this" },
   "decisions.recommended": { tr: "Önerilen:", en: "Recommended:" },
   "decisions.collapse": { tr: "kapat −", en: "close −" },
   "decisions.expand": { tr: "incele +", en: "inspect +" },

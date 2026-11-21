@@ -56,6 +56,24 @@ function reliabilityText(locale: Locale, code: string): string {
   return label === key ? code : label;
 }
 
+function relationText(locale: Locale, code: string): string {
+  const key = `decisions.relation.${code}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? code : label;
+}
+
+function causalMethodText(locale: Locale, code: string): string {
+  const key = `decisions.causalMethod.${code}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? code : label;
+}
+
+function levelText(locale: Locale, code: string): string {
+  const key = `decisions.level.${code}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? code : label;
+}
+
 function severityText(locale: Locale, code: string): string {
   const key = `decisions.severity.${code}` as ShellKey;
   const label = t(locale, key);
@@ -899,6 +917,7 @@ interface CausalLink {
 
 // Sunucu oturumu yoksa gizlenir — kök neden zinciri org izolasyonlu sunucu verisidir.
 function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }) {
+  const locale = useLocale();
   const [links, setLinks] = useState<CausalLink[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -916,11 +935,17 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
   function load() {
     fetch(`/api/causal?caseId=${c.id}`)
       .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json().catch(() => null))?.error ?? "Kök neden zinciri yüklenemedi.");
+        if (!r.ok)
+          throw new Error(
+            (await r.json().catch(() => null))?.error ??
+              t(readLocale(), "decisions.causal.loadFailed")
+          );
         return (await r.json()).links as CausalLink[];
       })
       .then((rows) => setLinks(rows))
-      .catch((err) => setError(err instanceof Error ? err.message : "Kök neden zinciri yüklenemedi."));
+      .catch((err) =>
+      setError(err instanceof Error ? err.message : t(readLocale(), "decisions.causal.loadFailed"))
+    );
   }
 
   useEffect(() => {
@@ -952,7 +977,10 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
           uncertainty: uncertainty || undefined,
         }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Bağlantı eklenemedi.");
+      if (!res.ok)
+        throw new Error(
+          (await res.json().catch(() => null))?.error ?? t(readLocale(), "decisions.causal.addFailed")
+        );
       setFrom("");
       setTo("");
       setNote("");
@@ -965,7 +993,7 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
       setShowForm(false);
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bilinmeyen hata.");
+      setError(err instanceof Error ? err.message : t(readLocale(), "decisions.unknownError"));
     } finally {
       setBusy(false);
     }
@@ -979,10 +1007,13 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ linkId, relationStatus: next }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Durum güncellenemedi.");
+      if (!res.ok)
+        throw new Error(
+          (await res.json().catch(() => null))?.error ?? t(readLocale(), "decisions.stateUpdateFailed")
+        );
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Bilinmeyen hata.");
+      setError(err instanceof Error ? err.message : t(readLocale(), "decisions.unknownError"));
     }
   }
 
@@ -990,10 +1021,11 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
     <div>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs tracking-widest text-abys-muted font-semibold">
-          KÖK NEDEN ZİNCİRİ {links ? `(${links.length})` : ""}
+          {t(locale, "decisions.causal.heading")}{" "}
+          {links ? formatMessage(locale, "decisions.causal.count", { count: links.length }) : ""}
         </p>
         <button onClick={() => setShowForm((v) => !v)} className="text-xs text-abys-muted hover:text-abys-ink">
-          {showForm ? "vazgeç" : "+ bağlantı ekle"}
+          {showForm ? t(locale, "decisions.cancel") : t(locale, "decisions.causal.addLink")}
         </button>
       </div>
 
@@ -1001,7 +1033,7 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
 
       <div className="space-y-1.5 mb-3">
         {links && links.length === 0 && !showForm && (
-          <p className="text-sm text-abys-muted">Henüz kök neden bağlantısı eklenmedi.</p>
+          <p className="text-sm text-abys-muted">{t(locale, "decisions.causal.empty")}</p>
         )}
         {links?.map((l) => {
           const meta = RELATION_META[l.relationStatus];
@@ -1014,10 +1046,14 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
                 {l.note && <p className="text-xs text-abys-muted mt-0.5">{l.note}</p>}
                 {(l.method || l.sampleSize !== null || l.dataQuality || l.uncertainty) && (
                   <p className="text-[11px] text-abys-muted mt-0.5">
-                    {l.method ? CAUSAL_METHOD_LABELS[l.method] ?? l.method : "Yöntem belirtilmedi"}
+                    {l.method ? causalMethodText(locale, l.method) : t(locale, "decisions.causal.methodUnset")}
                     {l.sampleSize !== null && <> · n={l.sampleSize}</>}
-                    {l.dataQuality && <> · veri kalitesi {l.dataQuality}</>}
-                    {l.uncertainty && <> · belirsizlik {l.uncertainty}</>}
+                    {l.dataQuality && (
+                      <> · {formatMessage(locale, "decisions.causal.dataQuality", { level: levelText(locale, l.dataQuality) })}</>
+                    )}
+                    {l.uncertainty && (
+                      <> · {formatMessage(locale, "decisions.causal.uncertainty", { level: levelText(locale, l.uncertainty) })}</>
+                    )}
                   </p>
                 )}
               </div>
@@ -1026,9 +1062,11 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
                   className="text-[10px] font-semibold rounded-full px-2 py-0.5"
                   style={{ color: meta.color, background: meta.soft }}
                 >
-                  {meta.label}
+                  {relationText(locale, l.relationStatus)}
                 </span>
-                <span className="text-xs text-abys-muted">%{l.confidence}</span>
+                <span className="text-xs text-abys-muted">
+                  {formatMessage(locale, "decisions.percent", { value: l.confidence })}
+                </span>
                 <select
                   value={l.relationStatus}
                   onChange={(e) => changeStatus(l.id, e.target.value as RelationStatus)}
@@ -1036,7 +1074,7 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
                 >
                   {RELATION_STATUSES.map((s) => (
                     <option key={s} value={s}>
-                      {RELATION_META[s].label}
+                      {relationText(locale, s)}
                     </option>
                   ))}
                 </select>
@@ -1052,13 +1090,13 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
             <input
               value={from}
               onChange={(e) => setFrom(e.target.value)}
-              placeholder="Neden (A)"
+              placeholder={t(locale, "decisions.causal.fromPlaceholder")}
               className="flex-1 text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
             />
             <input
               value={to}
               onChange={(e) => setTo(e.target.value)}
-              placeholder="Sonuç (B)"
+              placeholder={t(locale, "decisions.causal.toPlaceholder")}
               className="flex-1 text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
             />
           </div>
@@ -1070,7 +1108,7 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
             >
               {RELATION_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {RELATION_META[s].label}
+                  {relationText(locale, s)}
                 </option>
               ))}
             </select>
@@ -1082,19 +1120,19 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
               onChange={(e) => setConfidence(Math.max(0, Math.min(100, Number(e.target.value))))}
               className="w-20 text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
             />
-            <span className="text-xs text-abys-muted">% güven</span>
+            <span className="text-xs text-abys-muted">{t(locale, "decisions.causal.confidenceUnit")}</span>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
             <select
               value={method}
               onChange={(e) => setMethod(e.target.value)}
-              aria-label="Kanıt yöntemi"
+              aria-label={t(locale, "decisions.causal.methodAria")}
               className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
             >
-              <option value="">Yöntem belirtilmedi</option>
-              {Object.entries(CAUSAL_METHOD_LABELS).map(([value, label]) => (
+              <option value="">{t(locale, "decisions.causal.methodUnset")}</option>
+              {Object.keys(CAUSAL_METHOD_LABELS).map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {causalMethodText(locale, value)}
                 </option>
               ))}
             </select>
@@ -1104,36 +1142,36 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
               value={sampleSize}
               onChange={(e) => setSampleSize(e.target.value)}
               placeholder="n"
-              aria-label="Örneklem"
+              aria-label={t(locale, "decisions.causal.sampleAria")}
               className="w-24 text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
             />
             <select
               value={dataQuality}
               onChange={(e) => setDataQuality(e.target.value)}
-              aria-label="Veri kalitesi"
+              aria-label={t(locale, "decisions.causal.dataQualityAria")}
               className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
             >
-              <option value="">Veri kalitesi</option>
-              <option value="high">Yüksek</option>
-              <option value="medium">Orta</option>
-              <option value="low">Düşük</option>
+              <option value="">{t(locale, "decisions.causal.dataQuality")}</option>
+              <option value="high">{t(locale, "decisions.level.high")}</option>
+              <option value="medium">{t(locale, "decisions.level.medium")}</option>
+              <option value="low">{t(locale, "decisions.level.low")}</option>
             </select>
             <select
               value={uncertainty}
               onChange={(e) => setUncertainty(e.target.value)}
-              aria-label="Belirsizlik"
+              aria-label={t(locale, "decisions.causal.uncertaintyAria")}
               className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2"
             >
-              <option value="">Belirsizlik</option>
-              <option value="low">Düşük</option>
-              <option value="medium">Orta</option>
-              <option value="high">Yüksek</option>
+              <option value="">{t(locale, "decisions.causal.uncertainty")}</option>
+              <option value="low">{t(locale, "decisions.level.low")}</option>
+              <option value="medium">{t(locale, "decisions.level.medium")}</option>
+              <option value="high">{t(locale, "decisions.level.high")}</option>
             </select>
           </div>
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Not (isteğe bağlı)"
+            placeholder={t(locale, "decisions.causal.notePlaceholder")}
             className="w-full text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
           />
           <button
@@ -1141,7 +1179,7 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
             disabled={busy || !from.trim() || !to.trim()}
             className="text-xs rounded-lg bg-abys-navy text-white px-3 py-1.5 disabled:opacity-40 hover:opacity-90"
           >
-            Bağlantı ekle
+            {t(locale, "decisions.causal.addButton")}
           </button>
         </div>
       )}
@@ -1152,6 +1190,7 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
 /* ---------------- Kanıta tıkla: izlenebilirlik modalı ---------------- */
 
 function TraceButton({ caseId }: { caseId: string }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -1159,7 +1198,7 @@ function TraceButton({ caseId }: { caseId: string }) {
         onClick={() => setOpen(true)}
         className="text-xs rounded-full px-3 py-1.5 border border-abys-ink/15 text-abys-muted hover:text-abys-ink hover:bg-white/60 transition-colors"
       >
-        🔍 Kökeni göster
+        {t(locale, "decisions.trace.button")}
       </button>
       {open && <TraceModal caseId={caseId} onClose={() => setOpen(false)} />}
     </>
@@ -1206,15 +1245,16 @@ interface TraceData {
   audit: { type: string; actor: string; summary: string; created_at: string }[];
 }
 
-function fmtDateTime(iso: string): string {
+function fmtDateTime(locale: Locale, iso: string): string {
   try {
-    return new Date(iso).toLocaleString("tr-TR");
+    return new Date(iso).toLocaleString(locale);
   } catch {
     return iso;
   }
 }
 
 function TraceModal({ caseId, onClose }: { caseId: string; onClose: () => void }) {
+  const locale = useLocale();
   const [data, setData] = useState<TraceData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const loading = !data && !error;
@@ -1232,14 +1272,18 @@ function TraceModal({ caseId, onClose }: { caseId: string; onClose: () => void }
     let cancelled = false;
     fetch(`/api/trace?caseId=${caseId}`)
       .then(async (r) => {
-        if (!r.ok) throw new Error((await r.json().catch(() => null))?.error ?? "İzlenebilirlik verisi yüklenemedi.");
+        if (!r.ok)
+          throw new Error(
+            (await r.json().catch(() => null))?.error ?? t(readLocale(), "decisions.trace.loadFailed")
+          );
         return (await r.json()) as TraceData;
       })
       .then((json) => {
         if (!cancelled) setData(json);
       })
       .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Bilinmeyen hata.");
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : t(readLocale(), "decisions.unknownError"));
       });
     return () => {
       cancelled = true;
@@ -1256,48 +1300,56 @@ function TraceModal({ caseId, onClose }: { caseId: string; onClose: () => void }
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-abys-cream-border sticky top-0 bg-white">
-          <p className="text-sm font-semibold text-abys-ink">Kanıt kökeni</p>
+          <p className="text-sm font-semibold text-abys-ink">{t(locale, "decisions.trace.title")}</p>
           <button onClick={onClose} className="text-abys-muted hover:text-abys-ink text-lg leading-none">
             ✕
           </button>
         </div>
 
         <div className="px-6 py-5 space-y-6">
-          {loading && <p className="text-sm text-abys-muted">Yükleniyor...</p>}
+          {loading && <p className="text-sm text-abys-muted">{t(locale, "decisions.loading")}</p>}
           {error && <p className="text-sm" style={{ color: "var(--abys-critical)" }}>{error}</p>}
 
           {data && (
             <>
-              <TraceSection title="MODEL KOŞUSU">
+              <TraceSection title={t(locale, "decisions.trace.modelRun")}>
                 {data.producedBy ? (
                   <div className="text-sm text-abys-ink space-y-1">
                     <p>
-                      <span className="text-abys-muted">Sağlayıcı: </span>
+                      <span className="text-abys-muted">{t(locale, "decisions.trace.provider")}{" "}</span>
                       {data.producedBy.provider}
                       {data.producedBy.model ? ` (${data.producedBy.model})` : ""}
                     </p>
                     <p>
-                      <span className="text-abys-muted">Politika: </span>
+                      <span className="text-abys-muted">{t(locale, "decisions.trace.policy")}{" "}</span>
                       {data.producedBy.policy ?? "—"}
                     </p>
                     <p>
-                      <span className="text-abys-muted">Süre: </span>
+                      <span className="text-abys-muted">{t(locale, "decisions.trace.duration")}{" "}</span>
                       {data.producedBy.latency_ms} ms
                     </p>
                     <p>
-                      <span className="text-abys-muted">Çıktı geçerli mi: </span>
-                      {data.producedBy.output_valid ? "Evet" : "Hayır"}
+                      <span className="text-abys-muted">{t(locale, "decisions.trace.outputValid")}{" "}</span>
+                      {data.producedBy.output_valid
+                        ? t(locale, "decisions.yes")
+                        : t(locale, "decisions.no")}
                     </p>
-                    <p className="text-xs text-abys-muted">{fmtDateTime(data.producedBy.created_at)}</p>
+                    <p className="text-xs text-abys-muted">
+                      {fmtDateTime(locale, data.producedBy.created_at)}
+                    </p>
                   </div>
                 ) : (
-                  <p className="text-sm text-abys-muted">Kayıt yok.</p>
+                  <p className="text-sm text-abys-muted">{t(locale, "decisions.trace.noRecord")}</p>
                 )}
               </TraceSection>
 
-              <TraceSection title={`KANIT ZİNCİRİ (${data.case.evidence.length})`}>
+              <TraceSection
+                title={formatMessage(locale, "decisions.evidenceHeading", {
+                  count: data.case.evidence.length,
+                })}
+              >
                 {data.case.evidence.length === 0 ? (
-                  <p className="text-sm text-abys-muted">Kayıt yok.</p>
+                  <p className="text-sm text-abys-muted">{t(locale, "decisions.trace.noRecord")}</p>
                 ) : (
                   <div className="space-y-1.5">
                     {data.case.evidence.map((e, i) => {
@@ -1308,11 +1360,13 @@ function TraceModal({ caseId, onClose }: { caseId: string; onClose: () => void }
                             className="text-[10px] font-semibold rounded-full px-2 py-0.5 mt-0.5 shrink-0 border"
                             style={{ color: rmeta.color, borderColor: rmeta.color }}
                           >
-                            {rmeta.label}
+                            {reliabilityText(locale, e.reliability ?? "unknown")}
                           </span>
                           <div className="min-w-0">
                             <p className="text-abys-ink">{e.fact}</p>
-                            <p className="text-xs text-abys-muted mt-0.5">Kaynak: {e.source}</p>
+                            <p className="text-xs text-abys-muted mt-0.5">
+                              {formatMessage(locale, "decisions.evidenceSource", { source: e.source })}
+                            </p>
                           </div>
                         </div>
                       );
@@ -1321,33 +1375,35 @@ function TraceModal({ caseId, onClose }: { caseId: string; onClose: () => void }
                 )}
               </TraceSection>
 
-              <TraceSection title="GÜVEN">
+              <TraceSection title={t(locale, "decisions.confidenceHeading")}>
                 <div className="text-sm text-abys-ink space-y-1.5">
                   <ConfidenceBadge value={data.case.confidence} />
                   <p>{data.case.confidenceRationale || "—"}</p>
                 </div>
               </TraceSection>
 
-              <TraceSection title="BU VAKADAN DOĞANLAR">
+              <TraceSection title={t(locale, "decisions.trace.derived")}>
                 {data.decisions.length === 0 && data.actions.length === 0 ? (
-                  <p className="text-sm text-abys-muted">Kayıt yok.</p>
+                  <p className="text-sm text-abys-muted">{t(locale, "decisions.trace.noRecord")}</p>
                 ) : (
                   <div className="space-y-3">
                     {data.decisions.map((d) => (
                       <div key={d.id} className="text-sm bg-abys-cream/60 rounded-lg px-3 py-2">
                         <p className="text-abys-ink">
-                          <span className="font-semibold">Karar: </span>
+                          <span className="font-semibold">{t(locale, "decisions.trace.decision")}{" "}</span>
                           {d.choice} — {d.payload?.chosenAction ?? "—"}
                         </p>
                         <p className="text-xs text-abys-muted mt-0.5">
-                          {d.decided_by} · {fmtDateTime(d.created_at)}
+                          {d.decided_by} · {fmtDateTime(locale, d.created_at)}
                         </p>
                         {d.payload?.reason && (
-                          <p className="text-xs text-abys-ink mt-1">Gerekçe: {d.payload.reason}</p>
+                          <p className="text-xs text-abys-ink mt-1">
+                            {formatMessage(locale, "decisions.trace.reason", { reason: d.payload.reason })}
+                          </p>
                         )}
                         {d.outcome && (
                           <p className="text-xs text-abys-ink mt-1">
-                            Sonuç: {d.outcome.result ?? "—"}
+                            {t(locale, "decisions.trace.outcome")} {d.outcome.result ?? "—"}
                             {d.outcome.note ? ` — ${d.outcome.note}` : ""}
                           </p>
                         )}
@@ -1356,7 +1412,7 @@ function TraceModal({ caseId, onClose }: { caseId: string; onClose: () => void }
                     {data.actions.map((a) => (
                       <div key={a.id} className="text-sm bg-abys-cream/60 rounded-lg px-3 py-2">
                         <p className="text-abys-ink">
-                          <span className="font-semibold">Aksiyon: </span>
+                          <span className="font-semibold">{t(locale, "decisions.trace.action")}{" "}</span>
                           {a.title}
                         </p>
                         <p className="text-xs text-abys-muted mt-0.5">
@@ -1369,14 +1425,14 @@ function TraceModal({ caseId, onClose }: { caseId: string; onClose: () => void }
                 )}
               </TraceSection>
 
-              <TraceSection title="DENETİM OLAYLARI">
+              <TraceSection title={t(locale, "decisions.trace.auditEvents")}>
                 {data.audit.length === 0 ? (
-                  <p className="text-sm text-abys-muted">Kayıt yok.</p>
+                  <p className="text-sm text-abys-muted">{t(locale, "decisions.trace.noRecord")}</p>
                 ) : (
                   <div className="space-y-1">
                     {data.audit.map((ev, i) => (
                       <p key={i} className="text-xs text-abys-ink">
-                        <span className="text-abys-muted">{fmtDateTime(ev.created_at)}</span>{" "}
+                        <span className="text-abys-muted">{fmtDateTime(locale, ev.created_at)}</span>{" "}
                         · <span className="font-medium">{ev.actor}</span> · {ev.summary}
                       </p>
                     ))}
@@ -1413,6 +1469,7 @@ function OptionsPanel({
   decidedBy: string;
   serverMode: boolean;
 }) {
+  const locale = useLocale();
   const [choosing, setChoosing] = useState<{ mode: DecisionChoice; option?: ActionOption } | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -1427,7 +1484,7 @@ function OptionsPanel({
 
     const chosenAction =
       choosing.mode === "rejected"
-        ? "Aksiyon alınmadı"
+        ? t(readLocale(), "decisions.options.noAction")
         : choosing.option?.title ?? recommended?.title ?? "";
 
     // Sunucu modunda karar SUNUCUYA yazılır: /api/decisions kararı kaydeder,
@@ -1447,7 +1504,10 @@ function OptionsPanel({
             chosenAction,
           }),
         });
-        if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Karar kaydedilemedi.");
+        if (!res.ok)
+          throw new Error(
+            (await res.json().catch(() => null))?.error ?? t(readLocale(), "decisions.options.saveFailed")
+          );
       } catch {
         setBusy(false);
         return;
@@ -1477,7 +1537,7 @@ function OptionsPanel({
       "decision_made",
       decidedBy,
       `Karar: ${c.title}`,
-      `${choosing.mode === "accepted" ? "Öneri kabul edildi" : choosing.mode === "rejected" ? "Öneri reddedildi" : "Değiştirilerek uygulandı"}: "${chosenAction}"${reason.trim() ? ` — Gerekçe: ${reason.trim()}` : ""}`
+      `${t(readLocale(), `decisions.choice.${choosing.mode}` as ShellKey)}: "${chosenAction}"${reason.trim() ? ` — ${reason.trim()}` : ""}`
     );
     onDecided();
   }
@@ -1485,7 +1545,7 @@ function OptionsPanel({
   return (
     <div>
       <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
-        UYGULANABİLİR SEÇENEKLER — KISIT KONTROLÜNDEN GEÇTİ
+        {t(locale, "decisions.options.feasibleHeading")}
       </p>
       <div className="space-y-2 mb-3">
         {feasible.map((o) => (
@@ -1502,7 +1562,7 @@ function OptionsPanel({
         ))}
         {feasible.length === 0 && (
           <p className="text-sm text-abys-muted">
-            Mevcut kısıtlar altında uygulanabilir seçenek bulunamadı — kısıt modelini gözden geçirin.
+            {t(locale, "decisions.options.noFeasible")}
           </p>
         )}
       </div>
@@ -1510,7 +1570,9 @@ function OptionsPanel({
       {infeasible.length > 0 && (
         <details className="mb-4">
           <summary className="text-xs text-abys-muted cursor-pointer">
-            Kısıtlara takılan {infeasible.length} seçenek (gerekçesiyle)
+            {formatMessage(locale, "decisions.options.infeasibleSummary", {
+              count: infeasible.length,
+            })}
           </summary>
           <div className="space-y-2 mt-2">
             {infeasible.map((o) => (
@@ -1528,17 +1590,17 @@ function OptionsPanel({
                 onClick={() => setChoosing({ mode: "accepted", option: recommended })}
                 className="text-sm rounded-lg bg-abys-navy text-white px-4 py-2 hover:opacity-90"
               >
-                ✓ Öneriyi kabul et
+                {t(locale, "decisions.options.acceptRecommended")}
               </button>
             )}
             <button
               onClick={() => setChoosing({ mode: "rejected" })}
               className="text-sm rounded-lg border border-abys-ink/15 text-abys-ink px-4 py-2 hover:bg-white/60"
             >
-              Reddet
+              {t(locale, "decisions.options.reject")}
             </button>
             <span className="text-xs text-abys-muted self-center">
-              ya da yukarıdan farklı bir seçenek seçin
+              {t(locale, "decisions.options.orPickAnother")}
             </span>
           </div>
         )}
@@ -1547,12 +1609,20 @@ function OptionsPanel({
           <div className="space-y-3">
             <p className="text-sm text-abys-ink">
               {choosing.mode === "accepted" && (
-                <>Öneri kabul edilecek: <strong>{choosing.option?.title}</strong></>
+                <>
+                  {t(locale, "decisions.options.willAccept")}{" "}
+                  <strong>{choosing.option?.title}</strong>
+                </>
               )}
               {choosing.mode === "modified" && (
-                <>Farklı seçenekle uygulanacak: <strong>{choosing.option?.title}</strong></>
+                <>
+                  {t(locale, "decisions.options.willApplyOther")}{" "}
+                  <strong>{choosing.option?.title}</strong>
+                </>
               )}
-              {choosing.mode === "rejected" && <>Öneri reddedilecek, aksiyon alınmayacak.</>}
+              {choosing.mode === "rejected" && (
+                <>{t(locale, "decisions.options.willReject")}</>
+              )}
             </p>
             <textarea
               value={reason}
@@ -1560,8 +1630,8 @@ function OptionsPanel({
               rows={2}
               placeholder={
                 choosing.mode === "accepted"
-                  ? "Gerekçe (isteğe bağlı) — ABYS bundan öğrenir"
-                  : "Gerekçe (zorunlu) — ABYS bir daha aynı hatayı yapmasın diye nedeninizi kaydeder"
+                  ? t(locale, "decisions.options.reasonOptional")
+                  : t(locale, "decisions.options.reasonRequired")
               }
               className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
             />
@@ -1571,7 +1641,7 @@ function OptionsPanel({
                 disabled={choosing.mode !== "accepted" && !reason.trim()}
                 className="text-sm rounded-lg bg-abys-navy text-white px-4 py-2 disabled:opacity-40 hover:opacity-90"
               >
-                Kararı kaydet
+                {t(locale, "decisions.options.save")}
               </button>
               <button
                 onClick={() => {
@@ -1580,7 +1650,7 @@ function OptionsPanel({
                 }}
                 className="text-sm rounded-lg border border-abys-ink/15 text-abys-ink px-4 py-2 hover:bg-white/60"
               >
-                Vazgeç
+                {t(locale, "decisions.cancel")}
               </button>
             </div>
           </div>
@@ -1603,6 +1673,7 @@ function OptionRow({
   selected: boolean;
   onSelect?: () => void;
 }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   return (
     <div
@@ -1621,34 +1692,46 @@ function OptionRow({
           </span>
         ) : (
           <span className="text-[10px] font-semibold rounded-full px-2 py-0.5 border border-abys-ink/20 text-abys-muted shrink-0 mt-0.5">
-            UYGULANAMAZ
+            {t(locale, "decisions.options.infeasibleBadge")}
           </span>
         )}
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-abys-ink">
             {o.title}
-            {recommended && <span className="text-abys-accent text-xs ml-2">★ ABYS önerisi</span>}
+            {recommended && (
+              <span className="text-abys-accent text-xs ml-2">
+                {t(locale, "decisions.options.recommendedBadge")}
+              </span>
+            )}
           </p>
           <p className="text-xs text-abys-muted mt-0.5">{o.detail}</p>
           {!o.feasible && (
             <p className="text-xs mt-1.5" style={{ color: "var(--abys-critical)" }}>
-              Kısıt: {o.feasibilityNote}
+              {formatMessage(locale, "decisions.options.constraint", {
+                note: o.feasibilityNote,
+              })}
             </p>
           )}
           {open && (
             <div className="mt-2 space-y-1 text-xs text-abys-ink">
               {o.feasible && (
                 <p>
-                  <span className="font-semibold text-abys-muted">Uygulanabilirlik: </span>
+                  <span className="font-semibold text-abys-muted">
+                    {t(locale, "decisions.options.feasibility")}{" "}
+                  </span>
                   {o.feasibilityNote}
                 </p>
               )}
               <p>
-                <span className="font-semibold text-abys-muted">Trade-off: </span>
+                <span className="font-semibold text-abys-muted">
+                  {t(locale, "decisions.options.tradeoff")}{" "}
+                </span>
                 {o.tradeoffs}
               </p>
               <p>
-                <span className="font-semibold text-abys-muted">Beklenen sonuç: </span>
+                <span className="font-semibold text-abys-muted">
+                  {t(locale, "decisions.options.expectedOutcome")}{" "}
+                </span>
                 {o.expectedOutcome}
               </p>
             </div>
@@ -1656,14 +1739,14 @@ function OptionRow({
         </div>
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           <button onClick={() => setOpen((v) => !v)} className="text-xs text-abys-muted hover:text-abys-ink">
-            {open ? "detay −" : "detay +"}
+            {open ? t(locale, "decisions.options.detailHide") : t(locale, "decisions.options.detailShow")}
           </button>
           {selectable && onSelect && (
             <button
               onClick={onSelect}
               className="text-xs rounded-full px-3 py-1 border border-abys-ink/15 text-abys-ink hover:bg-abys-cream"
             >
-              Bunu seç
+              {t(locale, "decisions.options.select")}
             </button>
           )}
         </div>
