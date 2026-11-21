@@ -100,13 +100,32 @@ export default function DataQualityPage() {
   const [score, setScore] = useState<ScoreReport | null>(null);
   const [scoreLoading, setScoreLoading] = useState(true);
   const [scoreError, setScoreError] = useState("");
+  const [scoreLabel, setScoreLabel] = useState("");
+  const [labelOptions, setLabelOptions] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const res = await fetch("/api/kpi-values", { cache: "no-store" });
+      if (!res.ok) return;
+      const body = (await res.json()) as { labels: { label: string }[] };
+      if (!cancelled) setLabelOptions(body.labels.map((row) => row.label));
+    })().catch(() => {
+      // Metrik listesi alınamazsa filtre boş kalır; skor yine yüklenir.
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const effectLocale = readLocale();
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/data-quality/score?maxAgeDays=30", { cache: "no-store" });
+        const query = new URLSearchParams({ maxAgeDays: "30" });
+        if (scoreLabel) query.set("label", scoreLabel);
+        const res = await fetch(`/api/data-quality/score?${query.toString()}`, { cache: "no-store" });
         if (!res.ok) {
           if (res.status === 401) throw new Error(t(effectLocale, "dataQuality.errorUnauthorized"));
           if (res.status === 403) throw new Error(t(effectLocale, "dataQuality.errorForbidden"));
@@ -130,7 +149,7 @@ export default function DataQualityPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [scoreLabel]);
 
   useEffect(() => {
     let cancelled = false;
@@ -210,13 +229,34 @@ export default function DataQualityPage() {
             <p className="text-xs font-semibold tracking-widest text-abys-muted">
               {t(locale, "dataQuality.score.heading")}
             </p>
-            {score?.worst && (
-              <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-abys-muted">
-                {formatMessage(locale, "dataQuality.score.worst", {
-                  dimension: t(locale, DIMENSION_KEY[score.worst]),
-                })}
-              </span>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-[11px] text-abys-muted" htmlFor="score-label">
+                {t(locale, "dataQuality.score.filterLabel")}
+              </label>
+              <select
+                id="score-label"
+                value={scoreLabel}
+                onChange={(e) => {
+                  setScoreLoading(true);
+                  setScoreLabel(e.target.value);
+                }}
+                className="rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1 text-xs text-abys-ink"
+              >
+                <option value="">{t(locale, "dataQuality.score.allMetrics")}</option>
+                {labelOptions.map((label) => (
+                  <option key={label} value={label}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {score?.worst && (
+                <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11px] text-abys-muted">
+                  {formatMessage(locale, "dataQuality.score.worst", {
+                    dimension: t(locale, DIMENSION_KEY[score.worst]),
+                  })}
+                </span>
+              )}
+            </div>
           </div>
 
           {scoreError ? (

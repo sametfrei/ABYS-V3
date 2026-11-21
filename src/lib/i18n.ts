@@ -845,6 +845,8 @@ export type ShellKey =
   | "dataQuality.score.sample"
   | "dataQuality.score.total"
   | "dataQuality.score.sampled"
+  | "dataQuality.score.filterLabel"
+  | "dataQuality.score.allMetrics"
   | "dataQuality.score.error"
   | "dataQuality.score.dimension.completeness"
   | "dataQuality.score.dimension.validity"
@@ -2873,6 +2875,8 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "integrations.apiKeys.scope.read_advisors": { tr: "danışman verisi okuma", en: "read advisor data" },
   "integrations.apiKeys.scope.read_all": { tr: "tüm veriyi okuma", en: "read all data" },
   "dataQuality.score.heading": { tr: "Kalite skoru", en: "Quality score" },
+  "dataQuality.score.filterLabel": { tr: "Metrik", en: "Metric" },
+  "dataQuality.score.allMetrics": { tr: "Tüm metrikler", en: "All metrics" },
   "dataQuality.score.overall": { tr: "Genel skor", en: "Overall score" },
   "dataQuality.score.worst": { tr: "En zayıf: {dimension}", en: "Weakest: {dimension}" },
   "dataQuality.score.noData": { tr: "Yeterli veri yok", en: "Not enough data" },

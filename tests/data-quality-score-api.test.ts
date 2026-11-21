@@ -122,6 +122,34 @@ describe("veri kalitesi skoru API", () => {
     expect(body.worst).toBe("validity");
   });
 
+  it("label filtresi kapsamı tek metriğe daraltır", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, session);
+    const db = getDb();
+    for (const [id, value, createdAt] of [
+      ["dq-g1", "10", "2026-11-20T00:00:00Z"],
+      ["dq-g2", "", "2026-11-19T00:00:00Z"],
+    ] as const) {
+      await db.query(
+        "INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
+        [id, ORG, "ds-dq", "Gider", value, createdAt]
+      );
+    }
+    const filtered = await scoreRoute(get("?label=Gider&maxAgeDays=30"));
+    expect(filtered.status).toBe(200);
+    const body = (await filtered.json()) as {
+      total: number;
+      label: string | null;
+      dimensions: Array<{ dimension: string; score: number | null }>;
+    };
+    expect(body.total).toBe(2);
+    expect(body.label).toBe("Gider");
+    const completeness = body.dimensions.find((d) => d.dimension === "completeness");
+    expect(completeness?.score).toBeCloseTo(0.5, 4);
+
+    const unfiltered = (await (await scoreRoute(get("?maxAgeDays=30"))).json()) as { total: number };
+    expect(unfiltered.total).toBe(8);
+  });
+
   it("geçersiz maxAgeDays 400 döner", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, session);
     for (const bad of ["abc", "0", "-1", "1.5", "4000"]) {
