@@ -48,15 +48,25 @@ export interface SessionInfo {
   displayName: string;
 }
 
-export async function createSession(userId: string, orgId: string): Promise<string> {
+export async function createSession(
+  userId: string,
+  orgId: string,
+  userAgent?: string | null
+): Promise<string> {
   await migrate();
   const id = randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + SESSION_TTL_MS).toISOString();
   await getDb().query(
-    "INSERT INTO sessions (id, user_id, org_id, expires_at) VALUES ($1, $2, $3, $4)",
-    [id, userId, orgId, expires]
+    "INSERT INTO sessions (id, user_id, org_id, expires_at, user_agent) VALUES ($1, $2, $3, $4, $5)",
+    [id, userId, orgId, expires, normalizeUserAgent(userAgent)]
   );
   return id;
+}
+
+/** User-Agent yalnızca cihaz ayırt etmek için saklanır; sınırlı ve normalize. */
+function normalizeUserAgent(value: string | null | undefined): string | null {
+  const text = String(value ?? "").trim();
+  return text ? text.slice(0, 300) : null;
 }
 
 /** Geçerli oturumu döner; süresi dolmuşsa null (ve kaydı temizler). */
@@ -87,6 +97,11 @@ export async function getSession(sessionId: string | undefined): Promise<Session
     await db.query("DELETE FROM sessions WHERE id = $1", [sessionId]);
     return null;
   }
+  // Son görülme her istekte yazılmasın: yalnızca 5 dakikadan eskiyse güncelle.
+  await db.query(
+    "UPDATE sessions SET last_seen_at = now() WHERE id = $1 AND last_seen_at < now() - interval '5 minutes'",
+    [sessionId]
+  );
   return {
     userId: row.user_id,
     orgId: row.org_id,

@@ -1087,4 +1087,15 @@ export const MIGRATIONS: Migration[] = [
         ON forecast_snapshots(org_id, label, created_at DESC);
     `,
   },
+  {
+    id: 36,
+    name: "oturum cihazi ve son gorulme",
+    sql: `
+      -- Oturum sahibi kendi cihazlarını ayırt edebilsin ve son kullanım
+      -- zamanını görebilsin. User-Agent yalnızca sahibine döner; IP gibi ek
+      -- kişisel veri saklanmaz. Eski satırlar başlangıç değeriyle doldurulur.
+      ALTER TABLE sessions ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now();
+      ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_agent TEXT;
+    `,
+  },
 ];

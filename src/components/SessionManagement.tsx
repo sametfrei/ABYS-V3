@@ -14,6 +14,8 @@ interface SessionRow {
   id: string;
   createdAt: string;
   expiresAt: string;
+  lastSeenAt: string;
+  userAgent: string | null;
   current: boolean;
 }
 
@@ -30,6 +32,16 @@ function formatMessage(
     (text, [name, value]) => text.replace(`{${name}}`, String(value)),
     t(locale, key)
   );
+}
+
+function deviceLabel(userAgent: string | null, locale: Locale): string {
+  if (!userAgent) return t(locale, "settings.sessions.unknownDevice");
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return "iOS";
+  if (/Android/i.test(userAgent)) return "Android";
+  if (/Macintosh|Mac OS X/i.test(userAgent)) return "macOS";
+  if (/Windows/i.test(userAgent)) return "Windows";
+  if (/Linux/i.test(userAgent)) return "Linux";
+  return t(locale, "settings.sessions.unknownDevice");
 }
 
 function formatDateTime(value: string, locale: Locale): string {
@@ -152,6 +164,15 @@ export function SessionManagement() {
                     ·{" "}
                     {formatMessage(locale, "settings.sessions.expires", {
                       date: formatDateTime(s.expiresAt, locale),
+                    })}
+                  </p>
+                  <p className="text-xs text-abys-muted">
+                    {formatMessage(locale, "settings.sessions.device", {
+                      device: deviceLabel(s.userAgent, locale),
+                    })}{" "}
+                    ·{" "}
+                    {formatMessage(locale, "settings.sessions.lastSeen", {
+                      date: formatDateTime(s.lastSeenAt, locale),
                     })}
                   </p>
                 </div>

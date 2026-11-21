@@ -42,8 +42,14 @@ export async function GET() {
     return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
   }
 
-  const r = await getDb().query<{ id: string; created_at: Date | string; expires_at: Date | string }>(
-    `SELECT id, created_at, expires_at FROM sessions
+  const r = await getDb().query<{
+    id: string;
+    created_at: Date | string;
+    expires_at: Date | string;
+    last_seen_at: Date | string;
+    user_agent: string | null;
+  }>(
+    `SELECT id, created_at, expires_at, last_seen_at, user_agent FROM sessions
      WHERE user_id = $1 AND org_id = $2 AND expires_at > $3
      ORDER BY created_at DESC`,
     [auth.session.userId, auth.session.orgId, new Date().toISOString()]
@@ -54,6 +60,8 @@ export async function GET() {
       id: row.id,
       createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
       expiresAt: row.expires_at instanceof Date ? row.expires_at.toISOString() : row.expires_at,
+      lastSeenAt: row.last_seen_at instanceof Date ? row.last_seen_at.toISOString() : row.last_seen_at,
+      userAgent: row.user_agent,
       current: row.id === auth.sessionId,
     })),
   });

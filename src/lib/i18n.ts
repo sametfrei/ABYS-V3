@@ -581,6 +581,9 @@ export type ShellKey =
   | "settings.sessions.activeBadge"
   | "settings.sessions.started"
   | "settings.sessions.expires"
+  | "settings.sessions.device"
+  | "settings.sessions.lastSeen"
+  | "settings.sessions.unknownDevice"
   | "settings.sessions.revoke"
   | "settings.sessions.revokeAll"
   | "settings.sessions.revoked"
@@ -2605,6 +2608,9 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "settings.sessions.started": { tr: "Başlangıç: {date}", en: "Started: {date}" },
   "settings.sessions.expires": { tr: "Bitiş: {date}", en: "Expires: {date}" },
   "settings.sessions.revoke": { tr: "Oturumu kapat", en: "Revoke session" },
+  "settings.sessions.device": { tr: "Cihaz: {device}", en: "Device: {device}" },
+  "settings.sessions.lastSeen": { tr: "Son görülme: {date}", en: "Last seen: {date}" },
+  "settings.sessions.unknownDevice": { tr: "Bilinmeyen cihaz", en: "Unknown device" },
   "settings.sessions.revokeAll": {
     tr: "Diğer tüm oturumları kapat",
     en: "Revoke all other sessions",

@@ -122,7 +122,7 @@ export async function GET(req: NextRequest) {
     return redirectWithError(req, "Bu e-posta ABYS'de tanımlı değil; yöneticinize başvurun.");
   }
 
-  const sessionId = await createSession(user.id, user.org_id);
+  const sessionId = await createSession(user.id, user.org_id, req.headers.get("user-agent"));
   await recordAuditEvent({
     orgId: user.org_id,
     actor: user.display_name,

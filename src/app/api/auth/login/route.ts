@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   }
 
   resetLoginRate(req, email);
-  const sessionId = await createSession(user.id, user.org_id);
+  const sessionId = await createSession(user.id, user.org_id, req.headers.get("user-agent"));
   await recordAuditEvent({
     orgId: user.org_id,
     actor: user.display_name,

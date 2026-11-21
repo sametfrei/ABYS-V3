@@ -80,7 +80,11 @@ describe("oturum yönetimi API'si", () => {
       );
     }
 
-    current = await createSession("sess-user-a", ORG);
+    current = await createSession(
+      "sess-user-a",
+      ORG,
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+    );
     otherA = await createSession("sess-user-a", ORG);
     otherB = await createSession("sess-user-b", ORG);
   });
@@ -109,6 +113,34 @@ describe("oturum yönetimi API'si", () => {
     // Başka kullanıcının oturumu listing'de yok.
     expect(ids).not.toContain(otherB);
     expect(JSON.stringify(body)).not.toContain("password");
+  });
+
+  it("cihaz bilgisi ve son görülme yalnızca oturum sahibine döner", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, current);
+    const body = (await (await listSessions()).json()) as {
+      sessions: Array<{ id: string; userAgent: string | null; lastSeenAt: string }>;
+    };
+    const mine = body.sessions.find((s) => s.id === current);
+    expect(mine?.userAgent).toContain("Macintosh");
+    expect(typeof mine?.lastSeenAt).toBe("string");
+    // Diğer kullanıcının satırı hâlâ listede değil.
+    expect(body.sessions.some((s) => s.id === otherB)).toBe(false);
+  });
+
+  it("son görülme beş dakikadan eskiyse güncellenir", async () => {
+    const db = getDb();
+    await db.query(
+      "UPDATE sessions SET last_seen_at = now() - interval '1 hour' WHERE id = $1",
+      [current]
+    );
+    expect(await getSession(current)).not.toBeNull();
+    const r = await db.query<{ last_seen_at: Date | string }>(
+      "SELECT last_seen_at FROM sessions WHERE id = $1",
+      [current]
+    );
+    const value = r.rows[0]?.last_seen_at;
+    const seenAt = value instanceof Date ? value.getTime() : new Date(String(value)).getTime();
+    expect(Date.now() - seenAt).toBeLessThan(60_000);
   });
 
   it("başka kullanıcının oturumu iptal edilemez (404)", async () => {
