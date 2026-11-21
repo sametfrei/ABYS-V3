@@ -625,7 +625,32 @@ export type ShellKey =
   | "settings.users.role.analyst"
   | "settings.users.role.auditor"
   | "settings.users.role.data_admin"
-  | "settings.users.role.sys_admin";
+  | "settings.users.role.sys_admin"
+  | "dataQuality.eyebrow"
+  | "dataQuality.title"
+  | "dataQuality.titleAccent"
+  | "dataQuality.subtitle"
+  | "dataQuality.filterPending"
+  | "dataQuality.filterAll"
+  | "dataQuality.loading"
+  | "dataQuality.emptyPending"
+  | "dataQuality.emptyAll"
+  | "dataQuality.noticeAcceptProposed"
+  | "dataQuality.noticeKeepExisting"
+  | "dataQuality.noticeResolved"
+  | "dataQuality.noticeDiscarded"
+  | "dataQuality.errorUnauthorized"
+  | "dataQuality.errorForbidden"
+  | "dataQuality.errorHttp"
+  | "dataQuality.errorNetwork"
+  | "dataQuality.errorLoadFailed"
+  | "dataQuality.actionApplyProposed"
+  | "dataQuality.actionKeepExisting"
+  | "dataQuality.actionResolved"
+  | "dataQuality.actionDiscard"
+  | "dataQuality.status.pending"
+  | "dataQuality.status.resolved"
+  | "dataQuality.status.discarded";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -1745,6 +1770,58 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "settings.users.role.auditor": { tr: "Denetçi", en: "Auditor" },
   "settings.users.role.data_admin": { tr: "Veri Yöneticisi", en: "Data Administrator" },
   "settings.users.role.sys_admin": { tr: "Sistem Yöneticisi", en: "System Administrator" },
+  "dataQuality.eyebrow": { tr: "VERİ KALİTESİ", en: "DATA QUALITY" },
+  "dataQuality.title": { tr: "Karantina", en: "Quarantine" },
+  "dataQuality.titleAccent": { tr: "kuyruğu.", en: "queue." },
+  "dataQuality.subtitle": {
+    tr: "Entegrasyonlarda eşleştirilemeyen veya doğrulanamayan satırlar. Sessizce atılmaz; burada incelenir.",
+    en: "Rows from integrations that could not be matched or validated. They are not silently dropped; they are reviewed here.",
+  },
+  "dataQuality.filterPending": { tr: "Bekleyen", en: "Pending" },
+  "dataQuality.filterAll": { tr: "Tümü", en: "All" },
+  "dataQuality.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "dataQuality.emptyPending": {
+    tr: "Bekleyen karantina kaydı yok.",
+    en: "No pending quarantine records.",
+  },
+  "dataQuality.emptyAll": {
+    tr: "Karantina kaydı yok.",
+    en: "No quarantine records.",
+  },
+  "dataQuality.noticeAcceptProposed": {
+    tr: "Önerilen güçlü kimlik bağlantısı uygulandı.",
+    en: "The proposed strong identity link was applied.",
+  },
+  "dataQuality.noticeKeepExisting": {
+    tr: "Mevcut kimlik bağlantısı korunarak çakışma kapatıldı.",
+    en: "The conflict was closed while keeping the existing identity link.",
+  },
+  "dataQuality.noticeResolved": { tr: "Kayıt çözüldü.", en: "Record resolved." },
+  "dataQuality.noticeDiscarded": { tr: "Kayıt atıldı.", en: "Record discarded." },
+  "dataQuality.errorUnauthorized": {
+    tr: "Bu sayfa için oturum gerekir.",
+    en: "This page requires an enterprise session.",
+  },
+  "dataQuality.errorForbidden": {
+    tr: "Veri kalitesi görünümü için yetkiniz yok.",
+    en: "You do not have permission to view data quality.",
+  },
+  "dataQuality.errorHttp": {
+    tr: "İşlem başarısız (HTTP {status}).",
+    en: "Operation failed (HTTP {status}).",
+  },
+  "dataQuality.errorNetwork": {
+    tr: "Sunucuya ulaşılamadı.",
+    en: "Could not reach the server.",
+  },
+  "dataQuality.errorLoadFailed": { tr: "Yükleme başarısız.", en: "Loading failed." },
+  "dataQuality.actionApplyProposed": { tr: "Öneriyi uygula", en: "Apply proposal" },
+  "dataQuality.actionKeepExisting": { tr: "Mevcudu koru", en: "Keep existing" },
+  "dataQuality.actionResolved": { tr: "Çözüldü", en: "Resolved" },
+  "dataQuality.actionDiscard": { tr: "At", en: "Discard" },
+  "dataQuality.status.pending": { tr: "bekliyor", en: "pending" },
+  "dataQuality.status.resolved": { tr: "çözüldü", en: "resolved" },
+  "dataQuality.status.discarded": { tr: "atıldı", en: "discarded" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
