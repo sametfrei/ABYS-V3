@@ -18,6 +18,17 @@ curl -s https://SUNUCU/api/health | jq '.build'
 `build.commit` beklenen commit değilse, sunucu o sürümü **çalıştırmıyor**.
 Ekranlara bakıp tahmin yürütmeye gerek yok.
 
+Önemli: SHA **derleme anında gömülür**. Çalışan `.next` dizinini `BUILD_SHA=...`
+ortam değişkeniyle başlatmak eski SHA'yı değiştirmez; her commit için yeniden
+`npm run build` (Docker'da `--build`) gerekir.
+
+Hazır kapı:
+
+```bash
+node scripts/verify-deploy.mjs --base=https://SUNUCU --expect=origin
+# 0 eşleşti · 1 commit uyuşmuyor · 2 sağlık hatası · 3 kullanım hatası
+```
+
 ## 2. Docker ile dağıtım (desteklenen yol)
 
 ```bash
