@@ -1,7 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 /**
  * Ask ABYS (Faz 5): yönetici asistanı arayüzü.
@@ -20,30 +28,51 @@ interface AskResponse {
   note?: string;
 }
 
-const LABEL_META: Record<Label, { text: string; color: string }> = {
-  fact: { text: "KAYIT", color: "var(--abys-healthy)" },
-  inference: { text: "ÇIKARIM", color: "var(--abys-warning)" },
-  recommendation: { text: "ÖNERİ", color: "var(--abys-accent)" },
+const LABEL_META: Record<Label, { key: ShellKey; color: string }> = {
+  fact: { key: "ask.label.fact", color: "var(--abys-healthy)" },
+  inference: { key: "ask.label.inference", color: "var(--abys-warning)" },
+  recommendation: { key: "ask.label.recommendation", color: "var(--abys-accent)" },
 };
 
-const ORNEK_SORULAR = [
-  "Bugün en kritik operasyonel risk nedir?",
-  "Hangi hizmet görevleri gecikiyor?",
-  "Hangi ekipte kapasite problemi var?",
-  "Yenileme tarihi yaklaşan müşteriler hangileri?",
-  "Hangi pest-control görevleri gecikti?",
-  "Catering operasyonunda bugün risk var mı?",
-  "Yönetimin bugün vermesi gereken karar nedir?",
-  "TAIS'in genel operasyon sağlığı nedir?",
+/**
+ * Örnek sorular Türkçe metniyle gönderilir; sunucu niyeti Türkçe anahtar
+ * sözcüklerle çözer. Görünen etiket yerelleştirilir, gönderilen istem değişmez.
+ */
+const ORNEK_SORULAR: { key: ShellKey; prompt: string }[] = [
+  { key: "ask.example.risk", prompt: "Bugün en kritik operasyonel risk nedir?" },
+  { key: "ask.example.delayedTasks", prompt: "Hangi hizmet görevleri gecikiyor?" },
+  { key: "ask.example.capacity", prompt: "Hangi ekipte kapasite problemi var?" },
+  { key: "ask.example.renewals", prompt: "Yenileme tarihi yaklaşan müşteriler hangileri?" },
+  { key: "ask.example.pest", prompt: "Hangi pest-control görevleri gecikti?" },
+  { key: "ask.example.catering", prompt: "Catering operasyonunda bugün risk var mı?" },
+  { key: "ask.example.decision", prompt: "Yönetimin bugün vermesi gereken karar nedir?" },
+  { key: "ask.example.taisHealth", prompt: "TAIS'in genel operasyon sağlığı nedir?" },
 ];
 
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
 export default function AskPage() {
+  const locale = useLocale();
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState<AskResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function ask(q?: string) {
+    const activeLocale = readLocale();
     const soru = (q ?? question).trim();
     if (!soru) return;
     setQuestion(soru);
@@ -57,17 +86,17 @@ export default function AskPage() {
         body: JSON.stringify({ question: soru }),
       });
       if (r.status === 401) {
-        setError("Bu sayfa kurumsal oturum gerektirir. Lütfen giriş yapın.");
+        setError(t(activeLocale, "ask.sessionRequired"));
         return;
       }
       const j = await r.json();
       if (!r.ok) {
-        setError(j.error ?? "Cevap alınamadı.");
+        setError(j.error ?? t(activeLocale, "ask.failed"));
         return;
       }
       setRes(j);
     } catch {
-      setError("Cevap alınamadı.");
+      setError(t(activeLocale, "ask.failed"));
     } finally {
       setBusy(false);
     }
@@ -76,10 +105,10 @@ export default function AskPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="ASK ABYS"
-        title="Kuruma"
-        accent="sorun."
-        desc="ABYS yalnızca kurumun kendi kayıtlarından ve erişim izniniz olan belgelerden cevap verir. Her ifade kaynağıyla gelir; kanıt yoksa bunu açıkça söyler."
+        eyebrow={t(locale, "ask.eyebrow")}
+        title={t(locale, "ask.title")}
+        accent={t(locale, "ask.titleAccent")}
+        desc={t(locale, "ask.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-3xl">
@@ -88,7 +117,7 @@ export default function AskPage() {
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && ask()}
-            placeholder="Örn: Hangi aksiyonlar gecikti?"
+            placeholder={t(locale, "ask.placeholder")}
             className="flex-1 rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-abys-accent"
           />
           <button
@@ -96,18 +125,18 @@ export default function AskPage() {
             disabled={busy || !question.trim()}
             className="rounded-xl bg-abys-navy text-white text-sm px-5 hover:opacity-90 disabled:opacity-40"
           >
-            {busy ? "…" : "Sor"}
+            {busy ? t(locale, "ask.busy") : t(locale, "ask.submit")}
           </button>
         </div>
 
         <div className="flex flex-wrap gap-2 mb-6">
           {ORNEK_SORULAR.map((s) => (
             <button
-              key={s}
-              onClick={() => ask(s)}
+              key={s.key}
+              onClick={() => ask(s.prompt)}
               className="text-xs rounded-full border border-abys-ink/15 px-3 py-1.5 text-abys-muted hover:bg-white/60 hover:text-abys-ink"
             >
-              {s}
+              {t(locale, s.key)}
             </button>
           ))}
         </div>
@@ -131,10 +160,12 @@ export default function AskPage() {
                         className="text-[10px] font-semibold rounded px-1.5 py-0.5 mr-2 align-middle"
                         style={{ color: meta.color, backgroundColor: `color-mix(in srgb, ${meta.color} 12%, transparent)` }}
                       >
-                        {meta.text}
+                        {t(locale, meta.key)}
                       </span>
                       <span className="text-abys-ink">{s.text}</span>
-                      <span className="block text-[11px] text-abys-muted mt-0.5 ml-1">kaynak: {s.source}</span>
+                      <span className="block text-[11px] text-abys-muted mt-0.5 ml-1">
+                        {formatMessage(locale, "ask.statementSource", { source: s.source })}
+                      </span>
                     </li>
                   );
                 })}
@@ -143,7 +174,9 @@ export default function AskPage() {
 
             {res.sources.length > 0 && (
               <div className="mt-4 pt-3 border-t border-abys-cream-border">
-                <p className="text-[11px] text-abys-muted font-semibold mb-1">KAYNAKLAR ({res.sources.length})</p>
+                <p className="text-[11px] text-abys-muted font-semibold mb-1">
+                  {formatMessage(locale, "ask.sourcesHeading", { count: res.sources.length })}
+                </p>
                 <ul className="text-xs text-abys-muted space-y-0.5">
                   {res.sources.map((s, i) => (
                     <li key={i}>

@@ -1419,7 +1419,29 @@ export type ShellKey =
   | "kpi.emptyPoints"
   | "kpi.colTime"
   | "kpi.colValue"
-  | "kpi.delete";
+  | "kpi.delete"
+  | "ask.eyebrow"
+  | "ask.title"
+  | "ask.titleAccent"
+  | "ask.subtitle"
+  | "ask.placeholder"
+  | "ask.submit"
+  | "ask.busy"
+  | "ask.sessionRequired"
+  | "ask.failed"
+  | "ask.label.fact"
+  | "ask.label.inference"
+  | "ask.label.recommendation"
+  | "ask.statementSource"
+  | "ask.sourcesHeading"
+  | "ask.example.risk"
+  | "ask.example.delayedTasks"
+  | "ask.example.capacity"
+  | "ask.example.renewals"
+  | "ask.example.pest"
+  | "ask.example.catering"
+  | "ask.example.decision"
+  | "ask.example.taisHealth";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -3513,6 +3535,28 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "kpi.colTime": { tr: "Zaman", en: "Time" },
   "kpi.colValue": { tr: "Değer", en: "Value" },
   "kpi.delete": { tr: "Sil", en: "Delete" },
+  "ask.eyebrow": { tr: "ASK ABYS", en: "ASK ABYS" },
+  "ask.title": { tr: "Kuruma", en: "Ask your" },
+  "ask.titleAccent": { tr: "sorun.", en: "institution." },
+  "ask.subtitle": { tr: "ABYS yalnızca kurumun kendi kayıtlarından ve erişim izniniz olan belgelerden cevap verir. Her ifade kaynağıyla gelir; kanıt yoksa bunu açıkça söyler.", en: "ABYS answers only from the institution's own records and documents you are permitted to access. Every statement arrives with its source; when there is no evidence it says so plainly." },
+  "ask.placeholder": { tr: "Örn: Hangi aksiyonlar gecikti?", en: "Example: Which actions are overdue?" },
+  "ask.submit": { tr: "Sor", en: "Ask" },
+  "ask.busy": { tr: "Yanıtlanıyor…", en: "Answering…" },
+  "ask.sessionRequired": { tr: "Bu sayfa kurumsal oturum gerektirir. Lütfen giriş yapın.", en: "This page requires an institutional session. Please sign in." },
+  "ask.failed": { tr: "Cevap alınamadı.", en: "No answer could be retrieved." },
+  "ask.label.fact": { tr: "KAYIT", en: "RECORD" },
+  "ask.label.inference": { tr: "ÇIKARIM", en: "INFERENCE" },
+  "ask.label.recommendation": { tr: "ÖNERİ", en: "RECOMMENDATION" },
+  "ask.statementSource": { tr: "kaynak: {source}", en: "source: {source}" },
+  "ask.sourcesHeading": { tr: "KAYNAKLAR ({count})", en: "SOURCES ({count})" },
+  "ask.example.risk": { tr: "Bugün en kritik operasyonel risk nedir?", en: "What is today's most critical operational risk?" },
+  "ask.example.delayedTasks": { tr: "Hangi hizmet görevleri gecikiyor?", en: "Which service tasks are delayed?" },
+  "ask.example.capacity": { tr: "Hangi ekipte kapasite problemi var?", en: "Which team has a capacity problem?" },
+  "ask.example.renewals": { tr: "Yenileme tarihi yaklaşan müşteriler hangileri?", en: "Which customers have upcoming renewals?" },
+  "ask.example.pest": { tr: "Hangi pest-control görevleri gecikti?", en: "Which pest-control tasks are overdue?" },
+  "ask.example.catering": { tr: "Catering operasyonunda bugün risk var mı?", en: "Is there a risk in catering operations today?" },
+  "ask.example.decision": { tr: "Yönetimin bugün vermesi gereken karar nedir?", en: "What decision should leadership make today?" },
+  "ask.example.taisHealth": { tr: "TAIS'in genel operasyon sağlığı nedir?", en: "What is TAIS's overall operations health?" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

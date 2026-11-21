@@ -205,6 +205,18 @@ describe("i18n kabuk sözlüğü", () => {
     expect(t("tr", "kpi.metricsHeading")).not.toBe(t("en", "kpi.metricsHeading"));
   });
 
+  it("Ask ABYS ekranı anahtarları iki dilde dolu", () => {
+    const keys = shellKeys().filter((key) => key.startsWith("ask."));
+    expect(keys.length).toBeGreaterThan(20);
+    for (const key of keys) {
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+    expect(t("tr", "ask.submit")).toBe("Sor");
+    expect(t("en", "ask.submit")).toBe("Ask");
+    expect(t("tr", "ask.sourcesHeading")).toContain("{count}");
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });
