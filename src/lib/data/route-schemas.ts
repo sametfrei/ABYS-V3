@@ -160,6 +160,34 @@ export function parseAuditLimit(
   return { ok: true, limit: parsed.data };
 }
 
+/**
+ * Karar defteri `limit`: 1..200 tam sayı, varsayılan 50. Audit'ten farklı
+ * üst sınır kullanır çünkü ledger satırları yürütme/sonuç alt kayıtlarıyla
+ * daha ağırdır. Aynı "yalnızca onluk tamsayı" kuralı geçerlidir.
+ */
+export const MAX_LEDGER_LIMIT = 200;
+export const DEFAULT_LEDGER_LIMIT = 50;
+
+const ledgerLimitSchema = z.preprocess((v) => {
+  if (v === undefined || v === null) return DEFAULT_LEDGER_LIMIT;
+  if (typeof v === "string") {
+    const trimmed = v.trim();
+    if (!trimmed) return DEFAULT_LEDGER_LIMIT;
+    if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  }
+  return v;
+}, z.number().int("limit tam sayı olmalı").min(1, "limit 1 ile 200 arasında olmalı").max(MAX_LEDGER_LIMIT, "limit 1 ile 200 arasında olmalı"));
+
+export function parseLedgerLimit(
+  raw: string | null
+): { ok: true; limit: number } | { ok: false; error: string } {
+  const parsed = ledgerLimitSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Geçersiz limit." };
+  }
+  return { ok: true, limit: parsed.data };
+}
+
 /** Ingest `sectorId`: yalnızca tanımlı sektör kimlikleri. */
 export const sectorIdSchema = z
   .string()

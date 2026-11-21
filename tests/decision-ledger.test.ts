@@ -157,15 +157,15 @@ describe("Decision Value Ledger API'si", () => {
 
   it("oturum yoksa 401, izin yoksa 403", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, undefined);
-    expect((await ledger()).status).toBe(401);
+    expect((await ledger(new Request("http://localhost/api/decision-ledger"))).status).toBe(401);
 
     nextHeaders.__setTestCookie(SESSION_COOKIE, guestA);
-    expect((await ledger()).status).toBe(403);
+    expect((await ledger(new Request("http://localhost/api/decision-ledger"))).status).toBe(403);
   });
 
   it("özet: toplam karar ve sonuç dağılımı doğru", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
-    const body = (await (await ledger()).json()) as {
+    const body = (await (await ledger(new Request("http://localhost/api/decision-ledger"))).json()) as {
       summary: {
         totalDecisions: number;
         withOutcome: number;
@@ -298,7 +298,7 @@ describe("Decision Value Ledger API'si", () => {
 
   it("kararlar sonuç ve dersleriyle birlikte, yeniden eskiye döner", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
-    const body = (await (await ledger()).json()) as {
+    const body = (await (await ledger(new Request("http://localhost/api/decision-ledger"))).json()) as {
       entries: Array<{
         decisionId: string;
         title: string;
@@ -412,7 +412,7 @@ describe("Decision Value Ledger API'si", () => {
     );
     expect(outcome.status).toBe(200);
 
-    const body = (await (await ledger()).json()) as {
+    const body = (await (await ledger(new Request("http://localhost/api/decision-ledger"))).json()) as {
       entries: Array<{
         decisionId: string;
         expectedImpact: { value: number; currency: string } | null;
@@ -489,11 +489,28 @@ describe("Decision Value Ledger API'si", () => {
 
   it("başka kurumun kararları görünmez", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, ceoB);
-    const body = (await (await ledger()).json()) as {
+    const body = (await (await ledger(new Request("http://localhost/api/decision-ledger"))).json()) as {
       summary: { totalDecisions: number };
       entries: unknown[];
     };
     expect(body.summary.totalDecisions).toBe(0);
     expect(body.entries).toHaveLength(0);
+  });
+
+  it("geçersiz limit 400 döner, geçerli limit kabul edilir", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    for (const bad of ["abc", "0", "-3", "1.5", "201", "1e2"]) {
+      const res = await ledger(
+        new Request(`http://localhost/api/decision-ledger?limit=${encodeURIComponent(bad)}`)
+      );
+      expect(res.status).toBe(400);
+      const body = (await res.json()) as { error?: string };
+      expect(body.error).toContain("limit");
+    }
+
+    const ok = await ledger(new Request("http://localhost/api/decision-ledger?limit=1"));
+    expect(ok.status).toBe(200);
+    const body = (await ok.json()) as { entries: unknown[] };
+    expect(body.entries.length).toBeLessThanOrEqual(1);
   });
 });
