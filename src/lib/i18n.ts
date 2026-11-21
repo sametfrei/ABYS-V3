@@ -1,5 +1,5 @@
 /**
- * Arayüz dili — kabuk ve aksiyon ekranı metinleri.
+ * Arayüz dili — kabuk, aksiyon ve bağlantı ekranı metinleri.
  *
  * Kapsam bilerek sınırlıdır. Eksik anahtar her zaman Türkçe metne düşer,
  * böylece yarım çeviri yüzünden boş etiket görünmez.
@@ -140,7 +140,145 @@ export type ShellKey =
   | "actions.providerResponse"
   | "actions.reference"
   | "actions.errorCode"
-  | "actions.executionError";
+  | "actions.executionError"
+  | "connectors.title"
+  | "connectors.titleAccent"
+  | "connectors.subtitle"
+  | "connectors.loading"
+  | "connectors.loadFailed"
+  | "connectors.loadFailedHttp"
+  | "connectors.catalogHeading"
+  | "connectors.statusReady"
+  | "connectors.statusRequiresCredentials"
+  | "connectors.statusPlanned"
+  | "connectors.newConnection"
+  | "connectors.connectionName"
+  | "connectors.baseUrlPlaceholder"
+  | "connectors.apiPathPlaceholder"
+  | "connectors.entityCustomer"
+  | "connectors.entitySupplier"
+  | "connectors.entityEmployee"
+  | "connectors.entityProduct"
+  | "connectors.entityOrder"
+  | "connectors.entityInvoice"
+  | "connectors.entityPayment"
+  | "connectors.entityAccount"
+  | "connectors.entityProject"
+  | "connectors.entityInventory"
+  | "connectors.entityEvent"
+  | "connectors.authNone"
+  | "connectors.authBearer"
+  | "connectors.authApiKey"
+  | "connectors.authBasic"
+  | "connectors.authOAuth2"
+  | "connectors.secretOAuthPlaceholder"
+  | "connectors.secretEnvPlaceholder"
+  | "connectors.oauthClientIdPlaceholder"
+  | "connectors.oauthScopePlaceholder"
+  | "connectors.idFieldPlaceholder"
+  | "connectors.recordsPathPlaceholder"
+  | "connectors.updatedAtFieldPlaceholder"
+  | "connectors.paginationPage"
+  | "connectors.paginationNone"
+  | "connectors.fieldMapLabel"
+  | "connectors.kpiFieldMapLabel"
+  | "connectors.computedKpiMapLabel"
+  | "connectors.computedKpiPlaceholder"
+  | "connectors.kpiObservedAtPlaceholder"
+  | "connectors.eventTypePlaceholder"
+  | "connectors.eventSubjectPlaceholder"
+  | "connectors.eventTimePlaceholder"
+  | "connectors.saving"
+  | "connectors.saveConnection"
+  | "connectors.selectConnectorFirst"
+  | "connectors.fieldMapJsonInvalid"
+  | "connectors.kpiFieldMapJsonInvalid"
+  | "connectors.computedKpiMapJsonInvalid"
+  | "connectors.defaultConnectorName"
+  | "connectors.saveFailed"
+  | "connectors.saveFailedHttp"
+  | "connectors.connectionCreated"
+  | "connectors.syncFailed"
+  | "connectors.syncFailedHttp"
+  | "connectors.syncSummary"
+  | "connectors.mappingLoadFailed"
+  | "connectors.mappingLoadFailedHttp"
+  | "connectors.mappingJsonInvalid"
+  | "connectors.mappingApproveFailed"
+  | "connectors.mappingApproveFailedHttp"
+  | "connectors.mappingApproved"
+  | "connectors.scheduleUpdateFailed"
+  | "connectors.scheduleUpdateFailedHttp"
+  | "connectors.scheduleDisabled"
+  | "connectors.scheduleSet"
+  | "connectors.scheduleValidation"
+  | "connectors.schedulerRunFailed"
+  | "connectors.schedulerRunFailedHttp"
+  | "connectors.schedulerSummary"
+  | "connectors.scheduleOff"
+  | "connectors.durationDays"
+  | "connectors.durationHours"
+  | "connectors.durationMinutes"
+  | "connectors.scheduleHealthHeading"
+  | "connectors.checkedAt"
+  | "connectors.notMeasured"
+  | "connectors.scheduledConnections"
+  | "connectors.due"
+  | "connectors.staleRunning"
+  | "connectors.consecutiveFailures"
+  | "connectors.healthNextLast"
+  | "connectors.healthDelay"
+  | "connectors.healthErrors"
+  | "connectors.scheduleHealthy"
+  | "connectors.scheduleDue"
+  | "connectors.scheduleOverdue"
+  | "connectors.scheduleRunning"
+  | "connectors.scheduleStale"
+  | "connectors.scheduleFailing"
+  | "connectors.scheduleUnscheduled"
+  | "connectors.schedulerNotRun"
+  | "connectors.connectionsHeading"
+  | "connectors.schedulerRunning"
+  | "connectors.runDue"
+  | "connectors.noConnections"
+  | "connectors.history"
+  | "connectors.mappingApproval"
+  | "connectors.syncNow"
+  | "connectors.scheduleLabel"
+  | "connectors.scheduleIntervalWithMinutes"
+  | "connectors.nextScheduled"
+  | "connectors.scheduleIntervalMinutesAria"
+  | "connectors.minutesPlaceholder"
+  | "connectors.saveInterval"
+  | "connectors.close"
+  | "connectors.scheduleHelp"
+  | "connectors.syncIssue"
+  | "connectors.syncIssueNoError"
+  | "connectors.retry"
+  | "connectors.records"
+  | "connectors.none"
+  | "connectors.intelligenceTransfer"
+  | "connectors.noRunHistory"
+  | "connectors.runTriggerScheduled"
+  | "connectors.runTriggerManual"
+  | "connectors.runStatusSuccess"
+  | "connectors.runStatusFailed"
+  | "connectors.runStatusRunning"
+  | "connectors.runHistoryLine"
+  | "connectors.sourceSchemaSummary"
+  | "connectors.sourceFields"
+  | "connectors.suggestions"
+  | "connectors.noSafeSuggestion"
+  | "connectors.mappingApprovedVersion"
+  | "connectors.mappingSchemaSummary"
+  | "connectors.noSchemaObservation"
+  | "connectors.addSuggestionsToDraft"
+  | "connectors.mappingConflicts"
+  | "connectors.mappingFieldLabel"
+  | "connectors.approving"
+  | "connectors.approveNewVersion"
+  | "connectors.mappingVersionHistory"
+  | "connectors.footnote";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -325,6 +463,315 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "actions.reference": { tr: "Referans", en: "Reference" },
   "actions.errorCode": { tr: "Hata kodu", en: "Error code" },
   "actions.executionError": { tr: "Yürütme hatası", en: "Execution error" },
+  "connectors.title": { tr: "Sistemleriniz", en: "Your systems" },
+  "connectors.titleAccent": { tr: "ABYS'ye bağlanır", en: "connect to ABYS" },
+  "connectors.subtitle": {
+    tr: "Genel REST/OData adaptörüyle ERP/CRM uçlarını bağlayın: alan eşlemesi, sayfalama, artımlı checkpoint ve otomatik yeniden deneme. Kimlik bilgileri yalnızca sunucu ortam değişkenlerinden okunur.",
+    en: "Connect ERP/CRM endpoints through the generic REST/OData adapter: field mapping, pagination, incremental checkpoints and automatic retries. Credentials are read only from server environment variables.",
+  },
+  "connectors.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "connectors.loadFailed": { tr: "Yüklenemedi.", en: "Could not load." },
+  "connectors.loadFailedHttp": {
+    tr: "Yüklenemedi (HTTP {status}).",
+    en: "Could not load (HTTP {status}).",
+  },
+  "connectors.catalogHeading": { tr: "Konnektör kataloğu", en: "Connector catalog" },
+  "connectors.statusReady": { tr: "Hazır", en: "Ready" },
+  "connectors.statusRequiresCredentials": {
+    tr: "Kimlik bilgisi gerekir",
+    en: "Requires credentials",
+  },
+  "connectors.statusPlanned": { tr: "Planlı", en: "Planned" },
+  "connectors.newConnection": { tr: "Yeni bağlantı", en: "New connection" },
+  "connectors.connectionName": { tr: "Bağlantı adı", en: "Connection name" },
+  "connectors.baseUrlPlaceholder": { tr: "https://api.sirket.com", en: "https://api.company.com" },
+  "connectors.apiPathPlaceholder": { tr: "/v1/customers", en: "/v1/customers" },
+  "connectors.entityCustomer": { tr: "Müşteri", en: "Customer" },
+  "connectors.entitySupplier": { tr: "Tedarikçi", en: "Supplier" },
+  "connectors.entityEmployee": { tr: "Çalışan", en: "Employee" },
+  "connectors.entityProduct": { tr: "Ürün", en: "Product" },
+  "connectors.entityOrder": { tr: "Sipariş", en: "Order" },
+  "connectors.entityInvoice": { tr: "Fatura", en: "Invoice" },
+  "connectors.entityPayment": { tr: "Ödeme", en: "Payment" },
+  "connectors.entityAccount": { tr: "Hesap", en: "Account" },
+  "connectors.entityProject": { tr: "Proje", en: "Project" },
+  "connectors.entityInventory": { tr: "Envanter", en: "Inventory" },
+  "connectors.entityEvent": { tr: "Olay", en: "Event" },
+  "connectors.authNone": { tr: "Kimlik yok", en: "No authentication" },
+  "connectors.authBearer": { tr: "Bearer token", en: "Bearer token" },
+  "connectors.authApiKey": { tr: "API key", en: "API key" },
+  "connectors.authBasic": { tr: "Basic", en: "Basic" },
+  "connectors.authOAuth2": {
+    tr: "OAuth2 client credentials",
+    en: "OAuth2 client credentials",
+  },
+  "connectors.secretOAuthPlaceholder": {
+    tr: "İstemci sırrı ortam değişkeni",
+    en: "Client secret environment variable",
+  },
+  "connectors.secretEnvPlaceholder": {
+    tr: "Ortam değişkeni (ör. CRM_TOKEN)",
+    en: "Environment variable (e.g. CRM_TOKEN)",
+  },
+  "connectors.oauthClientIdPlaceholder": {
+    tr: "İstemci kimliği ortam değişkeni",
+    en: "Client ID environment variable",
+  },
+  "connectors.oauthScopePlaceholder": { tr: "Scope (isteğe bağlı)", en: "Scope (optional)" },
+  "connectors.idFieldPlaceholder": { tr: "Kimlik alanı (id)", en: "ID field (id)" },
+  "connectors.recordsPathPlaceholder": { tr: "Kayıt yolu (data)", en: "Records path (data)" },
+  "connectors.updatedAtFieldPlaceholder": {
+    tr: "Güncelleme zamanı alanı",
+    en: "Updated-at field",
+  },
+  "connectors.paginationPage": { tr: "Sayfa numaralı", en: "Page-based" },
+  "connectors.paginationNone": { tr: "Tek sayfa", en: "Single page" },
+  "connectors.fieldMapLabel": {
+    tr: "Alan eşlemesi (kanonik alan → kaynak yol, JSON)",
+    en: "Field mapping (canonical field → source path, JSON)",
+  },
+  "connectors.kpiFieldMapLabel": {
+    tr: "KPI eşlemesi (kanonik sayısal alan → KPI etiketi, JSON)",
+    en: "KPI mapping (canonical numeric field → KPI label, JSON)",
+  },
+  "connectors.computedKpiMapLabel": {
+    tr: "Hesaplanan KPI (kpiId veya packId:kpiId → etiket, JSON)",
+    en: "Computed KPI (kpiId or packId:kpiId → label, JSON)",
+  },
+  "connectors.computedKpiPlaceholder": {
+    tr: '{ "manufacturing:first_pass_yield": "İlk Geçiş Verimi" }',
+    en: '{ "manufacturing:first_pass_yield": "First Pass Yield" }',
+  },
+  "connectors.kpiObservedAtPlaceholder": {
+    tr: "KPI gözlem zamanı alanı",
+    en: "KPI observation-time field",
+  },
+  "connectors.eventTypePlaceholder": { tr: "Olay türü alanı", en: "Event type field" },
+  "connectors.eventSubjectPlaceholder": { tr: "Olay öznesi alanı", en: "Event subject field" },
+  "connectors.eventTimePlaceholder": { tr: "Olay zamanı alanı", en: "Event time field" },
+  "connectors.saving": { tr: "Kaydediliyor…", en: "Saving…" },
+  "connectors.saveConnection": { tr: "Bağlantıyı kaydet", en: "Save connection" },
+  "connectors.selectConnectorFirst": {
+    tr: "Önce bir konnektör türü seçin.",
+    en: "Select a connector type first.",
+  },
+  "connectors.fieldMapJsonInvalid": {
+    tr: "Alan eşlemesi geçerli JSON olmalı.",
+    en: "Field mapping must be valid JSON.",
+  },
+  "connectors.kpiFieldMapJsonInvalid": {
+    tr: "KPI eşlemesi geçerli JSON olmalı.",
+    en: "KPI mapping must be valid JSON.",
+  },
+  "connectors.computedKpiMapJsonInvalid": {
+    tr: "Hesaplanan KPI eşlemesi geçerli JSON olmalı.",
+    en: "Computed KPI mapping must be valid JSON.",
+  },
+  "connectors.defaultConnectorName": { tr: "Konnektör", en: "Connector" },
+  "connectors.saveFailed": { tr: "Kaydetme başarısız.", en: "Save failed." },
+  "connectors.saveFailedHttp": {
+    tr: "Kaydetme başarısız (HTTP {status}).",
+    en: "Save failed (HTTP {status}).",
+  },
+  "connectors.connectionCreated": { tr: "Konnektör tanımlandı.", en: "Connector created." },
+  "connectors.syncFailed": { tr: "Senkron başarısız.", en: "Sync failed." },
+  "connectors.syncFailedHttp": {
+    tr: "Senkron başarısız (HTTP {status}).",
+    en: "Sync failed (HTTP {status}).",
+  },
+  "connectors.syncSummary": {
+    tr: "Senkron tamam: {fetched} okundu, {canonicalized} kanonikleştirildi, {kpi} KPI gözlemi ({computed} hesaplanan), {events} süreç olayı, {skipped} atlandı, {quarantined} karantinaya alındı, {warnings} uyarı.",
+    en: "Sync complete: {fetched} read, {canonicalized} canonicalized, {kpi} KPI observations ({computed} computed), {events} process events, {skipped} skipped, {quarantined} quarantined, {warnings} warnings.",
+  },
+  "connectors.mappingLoadFailed": {
+    tr: "Eşleme yüklenemedi.",
+    en: "Mapping could not be loaded.",
+  },
+  "connectors.mappingLoadFailedHttp": {
+    tr: "Eşleme yüklenemedi (HTTP {status}).",
+    en: "Mapping could not be loaded (HTTP {status}).",
+  },
+  "connectors.mappingJsonInvalid": {
+    tr: "Eşleme geçerli JSON olmalı.",
+    en: "Mapping must be valid JSON.",
+  },
+  "connectors.mappingApproveFailed": {
+    tr: "Eşleme onaylanamadı.",
+    en: "Mapping could not be approved.",
+  },
+  "connectors.mappingApproveFailedHttp": {
+    tr: "Eşleme onaylanamadı (HTTP {status}).",
+    en: "Mapping could not be approved (HTTP {status}).",
+  },
+  "connectors.mappingApproved": {
+    tr: "Eşleme v{version} olarak onaylandı; {count} şema önerisi izlendi.",
+    en: "Mapping approved as v{version}; {count} schema suggestions tracked.",
+  },
+  "connectors.scheduleUpdateFailed": {
+    tr: "Zamanlama güncellenemedi.",
+    en: "Schedule could not be updated.",
+  },
+  "connectors.scheduleUpdateFailedHttp": {
+    tr: "Zamanlama güncellenemedi (HTTP {status}).",
+    en: "Schedule could not be updated (HTTP {status}).",
+  },
+  "connectors.scheduleDisabled": {
+    tr: "Konnektör zamanlaması kapatıldı.",
+    en: "Connector schedule disabled.",
+  },
+  "connectors.scheduleSet": {
+    tr: "Konnektör zamanlaması {interval} olarak ayarlandı.",
+    en: "Connector schedule set to {interval}.",
+  },
+  "connectors.scheduleValidation": {
+    tr: "Zamanlama aralığı 5 ile 525600 dakika arasında bir tam sayı olmalı.",
+    en: "Schedule interval must be an integer between 5 and 525600 minutes.",
+  },
+  "connectors.schedulerRunFailed": {
+    tr: "Zamanlayıcı çalıştırılamadı.",
+    en: "Scheduler could not run.",
+  },
+  "connectors.schedulerRunFailedHttp": {
+    tr: "Zamanlayıcı çalıştırılamadı (HTTP {status}).",
+    en: "Scheduler could not run (HTTP {status}).",
+  },
+  "connectors.schedulerSummary": {
+    tr: "Zamanlayıcı: {due} vadesi gelen çalıştırma, {succeeded} başarılı, {failed} başarısız, {skipped} atlandı.",
+    en: "Scheduler: {due} due runs, {succeeded} succeeded, {failed} failed, {skipped} skipped.",
+  },
+  "connectors.scheduleOff": { tr: "Kapalı", en: "Off" },
+  "connectors.durationDays": { tr: "{count} gün", en: "{count} days" },
+  "connectors.durationHours": { tr: "{count} sa", en: "{count} hr" },
+  "connectors.durationMinutes": { tr: "{count} dk", en: "{count} min" },
+  "connectors.scheduleHealthHeading": {
+    tr: "Zamanlayıcı sağlığı",
+    en: "Scheduler health",
+  },
+  "connectors.checkedAt": { tr: "Kontrol: {date}", en: "Checked: {date}" },
+  "connectors.notMeasured": { tr: "Henüz ölçülmedi", en: "Not measured yet" },
+  "connectors.scheduledConnections": { tr: "Planlı bağlantı", en: "Scheduled connections" },
+  "connectors.due": { tr: "Vadesi gelen", en: "Due" },
+  "connectors.staleRunning": { tr: "Takılı çalıştırma", en: "Stale running" },
+  "connectors.consecutiveFailures": { tr: "Ardışık hata", en: "Consecutive failures" },
+  "connectors.healthNextLast": {
+    tr: "Sonraki çalışma: {next} · Son başarı: {last}",
+    en: "Next run: {next} · Last success: {last}",
+  },
+  "connectors.healthDelay": { tr: " · {minutes} dk gecikme", en: " · {minutes} min overdue" },
+  "connectors.healthErrors": { tr: " · {count} hata", en: " · {count} errors" },
+  "connectors.scheduleHealthy": { tr: "Sağlıklı", en: "Healthy" },
+  "connectors.scheduleDue": { tr: "Vadesi geldi", en: "Due" },
+  "connectors.scheduleOverdue": { tr: "Gecikmiş", en: "Overdue" },
+  "connectors.scheduleRunning": { tr: "Çalışıyor", en: "Running" },
+  "connectors.scheduleStale": { tr: "Takıldı", en: "Stale" },
+  "connectors.scheduleFailing": { tr: "Hata veriyor", en: "Failing" },
+  "connectors.scheduleUnscheduled": { tr: "Zamanlanmamış", en: "Unscheduled" },
+  "connectors.schedulerNotRun": {
+    tr: "Zamanlayıcı henüz çalıştırılmadı; kayıtlı çalıştırma yok.",
+    en: "The scheduler has not run yet; there are no recorded runs.",
+  },
+  "connectors.connectionsHeading": { tr: "Kayıtlı bağlantılar", en: "Saved connections" },
+  "connectors.schedulerRunning": { tr: "Zamanlayıcı çalışıyor…", en: "Scheduler running…" },
+  "connectors.runDue": { tr: "Vadesi gelenleri çalıştır", en: "Run due schedules" },
+  "connectors.noConnections": {
+    tr: "Henüz bağlantı yok. Katalogdan bir sistem seçip tanımlayın.",
+    en: "No connections yet. Select a system from the catalog and define it.",
+  },
+  "connectors.history": { tr: "Geçmiş", en: "History" },
+  "connectors.mappingApproval": { tr: "Eşleme onayı", en: "Mapping approval" },
+  "connectors.syncNow": { tr: "Senkronize et", en: "Sync now" },
+  "connectors.scheduleLabel": { tr: "Zamanlama", en: "Schedule" },
+  "connectors.scheduleIntervalWithMinutes": {
+    tr: "{interval} ({minutes} dk aralık)",
+    en: "{interval} ({minutes} min interval)",
+  },
+  "connectors.nextScheduled": {
+    tr: "Sonraki çalıştırma: {next} · Son zamanlanmış: {last}",
+    en: "Next run: {next} · Last scheduled: {last}",
+  },
+  "connectors.scheduleIntervalMinutesAria": {
+    tr: "Zamanlama aralığı (dakika)",
+    en: "Schedule interval (minutes)",
+  },
+  "connectors.minutesPlaceholder": { tr: "Dakika", en: "Minutes" },
+  "connectors.saveInterval": { tr: "Aralığı kaydet", en: "Save interval" },
+  "connectors.close": { tr: "Kapat", en: "Disable" },
+  "connectors.scheduleHelp": {
+    tr: "5–525600 dakika arasında bir aralık girin. Zamanlama kapatıldığında yalnızca manuel senkron çalışır.",
+    en: "Enter an interval between 5 and 525600 minutes. When the schedule is off, only manual syncs run.",
+  },
+  "connectors.syncIssue": {
+    tr: "{count} ardışık senkron hatası: {error}",
+    en: "{count} consecutive sync failures: {error}",
+  },
+  "connectors.syncIssueNoError": {
+    tr: "{count} ardışık senkron hatası",
+    en: "{count} consecutive sync failures",
+  },
+  "connectors.retry": { tr: "Yeniden dene", en: "Retry" },
+  "connectors.records": { tr: "Kayıtlar", en: "Records" },
+  "connectors.none": { tr: "yok", en: "none" },
+  "connectors.intelligenceTransfer": {
+    tr: "Zekâya aktarım: {kpi} KPI gözlemi · {events} süreç olayı",
+    en: "Intelligence transfer: {kpi} KPI observations · {events} process events",
+  },
+  "connectors.noRunHistory": { tr: "Çalıştırma geçmişi yok.", en: "No run history." },
+  "connectors.runTriggerScheduled": { tr: "Zamanlanmış", en: "Scheduled" },
+  "connectors.runTriggerManual": { tr: "Manuel", en: "Manual" },
+  "connectors.runStatusSuccess": { tr: "Başarılı", en: "Succeeded" },
+  "connectors.runStatusFailed": { tr: "Başarısız", en: "Failed" },
+  "connectors.runStatusRunning": { tr: "Çalışıyor", en: "Running" },
+  "connectors.runHistoryLine": {
+    tr: "{written} yazıldı / {read} okundu · {rejected} karantina",
+    en: "{written} written / {read} read · {rejected} quarantined",
+  },
+  "connectors.sourceSchemaSummary": {
+    tr: "Kaynak şema ve eşleme önerileri ({count} alan)",
+    en: "Source schema and mapping suggestions ({count} fields)",
+  },
+  "connectors.sourceFields": { tr: "Kaynak alanları: {fields}", en: "Source fields: {fields}" },
+  "connectors.suggestions": { tr: "Öneriler: {suggestions}", en: "Suggestions: {suggestions}" },
+  "connectors.noSafeSuggestion": {
+    tr: "Kanonik alanlar için güvenli bir eşleme önerisi bulunamadı.",
+    en: "No safe mapping suggestion was found for canonical fields.",
+  },
+  "connectors.mappingApprovedVersion": {
+    tr: "Onaylı eşleme v{version}",
+    en: "Approved mapping v{version}",
+  },
+  "connectors.mappingSchemaSummary": {
+    tr: "Son şema: {count} alan · {accepted}/{suggested} öneri kabul edildi",
+    en: "Latest schema: {count} fields · {accepted}/{suggested} suggestions accepted",
+  },
+  "connectors.noSchemaObservation": {
+    tr: "Henüz şema gözlemi yok; ilk senkrondan sonra öneriler oluşur.",
+    en: "No schema observation yet; suggestions appear after the first sync.",
+  },
+  "connectors.addSuggestionsToDraft": {
+    tr: "Önerileri taslağa ekle",
+    en: "Add suggestions to draft",
+  },
+  "connectors.mappingConflicts": {
+    tr: "{count} kanonik alan için çelişkili kaynak önerisi var; taslakta otomatik birleştirilmedi.",
+    en: "{count} canonical fields have conflicting source suggestions; they were not merged automatically in the draft.",
+  },
+  "connectors.mappingFieldLabel": {
+    tr: "Kanonik alan → kaynak JSON yolu",
+    en: "Canonical field → source JSON path",
+  },
+  "connectors.approving": { tr: "Onaylanıyor…", en: "Approving…" },
+  "connectors.approveNewVersion": {
+    tr: "Yeni sürümü onayla",
+    en: "Approve new version",
+  },
+  "connectors.mappingVersionHistory": {
+    tr: "Eşleme sürüm geçmişi ({count})",
+    en: "Mapping version history ({count})",
+  },
+  "connectors.footnote": {
+    tr: "Not: Katalogda “Kimlik bilgisi gerekir” işaretli sistemler aynı REST adaptörünü kullanır; canlı bağlantı müşteri uç noktası ve anahtarı sağlanana kadar doğrulanmış sayılmaz.",
+    en: "Note: Systems marked “Requires credentials” use the same REST adapter; a live connection is not considered verified until the customer endpoint and key are provided.",
+  },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {

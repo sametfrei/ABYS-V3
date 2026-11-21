@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { connectorHealthNote, summarizeConnectorRuns } from "@/lib/connector-run-health";
+import { summarizeConnectorRuns } from "@/lib/connector-run-health";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
 interface Definition {
   id: string;
@@ -113,10 +121,26 @@ interface MappingReview {
   }[];
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  ready: "Hazır",
-  "requires-credentials": "Kimlik bilgisi gerekir",
-  planned: "Planlı",
+const STATUS_LABEL: Record<string, ShellKey> = {
+  ready: "connectors.statusReady",
+  "requires-credentials": "connectors.statusRequiresCredentials",
+  planned: "connectors.statusPlanned",
+};
+
+const SCHEDULE_STATUS_LABEL: Record<string, ShellKey> = {
+  healthy: "connectors.scheduleHealthy",
+  due: "connectors.scheduleDue",
+  overdue: "connectors.scheduleOverdue",
+  running: "connectors.scheduleRunning",
+  stale: "connectors.scheduleStale",
+  failing: "connectors.scheduleFailing",
+  unscheduled: "connectors.scheduleUnscheduled",
+};
+
+const RUN_STATUS_LABEL: Record<string, ShellKey> = {
+  success: "connectors.runStatusSuccess",
+  failed: "connectors.runStatusFailed",
+  running: "connectors.runStatusRunning",
 };
 
 const STATUS_STYLE: Record<string, string> = {
@@ -136,40 +160,58 @@ const SCHEDULE_HEALTH_STYLE: Record<string, string> = {
 };
 
 const ENTITIES = [
-  "customer",
-  "supplier",
-  "employee",
-  "product",
-  "order",
-  "invoice",
-  "payment",
-  "account",
-  "project",
-  "inventory",
-  "event",
-];
+  { value: "customer", labelKey: "connectors.entityCustomer" },
+  { value: "supplier", labelKey: "connectors.entitySupplier" },
+  { value: "employee", labelKey: "connectors.entityEmployee" },
+  { value: "product", labelKey: "connectors.entityProduct" },
+  { value: "order", labelKey: "connectors.entityOrder" },
+  { value: "invoice", labelKey: "connectors.entityInvoice" },
+  { value: "payment", labelKey: "connectors.entityPayment" },
+  { value: "account", labelKey: "connectors.entityAccount" },
+  { value: "project", labelKey: "connectors.entityProject" },
+  { value: "inventory", labelKey: "connectors.entityInventory" },
+  { value: "event", labelKey: "connectors.entityEvent" },
+] as const;
 
-function formatScheduleInterval(minutes: number | null): string {
-  if (minutes === null) return "Kapalı";
-  if (minutes < 60) return `${minutes} dk`;
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function formatScheduleInterval(minutes: number | null, locale: Locale): string {
+  if (minutes === null) return t(locale, "connectors.scheduleOff");
+  if (minutes < 60) return formatMessage(locale, "connectors.durationMinutes", { count: minutes });
   const days = Math.floor(minutes / 1440);
   const hours = Math.floor((minutes % 1440) / 60);
   const remainingMinutes = minutes % 60;
   const parts = [
-    days > 0 ? `${days} gün` : "",
-    hours > 0 ? `${hours} sa` : "",
-    remainingMinutes > 0 ? `${remainingMinutes} dk` : "",
+    days > 0 ? formatMessage(locale, "connectors.durationDays", { count: days }) : "",
+    hours > 0 ? formatMessage(locale, "connectors.durationHours", { count: hours }) : "",
+    remainingMinutes > 0
+      ? formatMessage(locale, "connectors.durationMinutes", { count: remainingMinutes })
+      : "",
   ].filter(Boolean);
   return parts.join(" ");
 }
 
-function formatDateTime(value: string | null): string {
+function formatDateTime(value: string | null, locale: Locale): string {
   if (!value) return "—";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("tr-TR");
+  return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString(locale);
 }
 
 export default function ConnectorsPage() {
+  const locale = useLocale();
   const [definitions, setDefinitions] = useState<Definition[] | null>(null);
   const [configs, setConfigs] = useState<ConnectorConfigRow[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -211,7 +253,11 @@ export default function ConnectorsPage() {
   async function reload() {
     const res = await fetch("/api/connectors", { cache: "no-store" });
     const body = await res.json();
-    if (!res.ok) throw new Error(body.error ?? `Yüklenemedi (HTTP ${res.status}).`);
+    if (!res.ok) {
+      throw new Error(
+        body.error ?? formatMessage(locale, "connectors.loadFailedHttp", { status: res.status })
+      );
+    }
     setDefinitions(body.definitions);
     setConfigs(body.configs);
     const healthRes = await fetch("/api/connectors/scheduler/health", { cache: "no-store" });
@@ -219,19 +265,29 @@ export default function ConnectorsPage() {
   }
 
   useEffect(() => {
+    const effectLocale = readLocale();
     let cancelled = false;
     (async () => {
       try {
         const res = await fetch("/api/connectors", { cache: "no-store" });
         const body = await res.json();
-        if (!res.ok) throw new Error(body.error ?? `Yüklenemedi (HTTP ${res.status}).`);
+        if (!res.ok) {
+          throw new Error(
+            body.error ??
+              formatMessage(effectLocale, "connectors.loadFailedHttp", { status: res.status })
+          );
+        }
         if (cancelled) return;
         setDefinitions(body.definitions);
         setConfigs(body.configs);
         const healthRes = await fetch("/api/connectors/scheduler/health", { cache: "no-store" });
         if (healthRes.ok && !cancelled) setHealth((await healthRes.json()) as SchedulerHealth);
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Yüklenemedi.");
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : t(effectLocale, "connectors.loadFailed")
+          );
+        }
       }
     })();
     return () => {
@@ -244,24 +300,24 @@ export default function ConnectorsPage() {
     setError("");
     setMessage("");
     try {
-      if (!selectedId) throw new Error("Önce bir konnektör türü seçin.");
+      if (!selectedId) throw new Error(t(locale, "connectors.selectConnectorFirst"));
       let fieldMap: Record<string, string>;
       try {
         fieldMap = JSON.parse(fieldMapText) as Record<string, string>;
       } catch {
-        throw new Error("Alan eşlemesi geçerli JSON olmalı.");
+        throw new Error(t(locale, "connectors.fieldMapJsonInvalid"));
       }
       let kpiFieldMap: Record<string, string>;
       try {
         kpiFieldMap = JSON.parse(kpiFieldMapText) as Record<string, string>;
       } catch {
-        throw new Error("KPI eşlemesi geçerli JSON olmalı.");
+        throw new Error(t(locale, "connectors.kpiFieldMapJsonInvalid"));
       }
       let computedKpiMap: Record<string, string>;
       try {
         computedKpiMap = JSON.parse(computedKpiMapText) as Record<string, string>;
       } catch {
-        throw new Error("Hesaplanan KPI eşlemesi geçerli JSON olmalı.");
+        throw new Error(t(locale, "connectors.computedKpiMapJsonInvalid"));
       }
       const pagination =
         paginationType === "page"
@@ -277,7 +333,7 @@ export default function ConnectorsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           connectorId: selectedId,
-          name: name.trim() || "Konnektör",
+          name: name.trim() || t(locale, "connectors.defaultConnectorName"),
           config: {
             kind: "rest",
             baseUrl,
@@ -304,13 +360,17 @@ export default function ConnectorsPage() {
         }),
       });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? `Kaydetme başarısız (HTTP ${res.status}).`);
-      setMessage("Konnektör tanımlandı.");
+      if (!res.ok) {
+        throw new Error(
+          body.error ?? formatMessage(locale, "connectors.saveFailedHttp", { status: res.status })
+        );
+      }
+      setMessage(t(locale, "connectors.connectionCreated"));
       setSelectedId(null);
       setName("");
       await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Kaydetme başarısız.");
+      setError(err instanceof Error ? err.message : t(locale, "connectors.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -323,13 +383,22 @@ export default function ConnectorsPage() {
     try {
       const res = await fetch(`/api/connectors/${id}/sync`, { method: "POST" });
       const body = await res.json();
-      if (!res.ok) throw new Error(body.error ?? `Senkron başarısız (HTTP ${res.status}).`);
+      if (!res.ok) {
+        throw new Error(
+          body.error ?? formatMessage(locale, "connectors.syncFailedHttp", { status: res.status })
+        );
+      }
       setMessage(
-        `Senkron tamam: ${body.fetchedCount} okundu, ${body.canonicalizedCount} kanonikleştirildi, ` +
-        `${body.kpiObservationCount} KPI gözlemi (${body.computedKpiObservationCount ?? 0} hesaplanan), ` +
-        `${body.processEventCount} süreç olayı, ${body.skippedCount} atlandı, ${
-          body.quarantinedCount ?? 0
-        } karantinaya alındı, ${body.warnings?.length ?? 0} uyarı.`
+        formatMessage(locale, "connectors.syncSummary", {
+          fetched: body.fetchedCount,
+          canonicalized: body.canonicalizedCount,
+          kpi: body.kpiObservationCount,
+          computed: body.computedKpiObservationCount ?? 0,
+          events: body.processEventCount,
+          skipped: body.skippedCount,
+          quarantined: body.quarantinedCount ?? 0,
+          warnings: body.warnings?.length ?? 0,
+        })
       );
       const runsRes = await fetch(`/api/connectors/${id}/runs`, { cache: "no-store" });
       if (runsRes.ok) {
@@ -341,7 +410,7 @@ export default function ConnectorsPage() {
         setRunsByConfig((prev) => ({ ...prev, [id]: runsBody }));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Senkron başarısız.");
+      setError(err instanceof Error ? err.message : t(locale, "connectors.syncFailed"));
     } finally {
       setBusy(false);
     }
@@ -361,7 +430,11 @@ export default function ConnectorsPage() {
   async function loadMapping(id: string) {
     const res = await fetch(`/api/connectors/${id}/mapping`, { cache: "no-store" });
     const body = (await res.json()) as MappingReview & { error?: string };
-    if (!res.ok) throw new Error(body.error ?? `Eşleme yüklenemedi (HTTP ${res.status}).`);
+    if (!res.ok) {
+      throw new Error(
+        body.error ?? formatMessage(locale, "connectors.mappingLoadFailedHttp", { status: res.status })
+      );
+    }
     setMappingByConfig((prev) => ({ ...prev, [id]: body }));
     setMappingDrafts((prev) => ({
       ...prev,
@@ -375,7 +448,7 @@ export default function ConnectorsPage() {
     try {
       await loadMapping(id);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Eşleme yüklenemedi.");
+      setError(err instanceof Error ? err.message : t(locale, "connectors.mappingLoadFailed"));
     }
   }
 
@@ -390,7 +463,7 @@ export default function ConnectorsPage() {
       try {
         fieldMap = JSON.parse(mappingDrafts[id] ?? "{}") as Record<string, string>;
       } catch {
-        throw new Error("Eşleme geçerli JSON olmalı.");
+        throw new Error(t(locale, "connectors.mappingJsonInvalid"));
       }
       const res = await fetch(`/api/connectors/${id}/mapping`, {
         method: "POST",
@@ -406,7 +479,12 @@ export default function ConnectorsPage() {
         configVersion: number;
         approvedSuggestionCount: number;
       };
-      if (!res.ok) throw new Error(body.error ?? `Eşleme onaylanamadı (HTTP ${res.status}).`);
+      if (!res.ok) {
+        throw new Error(
+          body.error ??
+            formatMessage(locale, "connectors.mappingApproveFailedHttp", { status: res.status })
+        );
+      }
       setConfigs((prev) =>
         prev.map((config) =>
           config.id === id ? { ...config, configVersion: body.configVersion } : config
@@ -414,10 +492,13 @@ export default function ConnectorsPage() {
       );
       await loadMapping(id);
       setMessage(
-        `Eşleme v${body.configVersion} olarak onaylandı; ${body.approvedSuggestionCount} şema önerisi izlendi.`
+        formatMessage(locale, "connectors.mappingApproved", {
+          version: body.configVersion,
+          count: body.approvedSuggestionCount,
+        })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Eşleme onaylanamadı.");
+      setError(err instanceof Error ? err.message : t(locale, "connectors.mappingApproveFailed"));
     } finally {
       setMappingBusyId(null);
     }
@@ -439,7 +520,12 @@ export default function ConnectorsPage() {
         nextRunAt: string | null;
         lastScheduledAt: string | null;
       };
-      if (!res.ok) throw new Error(body.error ?? `Zamanlama güncellenemedi (HTTP ${res.status}).`);
+      if (!res.ok) {
+        throw new Error(
+          body.error ??
+            formatMessage(locale, "connectors.scheduleUpdateFailedHttp", { status: res.status })
+        );
+      }
       setConfigs((prev) =>
         prev.map((config) =>
           config.id === id
@@ -459,11 +545,13 @@ export default function ConnectorsPage() {
       });
       setMessage(
         body.scheduleIntervalMinutes === null
-          ? "Konnektör zamanlaması kapatıldı."
-          : `Konnektör zamanlaması ${formatScheduleInterval(body.scheduleIntervalMinutes)} olarak ayarlandı.`
+          ? t(locale, "connectors.scheduleDisabled")
+          : formatMessage(locale, "connectors.scheduleSet", {
+              interval: formatScheduleInterval(body.scheduleIntervalMinutes, locale),
+            })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Zamanlama güncellenemedi.");
+      setError(err instanceof Error ? err.message : t(locale, "connectors.scheduleUpdateFailed"));
     } finally {
       setScheduleBusyId(null);
     }
@@ -474,7 +562,7 @@ export default function ConnectorsPage() {
       scheduleDrafts[config.id] ?? (config.scheduleIntervalMinutes === null ? "" : String(config.scheduleIntervalMinutes));
     const scheduleIntervalMinutes = Number(raw);
     if (raw.trim() === "" || !Number.isInteger(scheduleIntervalMinutes) || scheduleIntervalMinutes < 5 || scheduleIntervalMinutes > 525_600) {
-      setError("Zamanlama aralığı 5 ile 525600 dakika arasında bir tam sayı olmalı.");
+      setError(t(locale, "connectors.scheduleValidation"));
       setMessage("");
       return;
     }
@@ -488,10 +576,19 @@ export default function ConnectorsPage() {
     try {
       const res = await fetch("/api/connectors/scheduler/run?limit=5", { method: "POST" });
       const body = (await res.json()) as SchedulerRunSummary & { error?: string };
-      if (!res.ok) throw new Error(body.error ?? `Zamanlayıcı çalıştırılamadı (HTTP ${res.status}).`);
+      if (!res.ok) {
+        throw new Error(
+          body.error ??
+            formatMessage(locale, "connectors.schedulerRunFailedHttp", { status: res.status })
+        );
+      }
       setMessage(
-        `Zamanlayıcı: ${body.dueCount} vadesi gelen çalıştırma, ${body.succeeded} başarılı, ` +
-        `${body.failed} başarısız, ${body.skipped} atlandı.`
+        formatMessage(locale, "connectors.schedulerSummary", {
+          due: body.dueCount,
+          succeeded: body.succeeded,
+          failed: body.failed,
+          skipped: body.skipped,
+        })
       );
       await reload();
       const loadedIds = Object.keys(runsByConfig);
@@ -508,7 +605,7 @@ export default function ConnectorsPage() {
         })
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Zamanlayıcı çalıştırılamadı.");
+      setError(err instanceof Error ? err.message : t(locale, "connectors.schedulerRunFailed"));
     } finally {
       setSchedulerBusy(false);
     }
@@ -517,10 +614,10 @@ export default function ConnectorsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="ENTEGRASYONLAR"
-        title="Sistemleriniz"
-        accent="ABYS'ye bağlanır"
-        desc="Genel REST/OData adaptörüyle ERP/CRM uçlarını bağlayın: alan eşlemesi, sayfalama, artımlı checkpoint ve otomatik yeniden deneme. Kimlik bilgileri yalnızca sunucu ortam değişkenlerinden okunur."
+        eyebrow={t(locale, "nav.connectors").toLocaleUpperCase(locale)}
+        title={t(locale, "connectors.title")}
+        accent={t(locale, "connectors.titleAccent")}
+        desc={t(locale, "connectors.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-5xl space-y-6">
@@ -536,9 +633,11 @@ export default function ConnectorsPage() {
         )}
 
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
-          <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">KONNEKTÖR KATALOĞU</p>
+          <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3 uppercase">
+            {t(locale, "connectors.catalogHeading")}
+          </p>
           {definitions === null ? (
-            <p className="text-sm text-abys-muted">Yükleniyor…</p>
+            <p className="text-sm text-abys-muted">{t(locale, "connectors.loading")}</p>
           ) : (
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 list-none p-0 m-0">
               {definitions.map((d) => {
@@ -557,7 +656,7 @@ export default function ConnectorsPage() {
                       <span className="flex items-center justify-between gap-2">
                         <span className="text-sm text-abys-ink">{d.label}</span>
                         <span className={`text-[10px] rounded-full px-2 py-0.5 ${STATUS_STYLE[d.status]}`}>
-                          {STATUS_LABEL[d.status]}
+                          {STATUS_LABEL[d.status] ? t(locale, STATUS_LABEL[d.status]) : d.status}
                         </span>
                       </span>
                       <span className="block text-[11px] text-abys-muted mt-0.5">{d.note}</span>
@@ -571,39 +670,41 @@ export default function ConnectorsPage() {
 
         {selectedId && (
           <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 space-y-3">
-            <p className="text-xs tracking-widest text-abys-muted font-semibold">YENİ BAĞLANTI</p>
+            <p className="text-xs tracking-widest text-abys-muted font-semibold uppercase">
+              {t(locale, "connectors.newConnection")}
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Bağlantı adı" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://api.sirket.com" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              <input value={apiPath} onChange={(e) => setApiPath(e.target.value)} placeholder="/v1/customers" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t(locale, "connectors.connectionName")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={t(locale, "connectors.baseUrlPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              <input value={apiPath} onChange={(e) => setApiPath(e.target.value)} placeholder={t(locale, "connectors.apiPathPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
               <select value={entity} onChange={(e) => setEntity(e.target.value)} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2">
-                {ENTITIES.map((e) => (
-                  <option key={e} value={e}>
-                    {e}
+                {ENTITIES.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {t(locale, item.labelKey)}
                   </option>
                 ))}
               </select>
               <select value={authType} onChange={(e) => setAuthType(e.target.value)} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2">
-                <option value="none">Kimlik yok</option>
-                <option value="bearer_token">Bearer token</option>
-                <option value="api_key">API key</option>
-                <option value="basic">Basic</option>
-                <option value="oauth2_client_credentials">OAuth2 client credentials</option>
+                <option value="none">{t(locale, "connectors.authNone")}</option>
+                <option value="bearer_token">{t(locale, "connectors.authBearer")}</option>
+                <option value="api_key">{t(locale, "connectors.authApiKey")}</option>
+                <option value="basic">{t(locale, "connectors.authBasic")}</option>
+                <option value="oauth2_client_credentials">{t(locale, "connectors.authOAuth2")}</option>
               </select>
-              <input value={secretEnvVar} onChange={(e) => setSecretEnvVar(e.target.value)} placeholder={authType === "oauth2_client_credentials" ? "İstemci sırrı ortam değişkeni" : "Ortam değişkeni (ör. CRM_TOKEN)"} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              <input value={secretEnvVar} onChange={(e) => setSecretEnvVar(e.target.value)} placeholder={authType === "oauth2_client_credentials" ? t(locale, "connectors.secretOAuthPlaceholder") : t(locale, "connectors.secretEnvPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
               {authType === "oauth2_client_credentials" && (
                 <>
                   <input value={oauth2TokenUrl} onChange={(e) => setOauth2TokenUrl(e.target.value)} placeholder="https://login.example.com/oauth2/token" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 sm:col-span-2" />
-                  <input value={oauth2ClientIdEnvVar} onChange={(e) => setOauth2ClientIdEnvVar(e.target.value)} placeholder="İstemci kimliği ortam değişkeni" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-                  <input value={oauth2Scope} onChange={(e) => setOauth2Scope(e.target.value)} placeholder="Scope (isteğe bağlı)" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+                  <input value={oauth2ClientIdEnvVar} onChange={(e) => setOauth2ClientIdEnvVar(e.target.value)} placeholder={t(locale, "connectors.oauthClientIdPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+                  <input value={oauth2Scope} onChange={(e) => setOauth2Scope(e.target.value)} placeholder={t(locale, "connectors.oauthScopePlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
                 </>
               )}
-              <input value={idField} onChange={(e) => setIdField(e.target.value)} placeholder="Kimlik alanı (id)" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              <input value={recordsPath} onChange={(e) => setRecordsPath(e.target.value)} placeholder="Kayıt yolu (data)" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              <input value={updatedAtField} onChange={(e) => setUpdatedAtField(e.target.value)} placeholder="Güncelleme zamanı alanı" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              <input value={idField} onChange={(e) => setIdField(e.target.value)} placeholder={t(locale, "connectors.idFieldPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              <input value={recordsPath} onChange={(e) => setRecordsPath(e.target.value)} placeholder={t(locale, "connectors.recordsPathPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              <input value={updatedAtField} onChange={(e) => setUpdatedAtField(e.target.value)} placeholder={t(locale, "connectors.updatedAtFieldPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
               <select value={paginationType} onChange={(e) => setPaginationType(e.target.value)} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2">
-                <option value="page">Sayfa numaralı</option>
-                <option value="none">Tek sayfa</option>
+                <option value="page">{t(locale, "connectors.paginationPage")}</option>
+                <option value="none">{t(locale, "connectors.paginationNone")}</option>
               </select>
               {paginationType === "page" && (
                 <>
@@ -614,7 +715,7 @@ export default function ConnectorsPage() {
               )}
             </div>
             <label className="block text-xs text-abys-muted">
-              Alan eşlemesi (kanonik alan → kaynak yol, JSON)
+              {t(locale, "connectors.fieldMapLabel")}
               <textarea
                 value={fieldMapText}
                 onChange={(e) => setFieldMapText(e.target.value)}
@@ -624,7 +725,7 @@ export default function ConnectorsPage() {
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <label className="block text-xs text-abys-muted">
-                KPI eşlemesi (kanonik sayısal alan → KPI etiketi, JSON)
+                {t(locale, "connectors.kpiFieldMapLabel")}
                 <textarea
                   value={kpiFieldMapText}
                   onChange={(e) => setKpiFieldMapText(e.target.value)}
@@ -633,33 +734,39 @@ export default function ConnectorsPage() {
                 />
               </label>
               <label className="block text-xs text-abys-muted">
-                Hesaplanan KPI (kpiId veya packId:kpiId → etiket, JSON)
+                {t(locale, "connectors.computedKpiMapLabel")}
                 <textarea
                   value={computedKpiMapText}
                   onChange={(e) => setComputedKpiMapText(e.target.value)}
                   rows={3}
-                  placeholder='{ "manufacturing:first_pass_yield": "İlk Geçiş Verimi" }'
+                  placeholder={t(locale, "connectors.computedKpiPlaceholder")}
                   className="mt-1 w-full text-sm font-mono rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
                 />
               </label>
               <div className="space-y-2">
-                <input value={kpiObservedAtField} onChange={(e) => setKpiObservedAtField(e.target.value)} placeholder="KPI gözlem zamanı alanı" className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-                <input value={eventTypeField} onChange={(e) => setEventTypeField(e.target.value)} placeholder="Olay türü alanı" className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-                <input value={eventSubjectField} onChange={(e) => setEventSubjectField(e.target.value)} placeholder="Olay öznesi alanı" className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-                <input value={eventTimeField} onChange={(e) => setEventTimeField(e.target.value)} placeholder="Olay zamanı alanı" className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+                <input value={kpiObservedAtField} onChange={(e) => setKpiObservedAtField(e.target.value)} placeholder={t(locale, "connectors.kpiObservedAtPlaceholder")} className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+                <input value={eventTypeField} onChange={(e) => setEventTypeField(e.target.value)} placeholder={t(locale, "connectors.eventTypePlaceholder")} className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+                <input value={eventSubjectField} onChange={(e) => setEventSubjectField(e.target.value)} placeholder={t(locale, "connectors.eventSubjectPlaceholder")} className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+                <input value={eventTimeField} onChange={(e) => setEventTimeField(e.target.value)} placeholder={t(locale, "connectors.eventTimePlaceholder")} className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
               </div>
             </div>
             <button onClick={createConfig} disabled={busy} className="text-sm rounded-full bg-abys-navy text-white px-5 py-2 hover:opacity-90 disabled:opacity-40">
-              {busy ? "Kaydediliyor…" : "Bağlantıyı kaydet"}
+              {busy ? t(locale, "connectors.saving") : t(locale, "connectors.saveConnection")}
             </button>
           </div>
         )}
 
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <p className="text-xs tracking-widest text-abys-muted font-semibold">ZAMANLAYICI SAĞLIĞI</p>
+            <p className="text-xs tracking-widest text-abys-muted font-semibold uppercase">
+              {t(locale, "connectors.scheduleHealthHeading")}
+            </p>
             <span className="text-[10px] text-abys-muted">
-              {health ? `Kontrol: ${formatDateTime(health.checkedAt)}` : "Henüz ölçülmedi"}
+              {health
+                ? formatMessage(locale, "connectors.checkedAt", {
+                    date: formatDateTime(health.checkedAt, locale),
+                  })
+                : t(locale, "connectors.notMeasured")}
             </span>
           </div>
           {health ? (
@@ -667,24 +774,26 @@ export default function ConnectorsPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
                 <div className="rounded-lg bg-white/60 px-2 py-2">
                   <p className="font-serif text-lg text-abys-navy">{health.summary.scheduledCount}</p>
-                  <p className="text-[10px] text-abys-muted">Planlı bağlantı</p>
+                  <p className="text-[10px] text-abys-muted">{t(locale, "connectors.scheduledConnections")}</p>
                 </div>
                 <div className="rounded-lg bg-white/60 px-2 py-2">
                   <p className="font-serif text-lg text-abys-navy">{health.summary.dueCount}</p>
-                  <p className="text-[10px] text-abys-muted">Vadesi gelen</p>
+                  <p className="text-[10px] text-abys-muted">{t(locale, "connectors.due")}</p>
                 </div>
                 <div className="rounded-lg bg-white/60 px-2 py-2">
                   <p className="font-serif text-lg text-abys-navy">{health.summary.staleRunningCount}</p>
-                  <p className="text-[10px] text-abys-muted">Takılı çalıştırma</p>
+                  <p className="text-[10px] text-abys-muted">{t(locale, "connectors.staleRunning")}</p>
                 </div>
                 <div className="rounded-lg bg-white/60 px-2 py-2">
                   <p className="font-serif text-lg text-abys-navy">{health.summary.failingCount}</p>
-                  <p className="text-[10px] text-abys-muted">Ardışık hata</p>
+                  <p className="text-[10px] text-abys-muted">{t(locale, "connectors.consecutiveFailures")}</p>
                 </div>
               </div>
               <p className="text-[11px] text-abys-muted mt-2">
-                Sonraki çalışma: {formatDateTime(health.summary.nextRunAt)} · Son başarı:{" "}
-                {formatDateTime(health.summary.lastSuccessAt)}
+                {formatMessage(locale, "connectors.healthNextLast", {
+                  next: formatDateTime(health.summary.nextRunAt, locale),
+                  last: formatDateTime(health.summary.lastSuccessAt, locale),
+                })}
               </p>
               {health.connectors.some((connector) => connector.status !== "healthy" && connector.status !== "unscheduled") && (
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -697,9 +806,20 @@ export default function ConnectorsPage() {
                           key={connector.configId}
                           className={`rounded-full px-2 py-1 text-[10px] ${SCHEDULE_HEALTH_STYLE[connector.status] ?? SCHEDULE_HEALTH_STYLE.unscheduled}`}
                         >
-                          {config?.name ?? connector.configId}: {connector.status}
-                          {connector.overdueMinutes > 0 ? ` · ${connector.overdueMinutes} dk gecikme` : ""}
-                          {connector.consecutiveFailures > 0 ? ` · ${connector.consecutiveFailures} hata` : ""}
+                          {config?.name ?? connector.configId}:{" "}
+                          {SCHEDULE_STATUS_LABEL[connector.status]
+                            ? t(locale, SCHEDULE_STATUS_LABEL[connector.status])
+                            : connector.status}
+                          {connector.overdueMinutes > 0
+                            ? formatMessage(locale, "connectors.healthDelay", {
+                                minutes: connector.overdueMinutes,
+                              })
+                            : ""}
+                          {connector.consecutiveFailures > 0
+                            ? formatMessage(locale, "connectors.healthErrors", {
+                                count: connector.consecutiveFailures,
+                              })
+                            : ""}
                         </span>
                       );
                     })}
@@ -707,23 +827,25 @@ export default function ConnectorsPage() {
               )}
             </>
           ) : (
-            <p className="text-sm text-abys-muted">Zamanlayıcı henüz çalıştırılmadı; kayıtlı çalıştırma yok.</p>
+            <p className="text-sm text-abys-muted">{t(locale, "connectors.schedulerNotRun")}</p>
           )}
         </div>
 
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <p className="text-xs tracking-widest text-abys-muted font-semibold">KAYITLI BAĞLANTILAR</p>
+            <p className="text-xs tracking-widest text-abys-muted font-semibold uppercase">
+              {t(locale, "connectors.connectionsHeading")}
+            </p>
             <button
               onClick={() => void runDueSchedules()}
               disabled={schedulerBusy || configs.length === 0}
               className="text-xs rounded-full border border-abys-cream-border bg-white/70 px-3 py-1 text-abys-muted hover:text-abys-ink disabled:opacity-40"
             >
-              {schedulerBusy ? "Zamanlayıcı çalışıyor…" : "Vadesi gelenleri çalıştır"}
+              {schedulerBusy ? t(locale, "connectors.schedulerRunning") : t(locale, "connectors.runDue")}
             </button>
           </div>
           {configs.length === 0 ? (
-            <p className="text-sm text-abys-muted">Henüz bağlantı yok. Katalogdan bir sistem seçip tanımlayın.</p>
+            <p className="text-sm text-abys-muted">{t(locale, "connectors.noConnections")}</p>
           ) : (
             <ul className="space-y-3 list-none p-0 m-0">
               {configs.map((c) => {
@@ -740,13 +862,13 @@ export default function ConnectorsPage() {
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => void loadRuns(c.id)} className="text-xs rounded-full border border-abys-cream-border px-3 py-1 text-abys-muted hover:text-abys-ink">
-                          Geçmiş
+                          {t(locale, "connectors.history")}
                         </button>
                         <button onClick={() => void openMapping(c.id)} className="text-xs rounded-full border border-abys-cream-border px-3 py-1 text-abys-muted hover:text-abys-ink">
-                          Eşleme onayı
+                          {t(locale, "connectors.mappingApproval")}
                         </button>
                         <button onClick={() => void sync(c.id)} disabled={busy} className="text-xs rounded-full bg-abys-accent text-white px-3 py-1 hover:opacity-90 disabled:opacity-40">
-                          Senkronize et
+                          {t(locale, "connectors.syncNow")}
                         </button>
                       </div>
                     </div>
@@ -754,21 +876,26 @@ export default function ConnectorsPage() {
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="text-[11px] text-abys-muted space-y-0.5">
                           <p>
-                            <span className="font-semibold text-abys-ink">Zamanlama:</span>{" "}
+                            <span className="font-semibold text-abys-ink">{t(locale, "connectors.scheduleLabel")}:</span>{" "}
                             {c.scheduleIntervalMinutes === null
-                              ? "Kapalı"
-                              : `${formatScheduleInterval(c.scheduleIntervalMinutes)} (${c.scheduleIntervalMinutes} dk aralık)`}
+                              ? t(locale, "connectors.scheduleOff")
+                              : formatMessage(locale, "connectors.scheduleIntervalWithMinutes", {
+                                  interval: formatScheduleInterval(c.scheduleIntervalMinutes, locale),
+                                  minutes: c.scheduleIntervalMinutes,
+                                })}
                           </p>
                           {c.scheduleIntervalMinutes !== null && (
                             <p>
-                              Sonraki çalıştırma: {formatDateTime(c.nextRunAt)} · Son zamanlanmış:{" "}
-                              {formatDateTime(c.lastScheduledAt)}
+                              {formatMessage(locale, "connectors.nextScheduled", {
+                                next: formatDateTime(c.nextRunAt, locale),
+                                last: formatDateTime(c.lastScheduledAt, locale),
+                              })}
                             </p>
                           )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                           <label htmlFor={`connector-schedule-${c.id}`} className="sr-only">
-                            Zamanlama aralığı (dakika)
+                            {t(locale, "connectors.scheduleIntervalMinutesAria")}
                           </label>
                           <input
                             id={`connector-schedule-${c.id}`}
@@ -783,7 +910,7 @@ export default function ConnectorsPage() {
                             onChange={(event) =>
                               setScheduleDrafts((prev) => ({ ...prev, [c.id]: event.target.value }))
                             }
-                            placeholder="Dakika"
+                            placeholder={t(locale, "connectors.minutesPlaceholder")}
                             disabled={scheduleBusyId !== null}
                             className="w-28 text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1"
                           />
@@ -792,60 +919,71 @@ export default function ConnectorsPage() {
                             disabled={scheduleBusyId !== null}
                             className="text-xs rounded-full bg-abys-navy text-white px-3 py-1 hover:opacity-90 disabled:opacity-40"
                           >
-                            {scheduleBusyId === c.id ? "Kaydediliyor…" : "Aralığı kaydet"}
+                            {scheduleBusyId === c.id
+                              ? t(locale, "connectors.saving")
+                              : t(locale, "connectors.saveInterval")}
                           </button>
                           <button
                             onClick={() => void saveSchedule(c.id, null)}
                             disabled={scheduleBusyId !== null || c.scheduleIntervalMinutes === null}
                             className="text-xs rounded-full border border-abys-cream-border px-3 py-1 text-abys-muted hover:text-abys-ink disabled:opacity-40"
                           >
-                            Kapat
+                            {t(locale, "connectors.close")}
                           </button>
                         </div>
                       </div>
                       <p className="mt-1 text-[10px] text-abys-muted">
-                        5–525600 dakika arasında bir aralık girin. Zamanlama kapatıldığında yalnızca manuel senkron çalışır.
+                        {t(locale, "connectors.scheduleHelp")}
                       </p>
                     </div>
                     {detail && (
                       <div className="mt-2 text-[11px] text-abys-muted space-y-1">
                         {(() => {
                           const health = summarizeConnectorRuns(detail.runs);
-                          const note = connectorHealthNote(health);
-                          if (!note) return null;
+                          if (health.consecutiveFailures === 0) return null;
+                          const note = health.lastErrorMessage
+                            ? formatMessage(locale, "connectors.syncIssue", {
+                                count: health.consecutiveFailures,
+                                error: health.lastErrorMessage,
+                              })
+                            : formatMessage(locale, "connectors.syncIssueNoError", {
+                                count: health.consecutiveFailures,
+                              });
                           return (
                             <div
                               role="alert"
                               className="flex flex-wrap items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-red-700"
                             >
-                              <span>Senkron sorunu · {note}</span>
+                              <span>{note}</span>
                               <button
                                 onClick={() => void sync(c.id)}
                                 disabled={busy}
                                 className="rounded-full bg-red-600 px-2.5 py-0.5 text-[10px] font-medium text-white hover:opacity-90 disabled:opacity-40"
                               >
-                                Yeniden dene
+                                {t(locale, "connectors.retry")}
                               </button>
                             </div>
                           );
                         })()}
                         <p>
-                          Kayıtlar:{" "}
+                          {t(locale, "connectors.records")}:{" "}
                           {detail.records.length === 0
-                            ? "yok"
+                            ? t(locale, "connectors.none")
                             : detail.records.map((r) => `${r.entity}=${r.count}`).join(", ")}
                         </p>
                         <p>
-                          Zekâya aktarım: {detail.promotion.kpiObservations} KPI gözlemi ·{" "}
-                          {detail.promotion.processEvents} süreç olayı
+                          {formatMessage(locale, "connectors.intelligenceTransfer", {
+                            kpi: detail.promotion.kpiObservations,
+                            events: detail.promotion.processEvents,
+                          })}
                         </p>
                         {detail.runs.length === 0 ? (
-                          <p>Çalıştırma geçmişi yok.</p>
+                          <p>{t(locale, "connectors.noRunHistory")}</p>
                         ) : (
                           <ul className="space-y-0.5 list-none p-0 m-0">
                             {detail.runs.slice(0, 5).map((r) => (
                               <li key={r.id}>
-                                {new Date(r.startedAt).toLocaleString("tr-TR")} ·{" "}
+                                {new Date(r.startedAt).toLocaleString(locale)} ·{" "}
                                 <span
                                   className={`rounded-full px-1.5 py-0.5 ${
                                     r.trigger === "scheduled"
@@ -853,10 +991,18 @@ export default function ConnectorsPage() {
                                       : "bg-abys-cream text-abys-muted"
                                   }`}
                                 >
-                                  {r.trigger === "scheduled" ? "Zamanlanmış" : "Manuel"}
+                                  {r.trigger === "scheduled"
+                                    ? t(locale, "connectors.runTriggerScheduled")
+                                    : t(locale, "connectors.runTriggerManual")}
                                 </span>{" "}
-                                · {r.status} · {r.writtenCount} yazıldı /{" "}
-                                {r.readCount} okundu · {r.rejectedCount ?? 0} karantina {r.error ? `· ${r.error}` : ""}
+                                ·{" "}
+                                {RUN_STATUS_LABEL[r.status] ? t(locale, RUN_STATUS_LABEL[r.status]) : r.status} ·{" "}
+                                {formatMessage(locale, "connectors.runHistoryLine", {
+                                  written: r.writtenCount,
+                                  read: r.readCount,
+                                  rejected: r.rejectedCount ?? 0,
+                                })}{" "}
+                                {r.error ? `· ${r.error}` : ""}
                               </li>
                             ))}
                           </ul>
@@ -864,18 +1010,30 @@ export default function ConnectorsPage() {
                         {detail.runs[0]?.sourceSchema?.length ? (
                           <details className="pt-1">
                             <summary className="cursor-pointer text-abys-accent">
-                              Kaynak şema ve eşleme önerileri ({detail.runs[0].sourceSchema.length} alan)
+                              {formatMessage(locale, "connectors.sourceSchemaSummary", {
+                                count: detail.runs[0].sourceSchema.length,
+                              })}
                             </summary>
                             <p className="mt-1">
-                              Kaynak alanları: {detail.runs[0].sourceSchema.slice(0, 12).map((f) => f.path).join(", ")}
+                              {formatMessage(locale, "connectors.sourceFields", {
+                                fields: detail.runs[0].sourceSchema
+                                  .slice(0, 12)
+                                  .map((f) => f.path)
+                                  .join(", "),
+                              })}
                               {detail.runs[0].sourceSchema.length > 12 ? "…" : ""}
                             </p>
                             {detail.runs[0].mappingSuggestions?.length ? (
                               <p>
-                                Öneriler: {detail.runs[0].mappingSuggestions.slice(0, 8).map((s) => `${s.canonicalField} ← ${s.sourcePath}`).join(", ")}
+                                {formatMessage(locale, "connectors.suggestions", {
+                                  suggestions: detail.runs[0].mappingSuggestions
+                                    .slice(0, 8)
+                                    .map((s) => `${s.canonicalField} ← ${s.sourcePath}`)
+                                    .join(", "),
+                                })}
                               </p>
                             ) : (
-                              <p>Kanonik alanlar için güvenli bir eşleme önerisi bulunamadı.</p>
+                              <p>{t(locale, "connectors.noSafeSuggestion")}</p>
                             )}
                           </details>
                         ) : null}
@@ -886,12 +1044,18 @@ export default function ConnectorsPage() {
                         <div className="flex flex-wrap items-start justify-between gap-2">
                           <div>
                             <p className="font-semibold text-abys-ink">
-                              Onaylı eşleme v{mappingByConfig[c.id].currentVersion}
+                              {formatMessage(locale, "connectors.mappingApprovedVersion", {
+                                version: mappingByConfig[c.id].currentVersion,
+                              })}
                             </p>
                             <p>
                               {mappingByConfig[c.id].latestRun
-                                ? `Son şema: ${mappingByConfig[c.id].latestRun?.sourceFieldCount ?? 0} alan · ${mappingByConfig[c.id].acceptedSuggestionCount}/${mappingByConfig[c.id].suggestedSuggestionCount} öneri kabul edildi`
-                                : "Henüz şema gözlemi yok; ilk senkrondan sonra öneriler oluşur."}
+                                ? formatMessage(locale, "connectors.mappingSchemaSummary", {
+                                    count: mappingByConfig[c.id].latestRun?.sourceFieldCount ?? 0,
+                                    accepted: mappingByConfig[c.id].acceptedSuggestionCount,
+                                    suggested: mappingByConfig[c.id].suggestedSuggestionCount,
+                                  })
+                                : t(locale, "connectors.noSchemaObservation")}
                             </p>
                           </div>
                           <button
@@ -904,16 +1068,18 @@ export default function ConnectorsPage() {
                             }}
                             className="rounded-full border border-abys-cream-border px-3 py-1 text-abys-muted hover:text-abys-ink"
                           >
-                            Önerileri taslağa ekle
+                            {t(locale, "connectors.addSuggestionsToDraft")}
                           </button>
                         </div>
                         {mappingByConfig[c.id].conflicts.length > 0 && (
                           <p className="rounded-lg bg-abys-warning-soft px-2 py-1 text-abys-warning">
-                            {mappingByConfig[c.id].conflicts.length} kanonik alan için çelişkili kaynak önerisi var; taslakta otomatik birleştirilmedi.
+                            {formatMessage(locale, "connectors.mappingConflicts", {
+                              count: mappingByConfig[c.id].conflicts.length,
+                            })}
                           </p>
                         )}
                         <label htmlFor={`connector-mapping-${c.id}`} className="block font-semibold text-abys-ink">
-                          Kanonik alan → kaynak JSON yolu
+                          {t(locale, "connectors.mappingFieldLabel")}
                         </label>
                         <textarea
                           id={`connector-mapping-${c.id}`}
@@ -927,7 +1093,15 @@ export default function ConnectorsPage() {
                         />
                         {mappingByConfig[c.id].suggestions.length > 0 && (
                           <p className="text-[10px]">
-                            Öneriler: {mappingByConfig[c.id].suggestions.slice(0, 8).map((suggestion) => `${suggestion.canonicalField} ← ${suggestion.sourcePath} (${Math.round(suggestion.confidence * 100)}%)`).join(", ")}
+                            {formatMessage(locale, "connectors.suggestions", {
+                              suggestions: mappingByConfig[c.id].suggestions
+                                .slice(0, 8)
+                                .map(
+                                  (suggestion) =>
+                                    `${suggestion.canonicalField} ← ${suggestion.sourcePath} (${Math.round(suggestion.confidence * 100)}%)`
+                                )
+                                .join(", "),
+                            })}
                           </p>
                         )}
                         <div className="flex flex-wrap items-center gap-2">
@@ -936,7 +1110,9 @@ export default function ConnectorsPage() {
                             disabled={mappingBusyId !== null}
                             className="rounded-full bg-abys-navy px-3 py-1 text-white hover:opacity-90 disabled:opacity-40"
                           >
-                            {mappingBusyId === c.id ? "Onaylanıyor…" : "Yeni sürümü onayla"}
+                            {mappingBusyId === c.id
+                              ? t(locale, "connectors.approving")
+                              : t(locale, "connectors.approveNewVersion")}
                           </button>
                           <span>
                             v{mappingByConfig[c.id].currentVersion} → v{mappingByConfig[c.id].currentVersion + 1}
@@ -945,12 +1121,14 @@ export default function ConnectorsPage() {
                         {mappingByConfig[c.id].versions.length > 0 && (
                           <details>
                             <summary className="cursor-pointer text-abys-accent">
-                              Eşleme sürüm geçmişi ({mappingByConfig[c.id].versions.length})
+                              {formatMessage(locale, "connectors.mappingVersionHistory", {
+                                count: mappingByConfig[c.id].versions.length,
+                              })}
                             </summary>
                             <ul className="mt-1 space-y-0.5 list-none p-0 m-0">
                               {mappingByConfig[c.id].versions.slice(0, 5).map((version) => (
                                 <li key={version.id}>
-                                  v{version.version} · {formatDateTime(version.createdAt)} · {version.createdBy} ·{" "}
+                                  v{version.version} · {formatDateTime(version.createdAt, locale)} · {version.createdBy} ·{" "}
                                   {version.changeSummary}
                                 </li>
                               ))}
@@ -965,8 +1143,7 @@ export default function ConnectorsPage() {
             </ul>
           )}
           <p className="text-[11px] text-abys-muted mt-3">
-            Not: Katalogda “Kimlik bilgisi gerekir” işaretli sistemler aynı REST adaptörünü kullanır; canlı bağlantı
-            müşteri uç noktası ve anahtarı sağlanana kadar doğrulanmış sayılmaz.
+            {t(locale, "connectors.footnote")}
           </p>
         </div>
       </div>

@@ -83,6 +83,15 @@ describe("i18n kabuk sözlüğü", () => {
     }
   });
 
+  it("bağlantı ekranı anahtarları iki dilde dolu", () => {
+    const connectorKeys = shellKeys().filter((key) => key.startsWith("connectors."));
+    expect(connectorKeys.length).toBeGreaterThan(20);
+    for (const key of connectorKeys) {
+      expect(t("tr", key).trim().length).toBeGreaterThan(0);
+      expect(t("en", key).trim().length).toBeGreaterThan(0);
+    }
+  });
+
   it("bilinmeyen anahtar çökmez, anahtarın kendisini döndürür", () => {
     expect(t("tr", "nav.missing" as ShellKey)).toBe("nav.missing");
   });
