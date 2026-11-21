@@ -37,8 +37,10 @@ export async function GET(req: NextRequest) {
     summary: string;
     detail: string | null;
     created_at: string;
+    prev_hash: string | null;
+    entry_hash: string | null;
   }>(
-    `SELECT id, actor, type, summary, detail, created_at FROM audit_events
+    `SELECT id, actor, type, summary, detail, created_at, prev_hash, entry_hash FROM audit_events
      WHERE org_id = $1 ORDER BY created_at DESC LIMIT $2`,
     [session.orgId, limit]
   );

@@ -151,6 +151,27 @@ describe("veri yolu girdi doğrulaması", () => {
       const res = await auditGET(getRequest("/api/audit"));
       expect(res.status).toBe(200);
     });
+
+    it("hash zinciri alanlarını da döndürür", async () => {
+      const { recordAuditEvent } = await import("../src/lib/db/repos/audit");
+      await recordAuditEvent({
+        orgId: org,
+        actor: "Test CEO",
+        type: "test_event",
+        summary: "Hash alanı testi",
+        detail: "detay",
+      });
+      nextHeaders.__setTestCookie(SESSION_COOKIE, ceoSession);
+      const res = await auditGET(getRequest("/api/audit?limit=5"));
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as {
+        events: Array<{ type: string; entry_hash: string | null; prev_hash: string | null }>;
+      };
+      const event = body.events.find((item) => item.type === "test_event");
+      expect(event).toBeDefined();
+      expect(event?.entry_hash).toMatch(/^[0-9a-f]{64}$/);
+      expect(event?.prev_hash).not.toBeNull();
+    });
   });
 
   describe("POST /api/documents/upload — başlık ve allowedRoles", () => {
