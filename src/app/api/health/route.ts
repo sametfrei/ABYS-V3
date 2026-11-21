@@ -5,6 +5,9 @@ import { getDb, getPendingMigrationApprovals, migrate } from "@/lib/db/client";
  * Sağlık kontrolü — konteyner/orchestrator probe'ları için.
  * Veritabanına hafif bir sorgu atar; hata ayrıntısı dışarı sızdırılmaz.
  * DB erişilemezse 503 döner ki dağıtım hazır olmayan örneğe trafik göndermesin.
+ *
+ * `build.commit` derlenen commit SHA'sıdır: sunucunun gerçekten hangi sürümü
+ * çalıştırdığı `curl .../api/health` ile kanıtlanır, tahmin edilmez.
  */
 export async function GET() {
   try {
@@ -17,6 +20,10 @@ export async function GET() {
       db: "up",
       schemaReady: pendingMigrations.length === 0,
       pendingMigrations,
+      build: {
+        commit: process.env.BUILD_SHA || "unknown",
+        builtAt: process.env.BUILD_TIME || "unknown",
+      },
     });
   } catch {
     return NextResponse.json(

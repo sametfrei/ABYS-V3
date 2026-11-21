@@ -13,6 +13,11 @@ COPY . .
 # üretilir; next.config.ts bu değişkene bakar. Yerel `npm start` ve eval
 # koşucusu `next start` kullandığı için standalone orada AÇILMAZ.
 ENV BUILD_STANDALONE=1
+# Sürüm parmak izi: imajda .git yok, SHA build-arg ile verilir; /api/health döndürür.
+ARG GIT_SHA=""
+ARG BUILD_TIME=""
+ENV BUILD_SHA=${GIT_SHA}
+ENV BUILD_TIME=${BUILD_TIME}
 RUN npm run build
 
 FROM node:22-alpine AS runner

@@ -27,4 +27,12 @@ describe("GET /api/health", () => {
       pendingMigrations: [expect.objectContaining({ id: 18 })],
     });
   });
+
+  it("dağıtım doğrulaması için derleme commit'ini döner", async () => {
+    const res = await health();
+    const body = await res.json();
+    expect(typeof body.build?.commit).toBe("string");
+    expect(body.build.commit.length).toBeGreaterThan(0);
+    expect(typeof body.build?.builtAt).toBe("string");
+  });
 });
