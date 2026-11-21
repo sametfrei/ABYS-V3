@@ -939,6 +939,26 @@ export type ShellKey =
   | "decisions.severity.warning"
   | "decisions.severity.info"
   | "decisions.severity.healthy"
+  | "decisions.recommended"
+  | "decisions.collapse"
+  | "decisions.expand"
+  | "decisions.percent"
+  | "decisions.evidenceHeading"
+  | "decisions.evidenceSource"
+  | "decisions.assumptionsHeading"
+  | "decisions.historicalHeading"
+  | "decisions.counterfactualHeading"
+  | "decisions.projectedImpact"
+  | "decisions.timeHorizon"
+  | "decisions.stateUpdateFailed"
+  | "decisions.alternativesHeading"
+  | "decisions.statusLine"
+  | "decisions.state.approve"
+  | "decisions.state.review"
+  | "decisions.state.defer"
+  | "decisions.reliability.verified"
+  | "decisions.reliability.estimated"
+  | "decisions.reliability.unknown"
   | "decisions.confidenceHeading"
   | "decisions.calibration.measured"
   | "decisions.calibration.rate"
@@ -2855,6 +2875,26 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "decisions.severity.warning": { tr: "DİKKAT", en: "WARNING" },
   "decisions.severity.info": { tr: "BİLGİ", en: "INFO" },
   "decisions.severity.healthy": { tr: "SAĞLIKLI", en: "HEALTHY" },
+  "decisions.recommended": { tr: "Önerilen:", en: "Recommended:" },
+  "decisions.collapse": { tr: "kapat −", en: "close −" },
+  "decisions.expand": { tr: "incele +", en: "inspect +" },
+  "decisions.percent": { tr: "%{value}", en: "{value}%" },
+  "decisions.evidenceHeading": { tr: "KANIT ZİNCİRİ ({count})", en: "EVIDENCE CHAIN ({count})" },
+  "decisions.evidenceSource": { tr: "Kaynak: {source}", en: "Source: {source}" },
+  "decisions.assumptionsHeading": { tr: "Varsayımlar", en: "Assumptions" },
+  "decisions.historicalHeading": { tr: "Geçmişle karşılaştırma", en: "Comparison with history" },
+  "decisions.counterfactualHeading": { tr: "KARŞI SENARYO — AKSİYON ALINMAZSA", en: "COUNTERFACTUAL — IF NO ACTION IS TAKEN" },
+  "decisions.projectedImpact": { tr: "Tahmini etki:", en: "Projected impact:" },
+  "decisions.timeHorizon": { tr: "Zaman ufku:", en: "Time horizon:" },
+  "decisions.stateUpdateFailed": { tr: "Karar durumu güncellenemedi.", en: "Decision status could not be updated." },
+  "decisions.alternativesHeading": { tr: "ALTERNATİFLER (A/B/C)", en: "ALTERNATIVES (A/B/C)" },
+  "decisions.statusLine": { tr: "Durum: {status} · karar kaydı sunucu oturumuna bağlıdır.", en: "Status: {status} · the decision record is bound to the server session." },
+  "decisions.state.approve": { tr: "Onayla", en: "Approve" },
+  "decisions.state.review": { tr: "İncelemeye al", en: "Send to review" },
+  "decisions.state.defer": { tr: "Ertele / reddet", en: "Defer / reject" },
+  "decisions.reliability.verified": { tr: "Doğrulanmış veri", en: "Verified data" },
+  "decisions.reliability.estimated": { tr: "Tahmini", en: "Estimated" },
+  "decisions.reliability.unknown": { tr: "Bilinmiyor", en: "Unknown" },
   "decisions.confidenceHeading": { tr: "GÜVEN SKORU", en: "CONFIDENCE SCORE" },
   "decisions.calibration.measured": {
     tr: "Geçmişte bu güven düzeyinde ({outcomes} sonuç) iyileşme",

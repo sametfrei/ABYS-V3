@@ -50,6 +50,12 @@ function formatMessage(
   );
 }
 
+function reliabilityText(locale: Locale, code: string): string {
+  const key = `decisions.reliability.${code}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? code : label;
+}
+
 function severityText(locale: Locale, code: string): string {
   const key = `decisions.severity.${code}` as ShellKey;
   const label = t(locale, key);
@@ -512,6 +518,7 @@ function TaisDecisionCard({
   onChanged: () => void;
   calibration: CalibrationSummary | null;
 }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -529,10 +536,16 @@ function TaisDecisionCard({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decisionId: c.decisionId ?? c.id, state }),
       });
-      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? "Karar durumu güncellenemedi.");
+      if (!res.ok)
+        throw new Error(
+          (await res.json().catch(() => null))?.error ??
+            t(readLocale(), "decisions.stateUpdateFailed")
+        );
       onChanged();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Karar durumu güncellenemedi.");
+      setError(
+        err instanceof Error ? err.message : t(readLocale(), "decisions.stateUpdateFailed")
+      );
     } finally {
       setBusy(false);
     }
@@ -546,21 +559,23 @@ function TaisDecisionCard({
             className="text-[10px] font-semibold tracking-wide rounded-full px-2 py-1 mt-0.5 shrink-0"
             style={{ color: meta.color, background: meta.soft }}
           >
-            {meta.label}
+            {severityText(locale, c.severity)}
           </span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-abys-ink">{c.title}</p>
             <p className="text-xs text-abys-muted mt-1">{c.businessImpact}</p>
             {recommended && (
               <p className="text-xs mt-2">
-                <span className="text-abys-muted">Önerilen: </span>
+                <span className="text-abys-muted">{t(locale, "decisions.recommended")}{" "}</span>
                 <span className="text-abys-navy font-medium">{recommendedTitle}</span>
               </p>
             )}
           </div>
           <div className="shrink-0 text-right">
             <ConfidenceBadge value={c.confidence} />
-            <p className="text-xs text-abys-muted mt-1">{open ? "kapat −" : "incele +"}</p>
+            <p className="text-xs text-abys-muted mt-1">
+              {open ? t(locale, "decisions.collapse") : t(locale, "decisions.expand")}
+            </p>
           </div>
         </div>
       </button>
@@ -572,7 +587,7 @@ function TaisDecisionCard({
           <CounterfactualPanel c={c} />
            <div>
             <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
-              ALTERNATİFLER (A/B/C)
+              {t(locale, "decisions.alternativesHeading")}
             </p>
             <div className="space-y-2">
               {c.options.map((o) => (
@@ -588,11 +603,13 @@ function TaisDecisionCard({
            </div>
            {error && <p className="text-xs text-abys-critical">{error}</p>}
            <div className="flex flex-wrap gap-2">
-             <button onClick={() => updateState("approved")} disabled={busy} className="text-xs rounded-lg bg-abys-navy text-white px-3 py-1.5 disabled:opacity-50">Onayla</button>
-             <button onClick={() => updateState("under_review")} disabled={busy} className="text-xs rounded-lg border border-abys-ink/15 px-3 py-1.5 disabled:opacity-50">İncelemeye al</button>
-             <button onClick={() => updateState("rejected")} disabled={busy} className="text-xs rounded-lg border border-abys-ink/15 px-3 py-1.5 text-abys-critical disabled:opacity-50">Ertele / reddet</button>
+             <button onClick={() => updateState("approved")} disabled={busy} className="text-xs rounded-lg bg-abys-navy text-white px-3 py-1.5 disabled:opacity-50">{t(locale, "decisions.state.approve")}</button>
+             <button onClick={() => updateState("under_review")} disabled={busy} className="text-xs rounded-lg border border-abys-ink/15 px-3 py-1.5 disabled:opacity-50">{t(locale, "decisions.state.review")}</button>
+             <button onClick={() => updateState("rejected")} disabled={busy} className="text-xs rounded-lg border border-abys-ink/15 px-3 py-1.5 text-abys-critical disabled:opacity-50">{t(locale, "decisions.state.defer")}</button>
            </div>
-           <p className="text-xs text-abys-muted">Durum: {c.status} · karar kaydı sunucu oturumuna bağlıdır.</p>
+           <p className="text-xs text-abys-muted">
+             {formatMessage(locale, "decisions.statusLine", { status: c.status })}
+           </p>
          </div>
       )}
     </div>
@@ -620,6 +637,7 @@ function CaseCard({
   serverMode: boolean;
   calibration: CalibrationSummary | null;
 }) {
+  const locale = useLocale();
   const meta = SEVERITY_META[c.severity];
   const recommended = c.options.find((o) => o.id === c.recommendedOptionId);
   const recommendedTitle = recommended?.title.replace(/^Önerilen:\s*/u, "");
@@ -635,21 +653,23 @@ function CaseCard({
             className="text-[10px] font-semibold tracking-wide rounded-full px-2 py-1 mt-0.5 shrink-0"
             style={{ color: meta.color, background: meta.soft }}
           >
-            {meta.label}
+            {severityText(locale, c.severity)}
           </span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-abys-ink">{c.title}</p>
             <p className="text-xs text-abys-muted mt-1">{c.businessImpact}</p>
             {recommended && (
               <p className="text-xs mt-2">
-                <span className="text-abys-muted">Önerilen: </span>
+                <span className="text-abys-muted">{t(locale, "decisions.recommended")}{" "}</span>
                 <span className="text-abys-navy font-medium">{recommendedTitle}</span>
               </p>
             )}
           </div>
           <div className="shrink-0 text-right">
             <ConfidenceBadge value={c.confidence} />
-            <p className="text-xs text-abys-muted mt-1">{expanded ? "kapat −" : "incele +"}</p>
+            <p className="text-xs text-abys-muted mt-1">
+              {expanded ? t(locale, "decisions.collapse") : t(locale, "decisions.expand")}
+            </p>
           </div>
         </div>
       </button>
@@ -674,6 +694,7 @@ function CaseCard({
 }
 
 function ConfidenceBadge({ value }: { value: number }) {
+  const locale = useLocale();
   const color =
     value >= 75 ? "var(--abys-healthy)" : value >= 50 ? "var(--abys-warning)" : "var(--abys-critical)";
   return (
@@ -682,7 +703,7 @@ function ConfidenceBadge({ value }: { value: number }) {
         <div className="h-full rounded-full" style={{ width: `${value}%`, background: color }} />
       </div>
       <span className="text-xs font-semibold" style={{ color }}>
-        %{value}
+        {formatMessage(locale, "decisions.percent", { value })}
       </span>
     </div>
   );
@@ -750,6 +771,7 @@ function ConfidencePanel({
 }
 
 function EvidencePanel({ c, defaultOpen }: { c: DecisionCase; defaultOpen: boolean }) {
+  const locale = useLocale();
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div>
@@ -757,7 +779,8 @@ function EvidencePanel({ c, defaultOpen }: { c: DecisionCase; defaultOpen: boole
         onClick={() => setOpen((v) => !v)}
         className="text-xs tracking-widest text-abys-muted font-semibold mb-2 flex items-center gap-1"
       >
-        KANIT ZİNCİRİ ({c.evidence.length}) {open ? "−" : "+"}
+        {formatMessage(locale, "decisions.evidenceHeading", { count: c.evidence.length })}{" "}
+        {open ? "−" : "+"}
       </button>
       {open && (
         <div className="space-y-3">
@@ -770,11 +793,13 @@ function EvidencePanel({ c, defaultOpen }: { c: DecisionCase; defaultOpen: boole
                     className="text-[10px] font-semibold rounded-full px-2 py-0.5 mt-0.5 shrink-0 border"
                     style={{ color: rmeta.color, borderColor: rmeta.color }}
                   >
-                    {rmeta.label}
+                    {reliabilityText(locale, e.reliability ?? "unknown")}
                   </span>
                   <div className="min-w-0">
                     <p className="text-abys-ink">{e.fact}</p>
-                    <p className="text-xs text-abys-muted mt-0.5">Kaynak: {e.source}</p>
+                    <p className="text-xs text-abys-muted mt-0.5">
+                      {formatMessage(locale, "decisions.evidenceSource", { source: e.source })}
+                    </p>
                   </div>
                 </div>
               );
@@ -783,7 +808,9 @@ function EvidencePanel({ c, defaultOpen }: { c: DecisionCase; defaultOpen: boole
 
           {c.assumptions.length > 0 && (
             <div>
-              <p className="text-xs text-abys-muted font-semibold mb-1">Varsayımlar</p>
+              <p className="text-xs text-abys-muted font-semibold mb-1">
+                {t(locale, "decisions.assumptionsHeading")}
+              </p>
               <ul className="text-sm text-abys-ink list-disc list-inside space-y-0.5">
                 {c.assumptions.map((a, i) => (
                   <li key={i}>{a}</li>
@@ -794,7 +821,9 @@ function EvidencePanel({ c, defaultOpen }: { c: DecisionCase; defaultOpen: boole
 
           {c.historicalComparison && (
             <div>
-              <p className="text-xs text-abys-muted font-semibold mb-1">Geçmişle karşılaştırma</p>
+              <p className="text-xs text-abys-muted font-semibold mb-1">
+                {t(locale, "decisions.historicalHeading")}
+              </p>
               <p className="text-sm text-abys-ink">{c.historicalComparison}</p>
             </div>
           )}
@@ -805,18 +834,21 @@ function EvidencePanel({ c, defaultOpen }: { c: DecisionCase; defaultOpen: boole
 }
 
 function CounterfactualPanel({ c }: { c: DecisionCase }) {
+  const locale = useLocale();
   return (
     <div className="rounded-lg border border-abys-critical/25 bg-abys-critical/5 px-4 py-3.5">
       <p className="text-xs tracking-widest font-semibold mb-2" style={{ color: "var(--abys-critical)" }}>
-        KARŞI SENARYO — AKSİYON ALINMAZSA
+        {t(locale, "decisions.counterfactualHeading")}
       </p>
       <p className="text-sm text-abys-ink mb-2">{c.counterfactual.narrative}</p>
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-abys-muted">
         <span>
-          <span className="font-semibold">Tahmini etki:</span> {c.counterfactual.projectedImpact}
+          <span className="font-semibold">{t(locale, "decisions.projectedImpact")}</span>{" "}
+          {c.counterfactual.projectedImpact}
         </span>
         <span>
-          <span className="font-semibold">Zaman ufku:</span> {c.counterfactual.timeHorizon}
+          <span className="font-semibold">{t(locale, "decisions.timeHorizon")}</span>{" "}
+          {c.counterfactual.timeHorizon}
         </span>
       </div>
     </div>
