@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T20:10:35.670Z",
+  "updatedAt": "2026-11-21T20:27:46.537Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1350,6 +1350,39 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Repeated demo sync does not add rows or change row ids; no duplicate (config_id, entity, external_id); live sync stores source_updated_at and source identity; org A rows never visible to org B.",
       "evidence": "Specialist Copernicus/Mendel wrote the tests; Founder B reviewed and ran gates: 3/3 tests, full suite 92 files/822 tests (9 skipped), tsc clean, eslint clean."
+    },
+    {
+      "id": "TB-067",
+      "commit": "e6e66c1",
+      "title": "Scenario lab TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/scenarios/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Scenario lab chrome, digital-twin section, sensitivity/provenance blocks and Monte Carlo panel render in TR and EN; numbers and dates follow the locale; template-driven data text stays server-provided.",
+      "evidence": "Founder B ran gates: tsc clean, eslint clean, i18n 19/19, full suite 92 files/822 tests (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-068",
+      "commit": "27f0096",
+      "title": "CSV export contract smoke checks",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer"
+      ],
+      "files": [
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Smoke asserts exact ledger/audit/forecast CSV header lines, attachment disposition, anonymous 401 on all three exports and 400 for an out-of-range audit limit.",
+      "evidence": "Specialist Mendel added 10 checks; Founder B reviewed and ran eslint + smoke: 53 passed, 0 failed."
     }
   ]
 }
