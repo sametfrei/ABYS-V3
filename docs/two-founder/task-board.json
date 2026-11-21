@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T22:45:28Z",
+  "updatedAt": "2026-11-21T22:57:27Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1609,6 +1609,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Quality score panel offers an 'all metrics' option plus every KPI label, refetches /api/data-quality/score with the selected label, and resetting restores org-wide scores. API label scoping is covered by a test.",
       "evidence": "Founder B gates: tsc clean, eslint clean, API score tests 5/5, full suite 825 passed (9 skipped), build OK, smoke 53/53."
+    },
+    {
+      "id": "TB-082",
+      "commit": "f532553",
+      "title": "Executive Command Center TR/EN localization",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "product-strategist"
+      ],
+      "files": [
+        "src/components/CommandCenter.tsx",
+        "src/lib/i18n.ts",
+        "tests/i18n.test.ts",
+        "docs/ROADMAP.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Command center heading, activity line, 30-second focus panel, focus CTAs, development list, summary stats, four blocks, executive brief labels, evidence lines, reliability/severity/outcome labels and calibration notes render in TR and EN with locale-aware dates and percentages.",
+      "evidence": "Gates: tsc clean, eslint clean, i18n 22/22, full suite 826 passed (9 skipped), build OK, smoke 53/53."
     }
   ]
 }
