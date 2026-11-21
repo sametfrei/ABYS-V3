@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { loadProfile } from "@/lib/profile";
 import { useStored } from "@/lib/use-stored";
@@ -10,33 +10,62 @@ import { getActiveSignals, SEVERITY_META, type Signal } from "@/lib/signals";
 import { listEntities, upsertEntity, newId } from "@/lib/entities";
 import type { HandledSignal, SignalStatus, WarRoomNote } from "@/lib/entities";
 import type { TaisRisk } from "@/lib/demo/tais/risks";
+import {
+  DEFAULT_LOCALE,
+  readLocale,
+  subscribeLocale,
+  t,
+  type Locale,
+  type ShellKey,
+} from "@/lib/i18n";
 
-const STATUS_LABEL: Record<SignalStatus, string> = {
-  open: "Açık",
-  handled: "Çözüldü",
-  snoozed: "Ertelendi",
-  escalated: "Yükseltildi",
+const STATUS_LABEL: Record<SignalStatus, ShellKey> = {
+  open: "alerts.status.open",
+  handled: "alerts.status.handled",
+  snoozed: "alerts.status.snoozed",
+  escalated: "alerts.status.escalated",
 };
 
-const EVIDENCE_TYPE_LABEL: Record<TaisRisk["evidence"][number]["type"], string> = {
-  task: "Görev",
-  complaint: "Şikâyet",
-  deal: "Satış Fırsatı",
-  quality_issue: "Kalite Uygunsuzluğu",
-  service_request: "Hizmet Talebi",
-  contract: "Sözleşme",
-};
+function useLocale(): Locale {
+  return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
+}
+
+function codeLabel(locale: Locale, prefix: string, code: string): string {
+  const key = `${prefix}.${code}` as ShellKey;
+  const label = t(locale, key);
+  return label === key ? code : label;
+}
+
+function formatNumber(value: number, locale: Locale): string {
+  return value.toLocaleString(locale);
+}
 
 /** TaisRisk kaydını mevcut Signal görünümüne çevirir (kanıt kayıtları KAYNAKLAR olarak listelenir). */
-function taisRiskToSignal(r: TaisRisk): Signal {
+function taisRiskToSignal(r: TaisRisk, locale: Locale): Signal {
   const context = [r.customerName, r.locationName].filter(Boolean).join(" · ");
   return {
     id: r.id,
     categoryId: r.ruleId,
-    categoryLabel: context || r.ruleId,
+    categoryLabel: context || codeLabel(locale, "alerts.rule", r.ruleId),
     severity: r.severity,
     title: r.title,
-    sources: r.evidence.map((e) => `${EVIDENCE_TYPE_LABEL[e.type]} kaydı: ${e.id}`),
+    sources: r.evidence.map((e) =>
+      formatMessage(locale, "alerts.evidenceRef", {
+        type: codeLabel(locale, "alerts.evidenceType", e.type),
+        id: e.id,
+      })
+    ),
     recommendedAction: r.recommendedAction,
     isReal: true,
     serviceType: r.category,
@@ -51,6 +80,7 @@ function taisRiskToSignal(r: TaisRisk): Signal {
 }
 
 export default function AlertsPage() {
+  const locale = useLocale();
   const [stored] = useStored(() => {
     const p = loadProfile();
     const sector = p ? getSector(p.sectorId) : null;
@@ -89,7 +119,11 @@ export default function AlertsPage() {
     };
   }, [isTais]);
 
-  const signals = isTais ? (taisRisks ?? []).map(taisRiskToSignal) : profile ? sectorSignals : [];
+  const signals = isTais
+    ? (taisRisks ?? []).map((risk) => taisRiskToSignal(risk, locale))
+    : profile
+      ? sectorSignals
+      : [];
   const [statusOverrides, setStatusOverrides] = useState<Record<string, SignalStatus>>({});
   const taisStatuses = Object.fromEntries((taisRisks ?? []).map((risk) => [risk.id, risk.status]));
   const statuses = isTais ? taisStatuses : { ...(stored?.statuses ?? {}), ...statusOverrides };
@@ -111,15 +145,19 @@ export default function AlertsPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="ALERTS"
-        title="Aktif"
-        accent="sinyaller."
-        desc="Sektörünüze özel risk sinyalleri. Bir sinyali açarak kaynaklarını görebilir, durumunu değiştirebilir ve War Room'da not bırakabilirsiniz."
+        eyebrow={t(locale, "alerts.eyebrow")}
+        title={t(locale, "alerts.title")}
+        accent={t(locale, "alerts.titleAccent")}
+        desc={t(locale, "alerts.subtitle")}
       />
 
       <div className="px-10 pb-16 max-w-2xl space-y-3">
-        {isTais && taisRisks === null && <p className="text-sm text-abys-muted">TAIS risk kayıtları yükleniyor…</p>}
-        {signals.length === 0 && !(isTais && taisRisks === null) && <p className="text-sm text-abys-muted">Sinyal bulunamadı.</p>}
+        {isTais && taisRisks === null && (
+          <p className="text-sm text-abys-muted">{t(locale, "alerts.loadingTais")}</p>
+        )}
+        {signals.length === 0 && !(isTais && taisRisks === null) && (
+          <p className="text-sm text-abys-muted">{t(locale, "alerts.empty")}</p>
+        )}
         {signals.map((s) => {
           const status = statuses[s.id] ?? "open";
           const meta = SEVERITY_META[s.severity];
@@ -134,13 +172,13 @@ export default function AlertsPage() {
                   className="text-[10px] font-semibold tracking-wide rounded-full px-2 py-1 mt-0.5 shrink-0"
                   style={{ color: meta.color, background: meta.soft }}
                 >
-                  {meta.label}
+                  {codeLabel(locale, "alerts.severity", s.severity)}
                 </span>
                 <div className="flex-1">
                   <p className="text-sm text-abys-ink font-medium">{s.title}</p>
                   <p className="text-xs text-abys-muted mt-0.5">
-                    {s.categoryLabel} · {STATUS_LABEL[status]}
-                    {s.isReal && <span className="text-abys-accent"> · TAIS demo kaydı</span>}
+                    {s.categoryLabel} · {t(locale, STATUS_LABEL[status])}
+                    {s.isReal && <span className="text-abys-accent"> · {t(locale, "alerts.taisDemoBadge")}</span>}
                   </p>
                 </div>
                 <span className="text-abys-muted text-sm">{isOpen ? "−" : "+"}</span>
@@ -150,22 +188,41 @@ export default function AlertsPage() {
                 <div className="px-5 pb-5 border-t border-abys-ink/10 pt-4">
                    {s.recommendedAction && (
                     <>
-                      <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">ÖNERİLEN AKSİYON</p>
+                      <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+                        {t(locale, "alerts.recommendedAction")}
+                      </p>
                       <p className="text-sm text-abys-ink mb-4">{s.recommendedAction}</p>
                     </>
                    )}
                   {(s.serviceType || s.customerName || s.locationName || s.rootCause || s.expectedImpact || s.confidence !== undefined || s.dataAsOf) && (
                     <div className="space-y-1 mb-4 text-sm text-abys-ink">
-                      {s.serviceType && <p><span className="text-abys-muted">Hizmet türü: </span>{s.serviceType}</p>}
-                      {s.customerName && <p><span className="text-abys-muted">Müşteri: </span>{s.customerName}</p>}
-                      {s.locationName && <p><span className="text-abys-muted">Lokasyon: </span>{s.locationName}</p>}
-                      {s.rootCause && <p><span className="text-abys-muted">Kök neden: </span>{s.rootCause}</p>}
-                      {s.expectedImpact && <p><span className="text-abys-muted">Beklenen etki: </span>{s.expectedImpact}</p>}
-                      {s.confidence !== undefined && <p><span className="text-abys-muted">Güven seviyesi: </span>%{s.confidence}</p>}
-                      {s.dataAsOf && <p><span className="text-abys-muted">Veri güncelliği: </span>{new Date(s.dataAsOf).toLocaleString("tr-TR")}</p>}
+                      {s.serviceType && (
+                        <p>
+                          <span className="text-abys-muted">{t(locale, "alerts.serviceType")} </span>
+                          {codeLabel(locale, "alerts.serviceType", s.serviceType)}
+                        </p>
+                      )}
+                      {s.customerName && <p><span className="text-abys-muted">{t(locale, "alerts.customer")} </span>{s.customerName}</p>}
+                      {s.locationName && <p><span className="text-abys-muted">{t(locale, "alerts.location")} </span>{s.locationName}</p>}
+                      {s.rootCause && <p><span className="text-abys-muted">{t(locale, "alerts.rootCause")} </span>{s.rootCause}</p>}
+                      {s.expectedImpact && <p><span className="text-abys-muted">{t(locale, "alerts.expectedImpact")} </span>{s.expectedImpact}</p>}
+                      {s.confidence !== undefined && (
+                        <p>
+                          <span className="text-abys-muted">{t(locale, "alerts.confidence")} </span>
+                          {formatMessage(locale, "alerts.confidenceValue", {
+                            value: formatNumber(s.confidence, locale),
+                          })}
+                        </p>
+                      )}
+                      {s.dataAsOf && (
+                        <p>
+                          <span className="text-abys-muted">{t(locale, "alerts.dataAsOf")} </span>
+                          {new Date(s.dataAsOf).toLocaleString(locale)}
+                        </p>
+                      )}
                     </div>
                   )}
-                   <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">KAYNAKLAR</p>
+                   <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">{t(locale, "alerts.sources")}</p>
                   <ul className="text-sm text-abys-ink mb-4 list-disc list-inside">
                     {s.sources.map((src) => (
                       <li key={src}>{src}</li>
@@ -174,7 +231,7 @@ export default function AlertsPage() {
 
                   {isTais ? (
                     <p className="text-xs text-abys-muted mb-5">
-                      Durum merkezi TAIS risk motorundan gelir; bu hesaplanan bulgu halen açıktır.
+                      {t(locale, "alerts.taisStatusNote")}
                     </p>
                   ) : (
                     <div className="flex gap-2 mb-5">
@@ -207,6 +264,7 @@ function StatusButton({
   target: SignalStatus;
   onClick: () => void;
 }) {
+  const locale = useLocale();
   const active = current === target;
   return (
     <button
@@ -217,12 +275,13 @@ function StatusButton({
           : "border-abys-ink/15 text-abys-ink hover:bg-white/60"
       }`}
     >
-      {STATUS_LABEL[target]}
+      {t(locale, STATUS_LABEL[target])}
     </button>
   );
 }
 
 function WarRoom({ signalId }: { signalId: string }) {
+  const locale = useLocale();
   const [stored, refreshNotes] = useStored(() => ({
     notes: listEntities<WarRoomNote>("war-room-notes").filter((n) => n.signalId === signalId),
   }));
@@ -240,7 +299,7 @@ function WarRoom({ signalId }: { signalId: string }) {
       id: newId(),
       createdAt: new Date().toISOString(),
       signalId,
-      author: "Siz",
+      author: t(locale, "alerts.you"),
       text: text.trim(),
     };
     upsertEntity("war-room-notes", note);
@@ -250,12 +309,14 @@ function WarRoom({ signalId }: { signalId: string }) {
 
   return (
     <div>
-      <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">WAR ROOM</p>
-      {notes.length === 0 && <p className="text-xs text-abys-muted mb-3">Henüz not yok.</p>}
+      <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">{t(locale, "alerts.warRoom")}</p>
+      {notes.length === 0 && <p className="text-xs text-abys-muted mb-3">{t(locale, "alerts.noNotes")}</p>}
       <div className="space-y-2 mb-3">
         {notes.map((n) => (
           <div key={n.id} className="text-sm bg-white/60 rounded-lg px-3 py-2">
-            <span className="font-medium text-abys-navy">{n.author}: </span>
+            <span className="font-medium text-abys-navy">
+              {n.author === "Siz" || n.author === "You" ? t(locale, "alerts.you") : n.author}:{" "}
+            </span>
             <span className="text-abys-ink">{n.text}</span>
           </div>
         ))}
@@ -265,11 +326,11 @@ function WarRoom({ signalId }: { signalId: string }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="Not ekle..."
+          placeholder={t(locale, "alerts.notePlaceholder")}
           className="flex-1 text-sm rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
         />
         <button onClick={add} className="text-sm rounded-lg bg-abys-navy text-white px-3 py-2">
-          Gönder
+          {t(locale, "alerts.send")}
         </button>
       </div>
     </div>

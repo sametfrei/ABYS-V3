@@ -650,7 +650,63 @@ export type ShellKey =
   | "dataQuality.actionDiscard"
   | "dataQuality.status.pending"
   | "dataQuality.status.resolved"
-  | "dataQuality.status.discarded";
+  | "dataQuality.status.discarded"
+  | "alerts.eyebrow"
+  | "alerts.title"
+  | "alerts.titleAccent"
+  | "alerts.subtitle"
+  | "alerts.loadingTais"
+  | "alerts.empty"
+  | "alerts.taisDemoBadge"
+  | "alerts.recommendedAction"
+  | "alerts.serviceType"
+  | "alerts.customer"
+  | "alerts.location"
+  | "alerts.rootCause"
+  | "alerts.expectedImpact"
+  | "alerts.confidence"
+  | "alerts.confidenceValue"
+  | "alerts.dataAsOf"
+  | "alerts.sources"
+  | "alerts.taisStatusNote"
+  | "alerts.warRoom"
+  | "alerts.noNotes"
+  | "alerts.notePlaceholder"
+  | "alerts.send"
+  | "alerts.you"
+  | "alerts.evidenceRef"
+  | "alerts.severity.critical"
+  | "alerts.severity.warning"
+  | "alerts.severity.info"
+  | "alerts.severity.healthy"
+  | "alerts.status.open"
+  | "alerts.status.handled"
+  | "alerts.status.snoozed"
+  | "alerts.status.escalated"
+  | "alerts.evidenceType.task"
+  | "alerts.evidenceType.complaint"
+  | "alerts.evidenceType.deal"
+  | "alerts.evidenceType.quality_issue"
+  | "alerts.evidenceType.service_request"
+  | "alerts.evidenceType.contract"
+  | "alerts.rule.overdue_open_task"
+  | "alerts.rule.sla_risk_task"
+  | "alerts.rule.unassigned_task"
+  | "alerts.rule.team_capacity_overload"
+  | "alerts.rule.recurring_complaint"
+  | "alerts.rule.stale_deal"
+  | "alerts.rule.renewal_without_activity"
+  | "alerts.rule.overdue_periodic_service"
+  | "alerts.rule.recurring_quality_issue"
+  | "alerts.rule.stale_data_source"
+  | "alerts.rule.unmatched_service_request"
+  | "alerts.rule.high_delay_critical_customer"
+  | "alerts.serviceType.cleaning"
+  | "alerts.serviceType.catering"
+  | "alerts.serviceType.pest_control"
+  | "alerts.serviceType.horeca"
+  | "alerts.serviceType.property_mgmt"
+  | "alerts.serviceType.office_mgmt";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -1822,6 +1878,71 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "dataQuality.status.pending": { tr: "bekliyor", en: "pending" },
   "dataQuality.status.resolved": { tr: "çözüldü", en: "resolved" },
   "dataQuality.status.discarded": { tr: "atıldı", en: "discarded" },
+  "alerts.eyebrow": { tr: "ALARMLAR", en: "ALERTS" },
+  "alerts.title": { tr: "Aktif", en: "Active" },
+  "alerts.titleAccent": { tr: "sinyaller.", en: "signals." },
+  "alerts.subtitle": {
+    tr: "Sektörünüze özel risk sinyalleri. Bir sinyali açarak kaynaklarını görebilir, durumunu değiştirebilir ve War Room'da not bırakabilirsiniz.",
+    en: "Risk signals specific to your sector. Open a signal to see its sources, change its status, and leave a note in the War Room.",
+  },
+  "alerts.loadingTais": {
+    tr: "TAIS risk kayıtları yükleniyor…",
+    en: "Loading TAIS risk records…",
+  },
+  "alerts.empty": { tr: "Sinyal bulunamadı.", en: "No signals found." },
+  "alerts.taisDemoBadge": { tr: "TAIS demo kaydı", en: "TAIS demo record" },
+  "alerts.recommendedAction": { tr: "ÖNERİLEN AKSİYON", en: "RECOMMENDED ACTION" },
+  "alerts.serviceType": { tr: "Hizmet türü:", en: "Service type:" },
+  "alerts.customer": { tr: "Müşteri:", en: "Customer:" },
+  "alerts.location": { tr: "Lokasyon:", en: "Location:" },
+  "alerts.rootCause": { tr: "Kök neden:", en: "Root cause:" },
+  "alerts.expectedImpact": { tr: "Beklenen etki:", en: "Expected impact:" },
+  "alerts.confidence": { tr: "Güven seviyesi:", en: "Confidence:" },
+  "alerts.confidenceValue": { tr: "%{value}", en: "{value}%" },
+  "alerts.dataAsOf": { tr: "Veri güncelliği:", en: "Data as of:" },
+  "alerts.sources": { tr: "KAYNAKLAR", en: "SOURCES" },
+  "alerts.taisStatusNote": {
+    tr: "Durum merkezi TAIS risk motorundan gelir; bu hesaplanan bulgu halen açıktır.",
+    en: "Status comes from the central TAIS risk engine; this calculated finding is still open.",
+  },
+  "alerts.warRoom": { tr: "SAVAŞ ODASI", en: "WAR ROOM" },
+  "alerts.noNotes": { tr: "Henüz not yok.", en: "No notes yet." },
+  "alerts.notePlaceholder": { tr: "Not ekle...", en: "Add a note..." },
+  "alerts.send": { tr: "Gönder", en: "Send" },
+  "alerts.you": { tr: "Siz", en: "You" },
+  "alerts.evidenceRef": { tr: "{type} kaydı: {id}", en: "{type} record: {id}" },
+  "alerts.severity.critical": { tr: "KRİTİK", en: "CRITICAL" },
+  "alerts.severity.warning": { tr: "DİKKAT", en: "WARNING" },
+  "alerts.severity.info": { tr: "BİLGİ", en: "INFO" },
+  "alerts.severity.healthy": { tr: "SAĞLIKLI", en: "HEALTHY" },
+  "alerts.status.open": { tr: "Açık", en: "Open" },
+  "alerts.status.handled": { tr: "Çözüldü", en: "Handled" },
+  "alerts.status.snoozed": { tr: "Ertelendi", en: "Snoozed" },
+  "alerts.status.escalated": { tr: "Yükseltildi", en: "Escalated" },
+  "alerts.evidenceType.task": { tr: "Görev", en: "Task" },
+  "alerts.evidenceType.complaint": { tr: "Şikâyet", en: "Complaint" },
+  "alerts.evidenceType.deal": { tr: "Satış Fırsatı", en: "Deal" },
+  "alerts.evidenceType.quality_issue": { tr: "Kalite Uygunsuzluğu", en: "Quality issue" },
+  "alerts.evidenceType.service_request": { tr: "Hizmet Talebi", en: "Service request" },
+  "alerts.evidenceType.contract": { tr: "Sözleşme", en: "Contract" },
+  "alerts.rule.overdue_open_task": { tr: "Gecikmiş açık görev", en: "Overdue open task" },
+  "alerts.rule.sla_risk_task": { tr: "SLA riski taşıyan görev", en: "Task at SLA risk" },
+  "alerts.rule.unassigned_task": { tr: "Atanmamış görev", en: "Unassigned task" },
+  "alerts.rule.team_capacity_overload": { tr: "Ekip kapasitesi aşımı", en: "Team capacity overload" },
+  "alerts.rule.recurring_complaint": { tr: "Tekrarlayan şikâyet", en: "Recurring complaint" },
+  "alerts.rule.stale_deal": { tr: "Hareketsiz satış fırsatı", en: "Stale deal" },
+  "alerts.rule.renewal_without_activity": { tr: "Hareketsiz yenileme", en: "Renewal without activity" },
+  "alerts.rule.overdue_periodic_service": { tr: "Gecikmiş periyodik hizmet", en: "Overdue periodic service" },
+  "alerts.rule.recurring_quality_issue": { tr: "Tekrarlayan kalite sorunu", en: "Recurring quality issue" },
+  "alerts.rule.stale_data_source": { tr: "Güncel olmayan veri kaynağı", en: "Stale data source" },
+  "alerts.rule.unmatched_service_request": { tr: "Eşleşmemiş hizmet talebi", en: "Unmatched service request" },
+  "alerts.rule.high_delay_critical_customer": { tr: "Kritik müşteride yüksek gecikme", en: "High delay for critical customer" },
+  "alerts.serviceType.cleaning": { tr: "Temizlik", en: "Cleaning" },
+  "alerts.serviceType.catering": { tr: "Yemek Hizmeti", en: "Catering" },
+  "alerts.serviceType.pest_control": { tr: "Haşere Kontrolü", en: "Pest Control" },
+  "alerts.serviceType.horeca": { tr: "HORECA Çözümleri", en: "HORECA Solutions" },
+  "alerts.serviceType.property_mgmt": { tr: "Tesis Yönetimi", en: "Property Management" },
+  "alerts.serviceType.office_mgmt": { tr: "Ofis Yönetimi", en: "Office Management" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
