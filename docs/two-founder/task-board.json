@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T17:00:00Z",
+  "updatedAt": "2026-11-21T17:30:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1026,6 +1026,44 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Authorized users download a tenant-scoped CSV of up to 200 snapshots with evaluation columns; pending snapshots leave evaluation fields empty.",
       "evidence": "Unit tests 4/4 (header order, pending blanks, comma escaping, empty ledger); smoke 39/39 with a live text/csv response; build lists the route."
+    },
+    {
+      "id": "TB-050",
+      "commit": "9d288dd",
+      "title": "Ledger limit validation",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "integration-engineer",
+        "security-auditor"
+      ],
+      "files": [
+        "src/lib/data/route-schemas.ts",
+        "src/app/api/decision-ledger/route.ts",
+        "tests/decision-ledger.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "GET /api/decision-ledger accepts limit 1..200 (default 50), rejects non-integer/out-of-range values with 400, and never passes raw input to SQL.",
+      "evidence": "decision-ledger tests 9/9 including six invalid inputs and a bounded valid request; tsc/eslint/build clean; smoke 39/39."
+    },
+    {
+      "id": "TB-051",
+      "commit": "2400776",
+      "title": "Settings screen TR/EN localization",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/settings/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Settings tabs, profile/session labels, sector and role options and status messages resolve via the dictionary in both locales.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 86 files/781 tests (9 skipped), eslint/tsc/build clean, smoke 39/39. Embedded ChangePassword/SessionManagement/UserManagement components remain Turkish (next slice)."
     }
   ]
 }
