@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T18:15:00Z",
+  "updatedAt": "2026-11-21T18:45:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1140,6 +1140,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Audit CSV export rejects unauthenticated (401) and view_audit-less (403) callers, validates limit, and never leaks another org's events.",
       "evidence": "5 tests pass: 401, 403 via hasPermission('analyst','view_audit')===false, five invalid limits, CSV headers plus export audit event, and cross-tenant isolation both ways."
+    },
+    {
+      "id": "TB-056",
+      "commit": "bc83881",
+      "title": "Risks and signals screen TR/EN",
+      "priority": "P2",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "predictive-causal-intelligence-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/dashboard/alerts/page.tsx",
+        "tests/i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Alert cards, severity/status labels, rule/evidence/service labels and War Room copy resolve via the dictionary; unknown codes fall back to the raw code.",
+      "evidence": "Founder A implemented; Founder B ran gates: full suite 88 files/794 tests (9 skipped), eslint/tsc/build clean, smoke 41/41."
     }
   ]
 }
