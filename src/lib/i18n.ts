@@ -908,7 +908,50 @@ export type ShellKey =
   | "reports.status.done"
   | "ledger.exportCsv"
   | "audit.exportCsv"
-  | "forecast.exportCsv";
+  | "forecast.exportCsv"
+  | "scenarios.eyebrow"
+  | "scenarios.title"
+  | "scenarios.titleAccent"
+  | "scenarios.subtitle"
+  | "scenarios.loading"
+  | "scenarios.runFailed"
+  | "scenarios.unauthorized"
+  | "scenarios.templatesFailed"
+  | "scenarios.defaultName"
+  | "scenarios.twinNeedCurrency"
+  | "scenarios.twinRiskTitle"
+  | "scenarios.twinRiskEvidence"
+  | "scenarios.twinFailedHttp"
+  | "scenarios.twinFailed"
+  | "scenarios.namePlaceholder"
+  | "scenarios.calculating"
+  | "scenarios.compare"
+  | "scenarios.calculateAndSave"
+  | "scenarios.formula"
+  | "scenarios.twinHeading"
+  | "scenarios.twinDescription"
+  | "scenarios.twinBusy"
+  | "scenarios.twinCompare"
+  | "scenarios.twinBalance"
+  | "scenarios.twinDelta"
+  | "scenarios.twinSummary"
+  | "scenarios.twinCurrencyNew"
+  | "scenarios.twinCurrencyExisting"
+  | "scenarios.sensitivityHeading"
+  | "scenarios.provenanceHeading"
+  | "scenarios.engine"
+  | "scenarios.calculatedAt"
+  | "scenarios.limitsHeading"
+  | "scenarios.saved"
+  | "scenarios.sim.heading"
+  | "scenarios.sim.p10"
+  | "scenarios.sim.p50"
+  | "scenarios.sim.p90"
+  | "scenarios.sim.summary"
+  | "scenarios.sim.probability"
+  | "scenarios.sim.assumptionsHeading"
+  | "scenarios.sim.assumptionLine"
+  | "scenarios.sim.engineNote";
 
 const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "nav.dashboard": { tr: "Yönetim Merkezi", en: "Command Center" },
@@ -2443,6 +2486,76 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "audit.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "forecast.exportCsv": { tr: "Kalibrasyonu CSV indir", en: "Download calibration CSV" },
+  "scenarios.eyebrow": { tr: "SENARYO LABORATUVARI", en: "SCENARIO LAB" },
+  "scenarios.title": { tr: "Ya şöyle", en: "What if" },
+  "scenarios.titleAccent": { tr: "olsaydı?", en: "it were so?" },
+  "scenarios.subtitle": {
+    tr: "Değişkenleri değiştirin, taban/iyimser/kötümser karşılaştırın. Tüm sayılar deterministik formüllerle hesaplanır — model sayı üretmez; formül, sınırlar ve duyarlılık her sonuçla birlikte gösterilir.",
+    en: "Change the variables and compare base/optimistic/pessimistic cases. Every number comes from deterministic formulas — the model invents no values; the formula, limits and sensitivity are shown with each result.",
+  },
+  "scenarios.loading": { tr: "Yükleniyor…", en: "Loading…" },
+  "scenarios.runFailed": { tr: "Senaryo çalıştırılamadı.", en: "Scenario could not run." },
+  "scenarios.unauthorized": {
+    tr: "Senaryo Laboratuvarı kurumsal oturum gerektirir.",
+    en: "Scenario Lab requires an enterprise session.",
+  },
+  "scenarios.templatesFailed": { tr: "Şablonlar yüklenemedi.", en: "Templates could not be loaded." },
+  "scenarios.defaultName": { tr: "Senaryo", en: "Scenario" },
+  "scenarios.twinNeedCurrency": {
+    tr: "Dijital ikiz karşılaştırması için senaryo toplamı TRY, EUR, USD veya GBP cinsinden olmalı.",
+    en: "For a digital twin comparison the scenario total must be in TRY, EUR, USD or GBP.",
+  },
+  "scenarios.twinRiskTitle": { tr: "{name} etkisi", en: "{name} impact" },
+  "scenarios.twinRiskEvidence": {
+    tr: "Senaryo toplamı {value} {unit}; nakit etkisi senaryo varsayımı olarak uygulandı.",
+    en: "Scenario total {value} {unit}; cash impact applied as a scenario assumption.",
+  },
+  "scenarios.twinFailedHttp": { tr: "Karşılaştırma başarısız (HTTP {status}).", en: "Comparison failed (HTTP {status})." },
+  "scenarios.twinFailed": { tr: "Dijital ikiz karşılaştırması başarısız.", en: "Digital twin comparison failed." },
+  "scenarios.namePlaceholder": { tr: "Senaryo adı", en: "Scenario name" },
+  "scenarios.calculating": { tr: "Hesaplanıyor…", en: "Calculating…" },
+  "scenarios.compare": { tr: "Karşılaştır", en: "Compare" },
+  "scenarios.calculateAndSave": { tr: "Hesapla ve kaydet", en: "Calculate and save" },
+  "scenarios.formula": { tr: "Formül: {formula}", en: "Formula: {formula}" },
+  "scenarios.twinHeading": { tr: "SENARYO → DİJİTAL İKİZ", en: "SCENARIO → DIGITAL TWIN" },
+  "scenarios.twinDescription": {
+    tr: "Senaryo toplamı, açık bir nakit etkisi varsayımı olarak mevcut kurumsal durumla karşılaştırılır. Para birimleri toplanmaz.",
+    en: "The scenario total is compared with the current enterprise state as an explicit cash-impact assumption. Currencies are never summed.",
+  },
+  "scenarios.twinBusy": { tr: "Karşılaştırılıyor…", en: "Comparing…" },
+  "scenarios.twinCompare": { tr: "Dijital ikizle karşılaştır", en: "Compare with digital twin" },
+  "scenarios.twinBalance": { tr: "{currency} nakit dengesi", en: "{currency} cash balance" },
+  "scenarios.twinDelta": { tr: "Fark: {value} {currency}", en: "Delta: {value} {currency}" },
+  "scenarios.twinSummary": {
+    tr: "{deltas} açık delta · {risks} senaryo riski · {currencies}",
+    en: "{deltas} open deltas · {risks} scenario risks · {currencies}",
+  },
+  "scenarios.twinCurrencyNew": { tr: "Yeni para birimi: {list}", en: "New currency: {list}" },
+  "scenarios.twinCurrencyExisting": { tr: "Mevcut para birimleri", en: "Existing currencies" },
+  "scenarios.sensitivityHeading": { tr: "DUYARLILIK", en: "SENSITIVITY" },
+  "scenarios.provenanceHeading": { tr: "HESAP KAYNAĞI", en: "CALCULATION SOURCE" },
+  "scenarios.engine": { tr: "Motor: {engine}", en: "Engine: {engine}" },
+  "scenarios.calculatedAt": { tr: "Hesaplandı: {at}", en: "Calculated: {at}" },
+  "scenarios.limitsHeading": { tr: "SINIRLAR", en: "LIMITS" },
+  "scenarios.saved": { tr: "Senaryo kaydedildi (kurumsal hafızada).", en: "Scenario saved (institutional memory)." },
+  "scenarios.sim.heading": { tr: "BELİRSİZLİK ARALIĞI — MONTE CARLO", en: "UNCERTAINTY RANGE — MONTE CARLO" },
+  "scenarios.sim.p10": { tr: "P10 (iyi)", en: "P10 (good)" },
+  "scenarios.sim.p50": { tr: "P50 (beklenen)", en: "P50 (expected)" },
+  "scenarios.sim.p90": { tr: "P90 (kötü)", en: "P90 (bad)" },
+  "scenarios.sim.summary": {
+    tr: "{label}: taban {base} {unit} · ortalama {mean} · std. sapma {stdDev}",
+    en: "{label}: base {base} {unit} · mean {mean} · std. dev. {stdDev}",
+  },
+  "scenarios.sim.probability": {
+    tr: "Tabanı aşma olasılığı %{above} · tabanın %20 üzerini aşma olasılığı %{above20} · {samples} örnek, tohum {seed}",
+    en: "Probability of exceeding base {above}% · of exceeding base by 20% {above20}% · {samples} samples, seed {seed}",
+  },
+  "scenarios.sim.assumptionsHeading": { tr: "VARSAYIMLAR", en: "ASSUMPTIONS" },
+  "scenarios.sim.assumptionLine": {
+    tr: "{label}: alt {low} · mod {mode} · üst {high} {unit}",
+    en: "{label}: low {low} · mode {mode} · high {high} {unit}",
+  },
+  "scenarios.sim.engineNote": { tr: "Motor: {engine}. {note}", en: "Engine: {engine}. {note}" },
 };
 
 export function parseLocale(value: string | null | undefined): Locale {
