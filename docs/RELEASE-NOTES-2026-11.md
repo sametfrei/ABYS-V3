@@ -10,7 +10,7 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 | Kapı | Komut | Son sonuç |
 |---|---|---|
 | Tip + lint | `npm run verify` | temiz |
-| Testler | `npm test` | 94 dosya, 839 geçti / 9 atlandı |
+| Testler | `npm test` | 95 dosya, 844 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
 | Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 75 geçti / 0 başarısız |
 | Sürüm parmak izi | `node scripts/verify-deploy.mjs --base=... --expect=origin` | commit EŞLEŞTİ, exit 0 |
@@ -26,7 +26,9 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   filtre, karantina listesi (`limit` doğrulaması + `truncated` bildirimi) ve
   yetki/kurum kapsamlı CSV dışa aktarımı (payload hariç, denetim kayıtlı).
 - **Aksiyonlar:** durum geçişleri, gecikme görünürlüğü, yürütme niyeti ve
-  deneme durumu; sahiplik/tarih/olay kanıtıyla CSV dışa aktarımı.
+  deneme durumu; beklenen etki bağlamı, doğrulanmış gerçekleşen finansal etki
+  (tutar/ISO para birimi/ölçüm aralığı/kanıt) ve sahiplik/tarih/olay kanıtıyla
+  CSV dışa aktarımı.
 - **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
   sürümleme, idempotent kanonik kayıt, karantina ve zamanlayıcı sağlığı.
 - **Kimlik ve güvenlik:** RBAC, tenant izolasyonu, oturum cihazı ve son

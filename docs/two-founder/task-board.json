@@ -1808,6 +1808,29 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "npm run release:check runs tsc+eslint, full tests, production build and optional BASE_URL smoke in order; release notes list only verified scope with explicit limitations and approval gates.",
       "evidence": "tsc+eslint clean, full suite 839 passed (9 skipped), build OK, smoke 75/75 against 127.0.0.1:3100; release notes written."
+    },
+    {
+      "id": "TB-092",
+      "commit": "c1f0ae9",
+      "title": "Actual financial impact capture in action outcomes",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "product-manager",
+        "frontend-engineer",
+        "backend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/actions/page.tsx",
+        "src/lib/db/repos/actions.ts",
+        "src/lib/outcome-impact.ts",
+        "src/lib/i18n.ts",
+        "tests/action-governance.test.ts",
+        "tests/outcome-impact.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "A completed action's outcome form exposes the decision's expected impact and optional actual amount, ISO currency, measurement window and evidence. Partial financial input is rejected rather than silently dropped; invalid dates, reversed ranges, non-finite/out-of-range amounts and non-ISO currencies are rejected in TR/EN. listActions returns org-scoped expected impact for context, and the existing outcome API receives a typed actualImpact payload.",
+      "evidence": "Gates: tsc clean, eslint clean, outcome-impact tests 5/5, action-governance 7/7 including expected-impact mapping, full suite 95 files / 844 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
     }
   ]
 }
