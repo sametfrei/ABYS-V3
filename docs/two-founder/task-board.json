@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T11:49:44Z",
+  "updatedAt": "2026-11-22T12:08:31Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1929,6 +1929,29 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The org- and permission-scoped actions CSV keeps its existing columns and appends the expected impact (value/currency/basis) plus the latest outcome (result/note/lesson/recorder/recorded_at) and its realized impact (value/currency/measurement window/evidence). Empty fields stay blank; a decision without an outcome exports blanks instead of fabricated values.",
       "evidence": "Gates: tsc+eslint clean (npm run verify), actions-export 5/5, full suite 95 files / 845 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-098",
+      "commit": "0c7010a",
+      "title": "Org-scoped decision outcome history in action cards",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "product-manager",
+        "frontend-engineer",
+        "backend-engineer",
+        "security-engineer"
+      ],
+      "files": [
+        "src/lib/db/repos/actions.ts",
+        "src/app/api/outcomes/route.ts",
+        "src/app/dashboard/actions/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/outcome-history-api.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "GET /api/outcomes?decisionId= returns only the caller org's measurements for that decision, newest first, with result, note, lesson, recorder, timestamp and optional realized impact. Cross-org decision ids return 404, missing view_decisions returns 403, unauthenticated returns 401 and an oversized id returns 400. The action card loads history on demand and shows every measurement TR/EN.",
+      "evidence": "Gates: tsc clean, eslint clean, outcome-history/api-auth/action-governance/decision-ledger/i18n 60/60, full suite 96 files / 849 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
     }
   ]
 }
