@@ -10,7 +10,7 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 | Kapı | Komut | Son sonuç |
 |---|---|---|
 | Tip + lint | `npm run verify` | temiz |
-| Testler | `npm test` | 96 dosya, 849 geçti / 9 atlandı |
+| Testler | `npm test` | 96 dosya, 851 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
 | Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 80 geçti / 0 başarısız |
 | Sürüm parmak izi | `node scripts/verify-deploy.mjs --base=... --expect=origin` | commit EŞLEŞTİ, exit 0 |
