@@ -13,6 +13,7 @@ import {
   OIDC_VERIFIER_COOKIE,
   OIDC_NONCE_COOKIE,
 } from "@/lib/auth/oidc";
+import { LOCALE_COOKIE, parseLocale, t } from "@/lib/i18n";
 
 /**
  * State/verifier çerezlerini SİLİNDİĞİ path ile temizler. `cookies.delete`
@@ -46,9 +47,13 @@ function redirectWithError(req: NextRequest, message: string): NextResponse {
  * (SSO ile kendiliğinden hesap/rol oluşturma yok — yetki yükselmesi riski).
  */
 export async function GET(req: NextRequest) {
+  const locale = parseLocale(req.cookies.get(LOCALE_COOKIE)?.value);
   const config = getOidcConfig();
   if (!config) {
-    return NextResponse.json({ error: "Kurumsal giriş (SSO) yapılandırılmamış." }, { status: 404 });
+    return NextResponse.json(
+      { error: t(locale, "login.error.ssoNotConfigured") },
+      { status: 404 }
+    );
   }
 
   const url = new URL(req.url);
@@ -64,14 +69,14 @@ export async function GET(req: NextRequest) {
   // Önce state/verifier doğrulanır; sağlayıcıdan gelen serbest metin
   // (`error=...`) state doğrulanmadan kullanıcıya yansıtılmaz.
   if (!state || !expectedState || !verifier || !expectedNonce || state !== expectedState) {
-    return redirectWithError(req, "Oturum durumu eşleşmedi; giriş iptal edildi. Lütfen tekrar deneyin.");
+    return redirectWithError(req, t(locale, "login.error.ssoState"));
   }
   if (providerError) {
     console.error("OIDC sağlayıcı hatası:", providerError.slice(0, 200));
-    return redirectWithError(req, "Kimlik sağlayıcı girişi reddetti. Lütfen tekrar deneyin.");
+    return redirectWithError(req, t(locale, "login.error.ssoProvider"));
   }
   if (!code) {
-    return redirectWithError(req, "Giriş kodu alınamadı. Lütfen tekrar deneyin.");
+    return redirectWithError(req, t(locale, "login.error.ssoCode"));
   }
 
   let discovery;
@@ -79,7 +84,7 @@ export async function GET(req: NextRequest) {
     discovery = await getDiscoveryDocument(config.issuer);
   } catch (err) {
     console.error("OIDC discovery hatası:", err instanceof Error ? err.message : err);
-    return redirectWithError(req, "SSO yapılandırması alınamadı. Yöneticinize başvurun.");
+    return redirectWithError(req, t(locale, "login.error.ssoDiscovery"));
   }
 
   let idToken: string;
@@ -95,7 +100,7 @@ export async function GET(req: NextRequest) {
     idToken = tokenResult.idToken;
   } catch (err) {
     console.error("OIDC token değişimi hatası:", err instanceof Error ? err.message : err);
-    return redirectWithError(req, "SSO girişi tamamlanamadı. Lütfen tekrar deneyin.");
+    return redirectWithError(req, t(locale, "login.error.ssoExchange"));
   }
 
   let email: string;
@@ -108,7 +113,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     console.error("OIDC id_token doğrulama hatası:", err instanceof Error ? err.message : err);
-    return redirectWithError(req, "Kimlik doğrulaması başarısız. Lütfen tekrar deneyin.");
+    return redirectWithError(req, t(locale, "login.error.ssoVerify"));
   }
 
   await migrate();
@@ -119,7 +124,7 @@ export async function GET(req: NextRequest) {
   );
   const user = r.rows[0];
   if (!user) {
-    return redirectWithError(req, "Bu e-posta ABYS'de tanımlı değil; yöneticinize başvurun.");
+    return redirectWithError(req, t(locale, "login.error.ssoUnknownUser"));
   }
 
   const sessionId = await createSession(user.id, user.org_id, req.headers.get("user-agent"));

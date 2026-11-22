@@ -54,6 +54,14 @@ export type ShellKey =
   | "login.error.tooMany"
   | "login.error.network"
   | "login.error.server"
+  | "login.error.ssoNotConfigured"
+  | "login.error.ssoState"
+  | "login.error.ssoProvider"
+  | "login.error.ssoCode"
+  | "login.error.ssoDiscovery"
+  | "login.error.ssoExchange"
+  | "login.error.ssoVerify"
+  | "login.error.ssoUnknownUser"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -1682,6 +1690,38 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "login.error.server": {
     tr: "Sunucu giriş isteğini işleyemedi. Lütfen tekrar deneyin.",
     en: "The server could not process the sign-in request. Please try again.",
+  },
+  "login.error.ssoNotConfigured": {
+    tr: "Kurumsal giriş (SSO) yapılandırılmamış.",
+    en: "Enterprise sign-in (SSO) is not configured.",
+  },
+  "login.error.ssoState": {
+    tr: "Oturum durumu eşleşmedi; giriş iptal edildi. Lütfen tekrar deneyin.",
+    en: "The sign-in session did not match; sign-in was cancelled. Please try again.",
+  },
+  "login.error.ssoProvider": {
+    tr: "Kimlik sağlayıcı girişi reddetti. Lütfen tekrar deneyin.",
+    en: "The identity provider rejected the sign-in. Please try again.",
+  },
+  "login.error.ssoCode": {
+    tr: "Giriş kodu alınamadı. Lütfen tekrar deneyin.",
+    en: "No sign-in code was received. Please try again.",
+  },
+  "login.error.ssoDiscovery": {
+    tr: "SSO yapılandırması alınamadı. Yöneticinize başvurun.",
+    en: "The SSO configuration could not be loaded. Contact your administrator.",
+  },
+  "login.error.ssoExchange": {
+    tr: "SSO girişi tamamlanamadı. Lütfen tekrar deneyin.",
+    en: "SSO sign-in could not be completed. Please try again.",
+  },
+  "login.error.ssoVerify": {
+    tr: "Kimlik doğrulaması başarısız. Lütfen tekrar deneyin.",
+    en: "Identity verification failed. Please try again.",
+  },
+  "login.error.ssoUnknownUser": {
+    tr: "Bu e-posta ABYS'de tanımlı değil; yöneticinize başvurun.",
+    en: "This email is not registered in ABYS; contact your administrator.",
   },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },
