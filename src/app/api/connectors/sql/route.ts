@@ -10,6 +10,7 @@ import { parseKpis } from "@/lib/kpi";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { toSqlResultCsv } from "@/lib/sql-result-csv";
 
 const MAX_ROWS = 5000;
 const STATEMENT_TIMEOUT_MS = 10_000;
@@ -35,16 +36,6 @@ function normalizeReadOnlyQuery(raw: string): { ok: true; query: string } | { ok
     return { ok: false, error: `Salt-okunur olmayan anahtar kelime tespit edildi: ${forbidden[0].toUpperCase()}.` };
   }
   return { ok: true, query: q };
-}
-
-function toCsv(fields: string[], rows: Record<string, unknown>[]): string {
-  const escape = (v: unknown) => {
-    const s = v === null || v === undefined ? "" : String(v);
-    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const lines = [fields.map(escape).join(",")];
-  for (const row of rows) lines.push(fields.map((f) => escape(row[f])).join(","));
-  return lines.join("\n");
 }
 
 /**
@@ -119,7 +110,7 @@ export async function POST(req: NextRequest) {
     }
 
     const fields = result.fields.map((f) => f.name);
-    text = toCsv(fields, result.rows as Record<string, unknown>[]);
+    text = toSqlResultCsv(fields, result.rows as Record<string, unknown>[]);
     rowCount = result.rows.length;
   } finally {
     await client.end().catch(() => {});
