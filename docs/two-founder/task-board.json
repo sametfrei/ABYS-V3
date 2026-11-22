@@ -2217,6 +2217,31 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "User-visible API errors for auth/password/sessions, actions and outcomes, users, scenarios, decision cases, data quality and forecast snapshots follow the abys_lang cookie; Turkish remains the default. The helper accepts plain Request objects and preserves headers such as Retry-After.",
       "evidence": "tests/api-i18n.test.ts (locale resolution, EN/TR messages, Retry-After, unauthenticated actions/outcomes); affected suites 59+64+36 tests pass; full suite 868 passed / 9 skipped; build clean; live production preview returns EN/TR messages on 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-112",
+      "commit": "a7a3563",
+      "title": "Localized causal, trace, graph, risk, document, analyze and Bitrix errors",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "backend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/app/api/causal/route.ts",
+        "src/app/api/trace/route.ts",
+        "src/app/api/decisions/route.ts",
+        "src/app/api/semantic-graph/neighborhood/route.ts",
+        "src/app/api/assess-risk/route.ts",
+        "src/app/api/analyze/route.ts",
+        "src/app/api/documents/upload/route.ts",
+        "src/app/api/integrations/bitrix24/events/route.ts",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "User-visible errors for causal links, trace, decision POST/PATCH, semantic-graph neighborhood, risk assessment, scenario analysis and document upload plus Bitrix24 webhook validation follow the abys_lang cookie; Turkish remains the default. Parameterized messages (title details, byte limit, scenario length) keep their values.",
+      "evidence": "tests/decision-cases-validation.test.ts, tests/public-demo-gate.test.ts, tests/api-i18n.test.ts and tests/login-flow.test.ts pass (55 tests); full suite 870 passed / 9 skipped / 100 files passed + 1 skipped; npm run lint clean; npm run build clean; rg counts zero Turkish error literals in all eight routes."
     }
   ]
 }

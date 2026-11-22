@@ -3,14 +3,14 @@
 Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
 başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
 modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
-(TB-001…TB-111), ürün durumu `docs/ROADMAP.md` içindedir.
+(TB-001…TB-112), ürün durumu `docs/ROADMAP.md` içindedir.
 
 ## Doğrulama kapıları
 
 | Kapı | Komut | Son sonuç |
 |---|---|---|
 | Tip + lint | `npm run verify` | temiz |
-| Testler | `npm test` | 101 dosya, 868 geçti / 9 atlandı |
+| Testler | `npm test` | 100 dosya geçti + 1 atlandı, 870 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
 | Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 80 geçti / 0 başarısız |
 | Tarayıcı smoke | `BASE_URL=... npm run smoke:browser` | 76 geçti / 0 başarısız (Chrome, 22 rota + mobil) |
@@ -30,6 +30,9 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 - **API hata dili:** Parola/oturum, aksiyon, sonuç, kullanıcı, senaryo, karar
   vakası, veri kalitesi ve tahmin uçlarındaki kullanıcı-görür hatalar da
   `abys_lang` çerezine göre TR/EN döner.
+  Nedensellik, izleme, karar kaydı/güncelleme, anlamsal grafik komşuluğu, risk
+  değerlendirme, senaryo analizi, belge yükleme ve Bitrix24 webhook doğrulama
+  hataları da aynı sözleşmeyi izler; parametreli mesajlar değerlerini korur.
 - **Veri kalitesi:** dört boyutlu deterministik skor, metrik etiketine göre
   filtre, karantina listesi (`limit` doğrulaması + `truncated` bildirimi) ve
   yetki/kurum kapsamlı CSV dışa aktarımı (payload hariç, denetim kayıtlı).
