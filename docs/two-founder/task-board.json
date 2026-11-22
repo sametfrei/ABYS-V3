@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T16:46:38Z",
+  "updatedAt": "2026-11-22T16:57:39Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2029,6 +2029,28 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "SQL connector field names and values are treated as untrusted input and rendered through the shared csvCell writer, preserving field order and LF row separators while applying RFC 4180 quoting and formula-injection neutralization. Null/undefined cells remain empty and negative numeric values stay numeric.",
       "evidence": "Gates: tsc clean, eslint clean, sql-result/ledger CSV tests 10/10."
+    },
+    {
+      "id": "TB-103",
+      "commit": "d644900",
+      "title": "Outcome history limit and explicit truncation",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "backend-engineer",
+        "frontend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/db/repos/actions.ts",
+        "src/app/api/outcomes/route.ts",
+        "src/components/OutcomeHistory.tsx",
+        "src/lib/i18n.ts",
+        "tests/outcome-history-api.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Outcome history accepts an optional limit between 1 and 100 (default 20), fetches one extra row to detect truncation, and returns outcomes, limit and truncated. The UI states that older measurements exist when truncated. Invalid, zero, negative, non-numeric or over-100 limits return 400.",
+      "evidence": "Gates: tsc clean, eslint clean, outcome-history+i18n 28/28 including 21-row truncation and invalid limits, npm run verify clean, live smoke 80/80 against 127.0.0.1:3100."
     }
   ]
 }

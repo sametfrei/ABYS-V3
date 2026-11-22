@@ -33,7 +33,8 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   yazılması ve sahiplik/tarih/olay kanıtıyla CSV dışa aktarımı. CSV ayrıca
   beklenen etkiyi, son sonucu (ders/kaydeden) ve gerçekleşen etkiyi ölçüm
   aralığı/kanıtıyla birlikte taşır. Aksiyon kartı ve karar defteri, kararın tüm
-  ölçüm geçmişini kurum kapsamlı API üzerinden istek üzerine yeniden eskiye gösterir.
+  ölçüm geçmişini kurum kapsamlı API üzerinden istek üzerine yeniden eskiye gösterir;
+  limit aşımı sessizce gizlenmez, `truncated` ve arayüz bildirimiyle açıklanır.
 - **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
   sürümleme, idempotent kanonik kayıt, karantina, zamanlayıcı sağlığı ve
   harici SQL sonuçlarında ortak CSV güvenliği.
