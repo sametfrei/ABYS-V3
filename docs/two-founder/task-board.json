@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T01:16:14Z",
+  "updatedAt": "2026-11-22T01:36:09Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1788,6 +1788,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "GET /api/actions/export requires view_decisions, validates the status filter (400 on unknown), exports at most 500 org-scoped actions with an RFC 4180 header including decision state and last-event evidence, writes an audit event, and is linked from the actions screen. listActions gains an optional bounded limit.",
       "evidence": "Gates: tsc clean, eslint clean, actions export tests 5/5 (anon 401, no-permission 403, bad status 400, escaped CSV, cross-org/filter isolation), full suite 839 passed (9 skipped), build OK, smoke 75/75."
+    },
+    {
+      "id": "TB-091",
+      "commit": "7776e73",
+      "title": "Release gate and delivery notes",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "devops-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "scripts/release-check.sh",
+        "package.json",
+        "docs/RELEASE-NOTES-2026-11.md",
+        "tests/actions-export.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "npm run release:check runs tsc+eslint, full tests, production build and optional BASE_URL smoke in order; release notes list only verified scope with explicit limitations and approval gates.",
+      "evidence": "tsc+eslint clean, full suite 839 passed (9 skipped), build OK, smoke 75/75 against 127.0.0.1:3100; release notes written."
     }
   ]
 }
