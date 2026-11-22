@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T21:40:00Z",
+  "updatedAt": "2026-11-23T01:25:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2190,6 +2190,33 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "npm run start:preview serves the production build on 127.0.0.1:3100 against .data/dev-preview with the demo account; browser smoke waits for form hydration, dev compile time and asynchronous action filters instead of fixed sleeps or generic role groups.",
       "evidence": "npm run start:preview + login ceo@tais.demo 200; browser smoke 76/76 and e2e smoke 80/80 on 127.0.0.1:3100; npm run verify clean."
+    },
+    {
+      "id": "TB-111",
+      "commit": "88d2069",
+      "title": "Localized API errors across auth, actions, users and data endpoints",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "backend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/api-i18n.ts",
+        "src/lib/i18n.ts",
+        "src/app/api/auth",
+        "src/app/api/actions",
+        "src/app/api/outcomes",
+        "src/app/api/users",
+        "src/app/api/scenarios",
+        "src/app/api/decision-cases",
+        "src/app/api/data-quality",
+        "src/app/api/forecast/snapshots",
+        "tests/api-i18n.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "User-visible API errors for auth/password/sessions, actions and outcomes, users, scenarios, decision cases, data quality and forecast snapshots follow the abys_lang cookie; Turkish remains the default. The helper accepts plain Request objects and preserves headers such as Retry-After.",
+      "evidence": "tests/api-i18n.test.ts (locale resolution, EN/TR messages, Retry-After, unauthenticated actions/outcomes); affected suites 59+64+36 tests pass; full suite 868 passed / 9 skipped; build clean; live production preview returns EN/TR messages on 127.0.0.1:3100."
     }
   ]
 }

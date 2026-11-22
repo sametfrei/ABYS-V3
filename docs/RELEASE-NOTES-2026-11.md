@@ -3,14 +3,14 @@
 Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
 başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
 modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
-(TB-001…TB-110), ürün durumu `docs/ROADMAP.md` içindedir.
+(TB-001…TB-111), ürün durumu `docs/ROADMAP.md` içindedir.
 
 ## Doğrulama kapıları
 
 | Kapı | Komut | Son sonuç |
 |---|---|---|
 | Tip + lint | `npm run verify` | temiz |
-| Testler | `npm test` | 100 dosya, 864 geçti / 9 atlandı |
+| Testler | `npm test` | 101 dosya, 868 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
 | Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 80 geçti / 0 başarısız |
 | Tarayıcı smoke | `BASE_URL=... npm run smoke:browser` | 76 geçti / 0 başarısız (Chrome, 22 rota + mobil) |
@@ -27,6 +27,9 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 - **Giriş deneyimi:** Giriş ekranı, API hata mesajları (eksik alan, hatalı
   kimlik, kaba kuvvet sınırı, ağ/sunucu hatası) ve SSO geri dönüş hataları
   `abys_lang` çerezine göre TR/EN döner; varsayılan Türkçedir.
+- **API hata dili:** Parola/oturum, aksiyon, sonuç, kullanıcı, senaryo, karar
+  vakası, veri kalitesi ve tahmin uçlarındaki kullanıcı-görür hatalar da
+  `abys_lang` çerezine göre TR/EN döner.
 - **Veri kalitesi:** dört boyutlu deterministik skor, metrik etiketine göre
   filtre, karantina listesi (`limit` doğrulaması + `truncated` bildirimi) ve
   yetki/kurum kapsamlı CSV dışa aktarımı (payload hariç, denetim kayıtlı).
