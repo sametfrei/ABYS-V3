@@ -97,15 +97,36 @@ try {
   ]);
   ok("tarayıcı girişi", page.url().replace(BASE, ""));
 
-  await visit("/dashboard", "komuta merkezi");
-  const actionsBody = await visit("/dashboard/actions", "aksiyon merkezi");
-  await visit("/dashboard/decision-ledger", "karar defteri");
-  await visit("/dashboard/forecast", "tahmin");
-  await visit("/dashboard/connectors", "bağlantılar");
-  await visit("/dashboard/data-quality", "veri kalitesi");
+  for (const [route, label] of [
+    ["/dashboard", "komuta merkezi"],
+    ["/dashboard/organization", "organizasyon"],
+    ["/dashboard/decision-ledger", "karar defteri"],
+    ["/dashboard/forecast", "tahmin"],
+    ["/dashboard/process", "süreç zekâsı"],
+    ["/dashboard/options", "karar seçenekleri"],
+    ["/dashboard/kpi", "KPI verisi"],
+    ["/dashboard/data-quality", "veri kalitesi"],
+    ["/dashboard/ask", "Ask ABYS"],
+    ["/dashboard/decisions", "karar merkezi"],
+    ["/dashboard/actions", "aksiyon merkezi"],
+    ["/dashboard/scenarios", "senaryo laboratuvarı"],
+    ["/dashboard/memory", "kurumsal hafıza"],
+    ["/dashboard/analysis", "analiz"],
+    ["/dashboard/reports", "raporlar"],
+    ["/dashboard/alerts", "riskler ve sinyaller"],
+    ["/dashboard/integrations", "entegrasyonlar"],
+    ["/dashboard/connectors", "bağlantılar"],
+    ["/dashboard/discovery", "iş keşfi"],
+    ["/dashboard/advisors", "danışman analitiği"],
+    ["/dashboard/audit", "denetim günlüğü"],
+    ["/dashboard/settings", "ayarlar"],
+  ]) {
+    await visit(route, label);
+  }
 
   await page.goto(`${BASE}/dashboard/actions`, { waitUntil: "domcontentloaded", timeout: 30_000 });
   await page.waitForTimeout(800);
+  const actionsBody = await page.locator("body").innerText();
   const filterGroup = page.getByRole("group", { name: "Aksiyon filtresi" });
   if ((await filterGroup.count()) > 0) {
     const overdue = filterGroup.getByRole("button", { name: /Geciken/ });
