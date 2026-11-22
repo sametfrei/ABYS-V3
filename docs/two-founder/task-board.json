@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T12:08:31Z",
+  "updatedAt": "2026-11-22T12:24:50Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1952,6 +1952,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "GET /api/outcomes?decisionId= returns only the caller org's measurements for that decision, newest first, with result, note, lesson, recorder, timestamp and optional realized impact. Cross-org decision ids return 404, missing view_decisions returns 403, unauthenticated returns 401 and an oversized id returns 400. The action card loads history on demand and shows every measurement TR/EN.",
       "evidence": "Gates: tsc clean, eslint clean, outcome-history/api-auth/action-governance/decision-ledger/i18n 60/60, full suite 96 files / 849 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-099",
+      "commit": "71ae4c4",
+      "title": "Smoke coverage for outcome history and action CSV closure headers",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer",
+        "backend-engineer"
+      ],
+      "files": [
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The live smoke asserts the exact actions CSV header including expected impact and outcome/realized-impact columns, and checks the outcomes API contract: anonymous 401, unknown decision 404, and an org-scoped lessons array for an authorized CEO.",
+      "evidence": "Gates: node --check clean, npm run verify clean, live smoke 80/80 against 127.0.0.1:3100 (previous 75 checks plus five new assertions)."
     }
   ]
 }

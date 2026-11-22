@@ -12,7 +12,7 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 | Tip + lint | `npm run verify` | temiz |
 | Testler | `npm test` | 95 dosya, 845 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
-| Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 75 geçti / 0 başarısız |
+| Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 80 geçti / 0 başarısız |
 | Sürüm parmak izi | `node scripts/verify-deploy.mjs --base=... --expect=origin` | commit EŞLEŞTİ, exit 0 |
 | Hepsi bir arada | `BASE_URL=... DEPLOY_EXPECT=origin npm run release:check` | tsc + lint + test + build + smoke + commit parmak izi |
 
