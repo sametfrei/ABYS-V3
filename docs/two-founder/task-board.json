@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T20:41:00Z",
+  "updatedAt": "2026-11-22T20:56:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2152,6 +2152,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Missing-field, invalid-credential and rate-limit login errors follow the abys_lang cookie; the browser form falls back to localized network and server messages in the selected locale; Turkish remains the default.",
       "evidence": "tests/login-flow.test.ts EN cookie 401/400 plus 5xx fallback; curl on production build 127.0.0.1:3102 returned EN messages with abys_lang=en and TR by default; full suite 861 passed / 9 skipped; npm run build clean."
+    },
+    {
+      "id": "TB-109",
+      "commit": "ea70c98",
+      "title": "Localized SSO callback errors (TR/EN)",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "backend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/app/api/auth/oidc/callback/route.ts",
+        "tests/oidc-callback-locale.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "OIDC callback user-visible errors (unconfigured SSO, state mismatch, provider rejection, missing code, discovery, token exchange, ID token verification, unknown email) follow the abys_lang cookie; Turkish remains the default.",
+      "evidence": "tests/oidc-callback-locale.test.ts: TR default, EN state mismatch and localized 404 pass; full suite 864 passed / 9 skipped; npm run build clean."
     }
   ]
 }
