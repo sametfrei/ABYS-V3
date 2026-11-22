@@ -5,6 +5,7 @@ import { ExecutionAttemptStatus } from "@/components/ExecutionAttemptStatus";
 import { PageHeader } from "@/components/PageHeader";
 import { ExportLink } from "@/components/ExportLink";
 import { overdueDays } from "@/lib/action-deadline";
+import { computeEconomicVariance } from "@/lib/decision-economics";
 import { buildActualImpact, type ActualImpactInputError } from "@/lib/outcome-impact";
 import {
   DEFAULT_LOCALE,
@@ -722,6 +723,31 @@ function OutcomeForm({
     }
   }
 
+  const preview = buildActualImpact({
+    amount,
+    currency,
+    measurementStart: "",
+    measurementEnd: "",
+    evidence: "",
+  });
+  const previewImpact = preview.error ? null : preview.impact;
+  const previewVariance =
+    expectedImpact && previewImpact && previewImpact.currency === expectedImpact.currency
+      ? computeEconomicVariance(
+          {
+            value: expectedImpact.value,
+            low: null,
+            high: null,
+            currency: expectedImpact.currency,
+            basis: expectedImpact.basis,
+            assumptions: [],
+          },
+          previewImpact
+        )
+      : null;
+  const previewCurrencyMismatch =
+    expectedImpact && previewImpact && previewImpact.currency !== expectedImpact.currency;
+
   return (
     <div className="mt-4 pt-4 border-t border-abys-cream-border space-y-2">
       <p className="text-xs font-semibold text-abys-muted uppercase">
@@ -820,6 +846,29 @@ function OutcomeForm({
           </label>
         </div>
       </fieldset>
+      {previewVariance && (
+        <p className="text-[11px] font-semibold text-abys-ink">
+          {previewVariance.percent === null
+            ? formatMessage(locale, "actions.variancePreviewNoPercent", {
+                value: previewVariance.amount.toLocaleString(locale),
+                currency: previewVariance.currency,
+              })
+            : formatMessage(locale, "actions.variancePreview", {
+                value: previewVariance.amount.toLocaleString(locale),
+                currency: previewVariance.currency,
+                percent: previewVariance.percent.toLocaleString(locale, {
+                  maximumFractionDigits: 1,
+                }),
+              })}
+        </p>
+      )}
+      {previewCurrencyMismatch && (
+        <p className="text-[11px] text-abys-warning">
+          {formatMessage(locale, "actions.varianceCurrencyMismatch", {
+            expected: expectedImpact.currency,
+          })}
+        </p>
+      )}
       {err && <p className="text-xs text-abys-critical">{err}</p>}
       <button onClick={save} disabled={busy} className="text-xs rounded-full bg-abys-accent text-white px-4 py-1.5 hover:opacity-90 disabled:opacity-50">
         {busy ? t(locale, "actions.saving") : t(locale, "actions.saveOutcomeFull")}

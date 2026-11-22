@@ -146,6 +146,9 @@ export type ShellKey =
   | "actions.actualImpactEndInvalid"
   | "actions.actualImpactRangeInvalid"
   | "actions.actualImpactEvidenceTooLong"
+  | "actions.variancePreview"
+  | "actions.variancePreviewNoPercent"
+  | "actions.varianceCurrencyMismatch"
   | "actions.attemptStatus"
   | "actions.attemptLoading"
   | "actions.attemptNone"
@@ -1824,6 +1827,18 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "actions.actualImpactEvidenceTooLong": {
     tr: "Kanıt açıklaması 5.000 karakteri aşamaz.",
     en: "Evidence cannot exceed 5,000 characters.",
+  },
+  "actions.variancePreview": {
+    tr: "Beklenen etkiye göre fark: {value} {currency} ({percent}%)",
+    en: "Variance from expected impact: {value} {currency} ({percent}%)",
+  },
+  "actions.variancePreviewNoPercent": {
+    tr: "Beklenen etkiye göre fark: {value} {currency}",
+    en: "Variance from expected impact: {value} {currency}",
+  },
+  "actions.varianceCurrencyMismatch": {
+    tr: "Beklenen etki {expected}. Fark hesaplamak için gerçekleşen tutarı aynı para biriminde girin; para birimleri toplanmaz.",
+    en: "Expected impact is in {expected}. Use the same currency for the actual amount to calculate variance; currencies are never combined.",
   },
   "actions.attemptStatus": { tr: "Adaptör denemesi", en: "Adapter attempt" },
   "actions.attemptLoading": { tr: "Deneme durumu yükleniyor…", en: "Loading attempt status…" },
