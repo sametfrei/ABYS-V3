@@ -87,6 +87,29 @@ export type ShellKey =
   | "api.quality.maxAgeRange"
   | "api.forecast.failed"
   | "api.forecast.noTimestamp"
+  | "api.connectors.notFound"
+  | "api.connectors.disabled"
+  | "api.connectors.adapterNotFound"
+  | "api.connectors.unknown"
+  | "api.connectors.unsupportedMethod"
+  | "api.connectors.invalidUrl"
+  | "api.connectors.schemeNotAllowed"
+  | "api.connectors.ssrfBlocked"
+  | "api.connectors.remoteError"
+  | "api.connectors.emptyResponse"
+  | "api.connectors.invalidConfig"
+  | "api.connectors.invalidMapping"
+  | "api.connectors.mappingUnchanged"
+  | "api.connectors.configChanged"
+  | "api.connectors.runNotOwned"
+  | "api.connectors.notImplemented"
+  | "api.connectors.invalidConnectionString"
+  | "api.connectors.postgresOnly"
+  | "api.connectors.connectFailed"
+  | "api.connectors.emptyResult"
+  | "api.connectors.querySingle"
+  | "api.connectors.querySelectOnly"
+  | "api.connectors.queryForbidden"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -1826,6 +1849,83 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "api.forecast.noTimestamp": {
     tr: "Tahmin anlık görüntüsü için zaman damgası yok.",
     en: "The forecast snapshot has no timestamp.",
+  },
+  "api.connectors.notFound": { tr: "Konnektör bulunamadı.", en: "Connector not found." },
+  "api.connectors.disabled": { tr: "Konnektör devre dışı.", en: "Connector is disabled." },
+  "api.connectors.adapterNotFound": { tr: "Adaptör bulunamadı.", en: "Adapter not found." },
+  "api.connectors.unknown": { tr: "Bilinmeyen konnektör.", en: "Unknown connector." },
+  "api.connectors.unsupportedMethod": {
+    tr: "Desteklenmeyen metod. İzin verilenler: {methods}",
+    en: "Unsupported method. Allowed: {methods}",
+  },
+  "api.connectors.invalidUrl": { tr: "Geçersiz URL.", en: "Invalid URL." },
+  "api.connectors.schemeNotAllowed": {
+    tr: "Yalnızca http/https şemasına izin verilir.",
+    en: "Only the http/https scheme is allowed.",
+  },
+  "api.connectors.ssrfBlocked": {
+    tr: "İç ağ hedeflerine erişim reddedildi (SSRF koruması).",
+    en: "Access to internal network targets was denied (SSRF protection).",
+  },
+  "api.connectors.remoteError": {
+    tr: "Uzak sunucu hata döndü: {status}",
+    en: "The remote server returned an error: {status}",
+  },
+  "api.connectors.emptyResponse": {
+    tr: "Uzak sunucu boş yanıt döndürdü.",
+    en: "The remote server returned an empty response.",
+  },
+  "api.connectors.invalidConfig": {
+    tr: "Geçersiz konfigürasyon: {details}",
+    en: "Invalid configuration: {details}",
+  },
+  "api.connectors.invalidMapping": {
+    tr: "Geçersiz eşleme: {details}",
+    en: "Invalid mapping: {details}",
+  },
+  "api.connectors.mappingUnchanged": {
+    tr: "Eşleme değişmedi.",
+    en: "The mapping did not change.",
+  },
+  "api.connectors.configChanged": {
+    tr: "Konnektör konfigürasyonu bu sırada değişti. Güncel eşlemeyi yeniden yükleyin.",
+    en: "The connector configuration changed meanwhile. Reload the current mapping.",
+  },
+  "api.connectors.runNotOwned": {
+    tr: "Kaynak çalıştırma bu konnektöre ait değil.",
+    en: "The source run does not belong to this connector.",
+  },
+  "api.connectors.notImplemented": {
+    tr: "{adapter} adaptörü henüz uygulanmadı.",
+    en: "The {adapter} adapter is not implemented yet.",
+  },
+  "api.connectors.invalidConnectionString": {
+    tr: "Geçersiz bağlantı dizesi.",
+    en: "Invalid connection string.",
+  },
+  "api.connectors.postgresOnly": {
+    tr: "Yalnızca postgres:// veya postgresql:// şemasına izin verilir.",
+    en: "Only the postgres:// or postgresql:// scheme is allowed.",
+  },
+  "api.connectors.connectFailed": {
+    tr: "Veritabanına bağlanılamadı.",
+    en: "Could not connect to the database.",
+  },
+  "api.connectors.emptyResult": {
+    tr: "Sorgu boş sonuç döndürdü.",
+    en: "The query returned no results.",
+  },
+  "api.connectors.querySingle": {
+    tr: "Sorgu yalnızca tek bir ifade içerebilir (noktalı virgülle çoklu ifadeye izin verilmez).",
+    en: "The query may contain only one statement (multiple statements with semicolons are not allowed).",
+  },
+  "api.connectors.querySelectOnly": {
+    tr: "Sorgu yalnızca SELECT veya WITH ile başlayabilir.",
+    en: "The query must start with SELECT or WITH.",
+  },
+  "api.connectors.queryForbidden": {
+    tr: "Salt-okunur olmayan anahtar kelime tespit edildi: {keyword}.",
+    en: "A non-read-only keyword was detected: {keyword}.",
   },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },
@@ -4141,10 +4241,18 @@ export function parseLocale(value: string | null | undefined): Locale {
 }
 
 /** Eksik anahtar Türkçe metne düşer; hiç yoksa anahtarın kendisi döner. */
-export function t(locale: Locale, key: ShellKey): string {
+export function t(
+  locale: Locale,
+  key: ShellKey,
+  params?: Record<string, string | number>
+): string {
   const entry = DICTIONARY[key];
   if (!entry) return key;
-  return entry[locale] ?? entry[DEFAULT_LOCALE];
+  const template = entry[locale] ?? entry[DEFAULT_LOCALE];
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
+    params[name] !== undefined ? String(params[name]) : match
+  );
 }
 
 export function shellKeys(): ShellKey[] {

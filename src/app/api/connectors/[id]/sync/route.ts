@@ -10,6 +10,7 @@ import {
   startSyncRun,
 } from "@/lib/db/repos/connectors";
 import { executeConnectorSync } from "@/lib/connectors/sync-execution";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * POST /api/connectors/[id]/sync — konnektörü çalıştırır.
@@ -18,23 +19,23 @@ import { executeConnectorSync } from "@/lib/connectors/sync-execution";
  * olarak güncellenir, checkpoint yalnızca başarılı çalıştırmada ilerler.
  */
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
 
   const { id } = await params;
   const configRow = await getConnectorConfig(session.orgId, id);
-  if (!configRow) return NextResponse.json({ error: "Konnektör bulunamadı." }, { status: 404 });
-  if (!configRow.enabled) return NextResponse.json({ error: "Konnektör devre dışı." }, { status: 400 });
+  if (!configRow) return localizedError(req, "api.connectors.notFound", 404);
+  if (!configRow.enabled) return localizedError(req, "api.connectors.disabled", 400);
 
   const adapter = getAdapter(configRow.connectorId);
-  if (!adapter) return NextResponse.json({ error: "Adaptör bulunamadı." }, { status: 400 });
+  if (!adapter) return localizedError(req, "api.connectors.adapterNotFound", 400);
 
   let runId: string;
   try {

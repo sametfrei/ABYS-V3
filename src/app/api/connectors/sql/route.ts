@@ -11,6 +11,7 @@ import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { toSqlResultCsv } from "@/lib/sql-result-csv";
+import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 
 const MAX_ROWS = 5000;
 const STATEMENT_TIMEOUT_MS = 10_000;
@@ -22,18 +23,33 @@ const postSchema = z.object({
   sectorId: z.string().trim().max(300).optional(),
 });
 
-function normalizeReadOnlyQuery(raw: string): { ok: true; query: string } | { ok: false; error: string } {
+type QueryCheck =
+  | { ok: true; query: string }
+  | {
+      ok: false;
+      key:
+        | "api.connectors.querySingle"
+        | "api.connectors.querySelectOnly"
+        | "api.connectors.queryForbidden";
+      params?: Record<string, string>;
+    };
+
+function normalizeReadOnlyQuery(raw: string): QueryCheck {
   let q = raw.trim();
   if (q.endsWith(";")) q = q.slice(0, -1).trimEnd();
   if (q.includes(";")) {
-    return { ok: false, error: "Sorgu yalnızca tek bir ifade içerebilir (noktalı virgülle çoklu ifadeye izin verilmez)." };
+    return { ok: false, key: "api.connectors.querySingle" };
   }
   if (!/^(SELECT|WITH)\b/i.test(q)) {
-    return { ok: false, error: "Sorgu yalnızca SELECT veya WITH ile başlayabilir." };
+    return { ok: false, key: "api.connectors.querySelectOnly" };
   }
   const forbidden = q.match(FORBIDDEN_KEYWORDS);
   if (forbidden) {
-    return { ok: false, error: `Salt-okunur olmayan anahtar kelime tespit edildi: ${forbidden[0].toUpperCase()}.` };
+    return {
+      ok: false,
+      key: "api.connectors.queryForbidden",
+      params: { keyword: forbidden[0].toUpperCase() },
+    };
   }
   return { ok: true, query: q };
 }
@@ -47,7 +63,7 @@ function normalizeReadOnlyQuery(raw: string): { ok: true; query: string } | { ok
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -58,22 +74,22 @@ export async function POST(req: NextRequest) {
 
   const sector = getSector(body.sectorId);
   if (!sector) {
-    return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });
+    return localizedError(req, "api.scenarios.invalidSector", 400);
   }
 
   const queryCheck = normalizeReadOnlyQuery(body.query);
   if (!queryCheck.ok) {
-    return NextResponse.json({ error: queryCheck.error }, { status: 400 });
+    return localizedErrorWith(req, queryCheck.key, 400, queryCheck.params ?? {});
   }
 
   let target: URL;
   try {
     target = new URL(body.connectionString.trim());
   } catch {
-    return NextResponse.json({ error: "Geçersiz bağlantı dizesi." }, { status: 400 });
+    return localizedError(req, "api.connectors.invalidConnectionString", 400);
   }
   if (target.protocol !== "postgres:" && target.protocol !== "postgresql:") {
-    return NextResponse.json({ error: "Yalnızca postgres:// veya postgresql:// şemasına izin verilir." }, { status: 400 });
+    return localizedError(req, "api.connectors.postgresOnly", 400);
   }
   const dbLabel = target.pathname.replace(/^\//, "") || "postgres";
   const hostLabel = target.host;
@@ -93,7 +109,7 @@ export async function POST(req: NextRequest) {
     try {
       await client.connect();
     } catch {
-      return NextResponse.json({ error: "Veritabanına bağlanılamadı." }, { status: 502 });
+      return localizedError(req, "api.connectors.connectFailed", 502);
     }
 
     let result;
@@ -117,7 +133,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!text.trim() || rowCount === 0) {
-    return NextResponse.json({ error: "Sorgu boş sonuç döndürdü." }, { status: 400 });
+    return localizedError(req, "api.connectors.emptyResult", 400);
   }
 
   const kpis = parseKpis(text).map((k) => ({ label: k.label, value: k.value }));

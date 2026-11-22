@@ -9,6 +9,8 @@ import { SESSION_COOKIE } from "../../../auth/login/route";
 import { getAdapter } from "@/lib/connectors/registry";
 import type { CanonicalEntity, ConnectorConfig } from "@/lib/connectors/types";
 import type { MappingSuggestion } from "@/lib/connectors/contracts";
+import { localizedError, localizedErrorWith, requestLocale } from "@/lib/api-i18n";
+import { t } from "@/lib/i18n";
 import {
   ConnectorMappingConflictError,
   approveConnectorMapping,
@@ -51,19 +53,19 @@ function suggestionsFromRun(
 
 /** GET — onaylı eşleme, son gözlenen şema ve sürüm geçmişi. */
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
   const { id } = await params;
   const config = await getConnectorConfig(session.orgId, id);
-  if (!config) return NextResponse.json({ error: "Konnektör bulunamadı." }, { status: 404 });
+  if (!config) return localizedError(req, "api.connectors.notFound", 404);
 
   const [latestRuns, versions] = await Promise.all([
     listSyncRuns(session.orgId, id, 1),
@@ -137,7 +139,7 @@ export async function POST(
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -146,11 +148,11 @@ export async function POST(
   if (!parsed.ok) return parsed.response;
   const { id } = await params;
   const config = await getConnectorConfig(session.orgId, id);
-  if (!config) return NextResponse.json({ error: "Konnektör bulunamadı." }, { status: 404 });
+  if (!config) return localizedError(req, "api.connectors.notFound", 404);
   if (config.configVersion !== parsed.data.expectedVersion) {
     return NextResponse.json(
       {
-        error: "Konnektör konfigürasyonu bu sırada değişti. Güncel eşlemeyi yeniden yükleyin.",
+        error: t(requestLocale(req), "api.connectors.configChanged"),
         code: "CONNECTOR_MAPPING_CONFLICT",
         currentVersion: config.configVersion,
       },
@@ -159,17 +161,14 @@ export async function POST(
   }
 
   const adapter = getAdapter(config.connectorId);
-  if (!adapter) return NextResponse.json({ error: "Adaptör bulunamadı." }, { status: 400 });
+  if (!adapter) return localizedError(req, "api.connectors.adapterNotFound", 400);
 
   const runs = parsed.data.sourceRunId ? await listSyncRuns(session.orgId, id, 50) : [];
   const sourceRun = parsed.data.sourceRunId
     ? runs.find((run) => run.id === parsed.data.sourceRunId)
     : null;
   if (parsed.data.sourceRunId && !sourceRun) {
-    return NextResponse.json(
-      { error: "Kaynak çalıştırma bu konnektöre ait değil." },
-      { status: 400 }
-    );
+    return localizedError(req, "api.connectors.runNotOwned", 400);
   }
 
   const nextConfig: ConnectorConfig = {
@@ -181,15 +180,14 @@ export async function POST(
     stableMap(nextConfig.fieldMap) === stableMap(config.config.fieldMap) &&
     stableMap(nextConfig.kpiFieldMap ?? {}) === stableMap(config.config.kpiFieldMap ?? {})
   ) {
-    return NextResponse.json({ error: "Eşleme değişmedi." }, { status: 400 });
+    return localizedError(req, "api.connectors.mappingUnchanged", 400);
   }
 
   const errors = adapter.validate(nextConfig);
   if (errors.length > 0) {
-    return NextResponse.json(
-      { error: `Geçersiz eşleme: ${errors.join("; ")}` },
-      { status: 400 }
-    );
+    return localizedErrorWith(req, "api.connectors.invalidMapping", 400, {
+      details: errors.join("; "),
+    });
   }
 
   const approvedSuggestions = suggestionsFromRun(
@@ -227,7 +225,7 @@ export async function POST(
         }),
       },
     });
-    if (!updated) return NextResponse.json({ error: "Konnektör bulunamadı." }, { status: 404 });
+    if (!updated) return localizedError(req, "api.connectors.notFound", 404);
 
     return NextResponse.json({
       configVersion: updated.configVersion,

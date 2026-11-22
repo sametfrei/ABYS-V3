@@ -30,3 +30,16 @@ export function localizedError(
     { status, headers: init?.headers }
   );
 }
+
+/** Parametreli (ör. sayı/ad içeren) hata mesajları için aynı yardımcı. */
+export function localizedErrorWith(
+  req: Request,
+  key: ShellKey,
+  status: number,
+  params: Record<string, string | number>
+): NextResponse {
+  return NextResponse.json(
+    { error: t(requestLocale(req), key, params) },
+    { status }
+  );
+}

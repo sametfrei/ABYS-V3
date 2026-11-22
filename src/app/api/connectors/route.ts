@@ -8,6 +8,7 @@ import { SESSION_COOKIE } from "../auth/login/route";
 import { getAdapter, getDefinition, listDefinitions } from "@/lib/connectors/registry";
 import { createConnectorConfig, listConnectorConfigs } from "@/lib/db/repos/connectors";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 
 const restConfigSchema = z.object({
   kind: z.literal("rest"),
@@ -74,10 +75,11 @@ const postSchema = z.object({
 });
 
 /** GET — kayıt defteri tanımları + org'un kayıtlı konfigürasyonları. */
-export async function GET() {
+export async function GET(req?: NextRequest) {
+  const localeRequest = req ?? new Request("http://localhost/api/connectors");
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(localeRequest, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -103,7 +105,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -112,19 +114,20 @@ export async function POST(req: NextRequest) {
   if (!parsed.ok) return parsed.response;
 
   const definition = getDefinition(parsed.data.connectorId);
-  if (!definition) return NextResponse.json({ error: "Bilinmeyen konnektör." }, { status: 400 });
+  if (!definition) return localizedError(req, "api.connectors.unknown", 400);
   if (definition.status === "planned") {
-    return NextResponse.json(
-      { error: `${definition.label} adaptörü henüz uygulanmadı.` },
-      { status: 400 }
-    );
+    return localizedErrorWith(req, "api.connectors.notImplemented", 400, {
+      adapter: definition.label,
+    });
   }
   const adapter = getAdapter(definition.id);
-  if (!adapter) return NextResponse.json({ error: "Adaptör bulunamadı." }, { status: 400 });
+  if (!adapter) return localizedError(req, "api.connectors.adapterNotFound", 400);
 
   const errors = adapter.validate(parsed.data.config);
   if (errors.length > 0) {
-    return NextResponse.json({ error: `Geçersiz konfigürasyon: ${errors.join("; ")}` }, { status: 400 });
+    return localizedErrorWith(req, "api.connectors.invalidConfig", 400, {
+      details: errors.join("; "),
+    });
   }
 
   const id = await createConnectorConfig({

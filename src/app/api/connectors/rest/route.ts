@@ -9,6 +9,7 @@ import { parseKpis } from "@/lib/kpi";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 import { fetchPinned } from "@/lib/net/pinned-fetch";
 import { SsrfError } from "@/lib/net/ssrf";
 
@@ -31,7 +32,7 @@ const postSchema = z.object({
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -42,24 +43,26 @@ export async function POST(req: NextRequest) {
 
   const sector = getSector(body.sectorId);
   if (!sector) {
-    return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });
+    return localizedError(req, "api.scenarios.invalidSector", 400);
   }
   const method = (body.method || "GET").toUpperCase();
   if (!ALLOWED_METHODS.includes(method)) {
-    return NextResponse.json({ error: `Desteklenmeyen metod. İzin verilenler: ${ALLOWED_METHODS.join(", ")}` }, { status: 400 });
+    return localizedErrorWith(req, "api.connectors.unsupportedMethod", 400, {
+      methods: ALLOWED_METHODS.join(", "),
+    });
   }
 
   let target: URL;
   try {
     target = new URL(body.url.trim());
   } catch {
-    return NextResponse.json({ error: "Geçersiz URL." }, { status: 400 });
+    return localizedError(req, "api.connectors.invalidUrl", 400);
   }
   if (target.protocol !== "http:" && target.protocol !== "https:") {
-    return NextResponse.json({ error: "Yalnızca http/https şemasına izin verilir." }, { status: 400 });
+    return localizedError(req, "api.connectors.schemeNotAllowed", 400);
   }
   if (target.hostname.toLowerCase() === "localhost") {
-    return NextResponse.json({ error: "İç ağ hedeflerine erişim reddedildi (SSRF koruması)." }, { status: 400 });
+    return localizedError(req, "api.connectors.ssrfBlocked", 400);
   }
 
   let text: string;
@@ -68,7 +71,9 @@ export async function POST(req: NextRequest) {
       headers: body.headers ?? undefined,
     });
     if (!res.ok) {
-      return NextResponse.json({ error: `Uzak sunucu hata döndü: ${res.status}` }, { status: 502 });
+      return localizedErrorWith(req, "api.connectors.remoteError", 502, {
+        status: res.status,
+      });
     }
     text = await res.text();
   } catch (err) {
@@ -82,7 +87,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!text.trim()) {
-    return NextResponse.json({ error: "Uzak sunucu boş yanıt döndürdü." }, { status: 400 });
+    return localizedError(req, "api.connectors.emptyResponse", 400);
   }
 
   const kpis = parseKpis(text).map((k) => ({ label: k.label, value: k.value }));

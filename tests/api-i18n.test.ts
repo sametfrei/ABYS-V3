@@ -6,8 +6,10 @@ vi.mock("next/headers", () => ({
 }));
 
 const { requestLocale, localizedError } = await import("../src/lib/api-i18n");
+const { t } = await import("../src/lib/i18n");
 const { GET: actionsGET } = await import("../src/app/api/actions/route");
 const { GET: outcomesGET } = await import("../src/app/api/outcomes/route");
+const { GET: connectorsGET } = await import("../src/app/api/connectors/route");
 
 function apiRequest(path: string, locale?: "tr" | "en") {
   const headers: Record<string, string> = {};
@@ -51,5 +53,23 @@ describe("API error localization", () => {
     const outcomesTr = await outcomesGET(apiRequest("http://localhost/api/outcomes"));
     expect(outcomesTr.status).toBe(401);
     expect(await outcomesTr.json()).toEqual({ error: "Oturum gerekli." });
+  });
+
+  it("interpolates parameters in connector messages", () => {
+    expect(t("en", "api.connectors.remoteError", { status: 503 })).toBe(
+      "The remote server returned an error: 503"
+    );
+    expect(t("tr", "api.connectors.notImplemented", { adapter: "SAP" })).toBe(
+      "SAP adaptörü henüz uygulanmadı."
+    );
+    expect(t("en", "api.connectors.queryForbidden", { keyword: "DELETE" })).toBe(
+      "A non-read-only keyword was detected: DELETE."
+    );
+  });
+
+  it("localizes unauthenticated connector list responses", async () => {
+    const res = await connectorsGET(apiRequest("http://localhost/api/connectors", "en"));
+    expect(res.status).toBe(401);
+    expect(await res.json()).toEqual({ error: "Sign-in required." });
   });
 });
