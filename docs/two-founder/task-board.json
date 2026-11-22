@@ -2242,6 +2242,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "User-visible errors for causal links, trace, decision POST/PATCH, semantic-graph neighborhood, risk assessment, scenario analysis and document upload plus Bitrix24 webhook validation follow the abys_lang cookie; Turkish remains the default. Parameterized messages (title details, byte limit, scenario length) keep their values.",
       "evidence": "tests/decision-cases-validation.test.ts, tests/public-demo-gate.test.ts, tests/api-i18n.test.ts and tests/login-flow.test.ts pass (55 tests); full suite 870 passed / 9 skipped / 100 files passed + 1 skipped; npm run lint clean; npm run build clean; rg counts zero Turkish error literals in all eight routes."
+    },
+    {
+      "id": "TB-113",
+      "commit": "7283e1c",
+      "title": "Complete localized API error coverage across every route",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "backend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/api-i18n.ts",
+        "src/lib/i18n.ts",
+        "src/app/api"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Every user-visible `error` string in src/app/api is locale-aware via the abys_lang cookie; Turkish stays the default. Handlers without a request parameter use a cookie-based helper, and the locale reader tolerates partial request mocks used by tests.",
+      "evidence": "rg 'error: \"' src/app/api returns 0 literal Turkish errors (was 227 at TB-111 start); localizedErrorFromCookies added for parameterless handlers; decision-cases and analyze validate unknown payloads post-parse; full suite 870 passed / 9 skipped; lint clean; build clean; live preview returns EN 'Sign-in required.' vs TR 'Oturum gerekli.'; e2e smoke 80/80 and browser smoke 76/76 on 127.0.0.1:3100."
     }
   ]
 }

@@ -3,7 +3,7 @@
 Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
 başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
 modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
-(TB-001…TB-112), ürün durumu `docs/ROADMAP.md` içindedir.
+(TB-001…TB-113), ürün durumu `docs/ROADMAP.md` içindedir.
 
 ## Doğrulama kapıları
 
@@ -33,6 +33,8 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   Nedensellik, izleme, karar kaydı/güncelleme, anlamsal grafik komşuluğu, risk
   değerlendirme, senaryo analizi, belge yükleme ve Bitrix24 webhook doğrulama
   hataları da aynı sözleşmeyi izler; parametreli mesajlar değerlerini korur.
+  `src/app/api` altındaki tüm kullanıcı-görür `error` metinleri artık
+  `abys_lang` çerezine göre yerelleşir (literal Türkçe hata sayısı: 0).
 - **Veri kalitesi:** dört boyutlu deterministik skor, metrik etiketine göre
   filtre, karantina listesi (`limit` doğrulaması + `truncated` bildirimi) ve
   yetki/kurum kapsamlı CSV dışa aktarımı (payload hariç, denetim kayıtlı).
