@@ -75,7 +75,7 @@ export default function IntegrationsPage() {
         desc={t(locale, "integrations.subtitle")}
       />
 
-      <div className="px-10">
+      <div className="px-4 sm:px-6 lg:px-10">
         {isTais ? (
           <div className="pb-16 max-w-3xl">
             <Bitrix24Card />

@@ -248,7 +248,7 @@ export default function ScenariosPage() {
         desc={t(locale, "scenarios.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-3xl space-y-6">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-3xl space-y-6">
         {error && <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3">{error}</p>}
         {templates === null && (
           <p className="text-sm text-abys-muted">{t(locale, "scenarios.loading")}</p>

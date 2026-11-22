@@ -130,7 +130,7 @@ export default function AdvisorsPage() {
         desc={t(locale, "advisors.subtitle")}
       />
 
-      <div className="px-10 pb-16">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16">
         {session === null && (
           <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3 mb-6 max-w-xl">
             {t(locale, "advisors.sessionRequired")}

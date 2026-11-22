@@ -100,7 +100,7 @@ export default function MemoryPage() {
         desc={t(locale, "memory.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-4xl space-y-6">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-4xl space-y-6">
         {/* İstatistikler */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard label={t(locale, "memory.statTotal")} value={String(stats.total)} />
@@ -205,7 +205,7 @@ function TaisMemoryView() {
         accent={t(locale, "memory.tais.titleAccent")}
         desc={t(locale, "memory.tais.subtitle")}
       />
-      <div className="px-10 pb-16 max-w-4xl space-y-6">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-4xl space-y-6">
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             label={t(locale, "memory.tais.statCases")}

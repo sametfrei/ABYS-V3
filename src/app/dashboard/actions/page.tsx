@@ -207,7 +207,7 @@ export default function ActionsPage() {
         accent={t(locale, "actions.titleAccent")}
         desc={t(locale, "actions.subtitle")}
       />
-      <div className="px-10 pb-16 max-w-3xl">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-3xl">
         {error && (
           <p className="text-sm text-abys-critical bg-abys-critical-soft rounded-lg p-3 mb-4">
             {t(locale, error)}
@@ -400,7 +400,7 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
         )}
       </p>
       <p className="text-[11px] text-abys-muted mb-3">
-        {t(locale, "actions.relatedRisk")}: <span className="font-mono">{action.related_risk_id ? action.related_risk_id : t(locale, "actions.noRiskReference")}</span>
+        {t(locale, "actions.relatedRisk")}: <span className="font-mono break-all">{action.related_risk_id ? action.related_risk_id : t(locale, "actions.noRiskReference")}</span>
       </p>
       {action.expected_impact && (
         <div className="mb-3 rounded-lg bg-white/60 px-3 py-2 text-[11px] text-abys-muted">

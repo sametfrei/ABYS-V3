@@ -151,7 +151,7 @@ export default function AlertsPage() {
         desc={t(locale, "alerts.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-2xl space-y-3">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl space-y-3">
         {isTais && taisRisks === null && (
           <p className="text-sm text-abys-muted">{t(locale, "alerts.loadingTais")}</p>
         )}

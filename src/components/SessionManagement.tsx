@@ -126,7 +126,7 @@ export function SessionManagement() {
   }
 
   return (
-    <section className="px-10 pb-16 max-w-2xl" aria-labelledby="sessions-heading">
+    <section className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl" aria-labelledby="sessions-heading">
       <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
         <h2 id="sessions-heading" className="font-serif text-lg text-abys-navy mb-1">
           {t(locale, "settings.sessions.title")}

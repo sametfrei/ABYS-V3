@@ -199,7 +199,7 @@ export function UserManagement() {
 
   return (
     <section
-      className="px-10 pb-16 max-w-3xl"
+      className="px-4 sm:px-6 lg:px-10 pb-16 max-w-3xl"
       aria-labelledby="user-management-heading"
     >
       <h2

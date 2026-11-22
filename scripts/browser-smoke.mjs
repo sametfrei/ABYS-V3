@@ -129,6 +129,44 @@ try {
   if (/Execution/i.test(englishHeading)) ok("TR/EN geçişi", englishHeading.slice(0, 50));
   else bad("TR/EN geçişi", englishHeading.slice(0, 60));
   await page.screenshot({ path: path.join(SHOTS, "actions-en.png"), fullPage: true });
+
+  await context.addCookies([{ name: "abys_lang", value: "tr", url: BASE }]);
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const [route, label] of [
+    ["/dashboard", "mobil komuta merkezi"],
+    ["/dashboard/actions", "mobil aksiyon merkezi"],
+    ["/dashboard/decision-ledger", "mobil karar defteri"],
+    ["/dashboard/forecast", "mobil tahmin"],
+    ["/dashboard/connectors", "mobil bağlantılar"],
+    ["/dashboard/data-quality", "mobil veri kalitesi"],
+  ]) {
+    await page.goto(`${BASE}${route}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForFunction(
+      () => (document.body.innerText ?? "").trim().length > 100,
+      undefined,
+      { timeout: 15_000 }
+    );
+    await page.waitForTimeout(350);
+    const overflow = await page.evaluate(() => ({
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    if (overflow.scrollWidth <= overflow.innerWidth + 1) {
+      ok(`${label} yatay taşma yok`);
+    } else {
+      bad(`${label} yatay taşma`, `${overflow.scrollWidth} > ${overflow.innerWidth}`);
+    }
+    await page.screenshot({ path: path.join(SHOTS, `${slug(route)}-mobile.png`), fullPage: true });
+  }
+
+  const mobileNav = page.locator('header select[aria-label]').first();
+  if (await mobileNav.isVisible()) {
+    await mobileNav.selectOption("/dashboard/decision-ledger");
+    await page.waitForURL("**/dashboard/decision-ledger", { timeout: 15_000 });
+    ok("mobil gezinme", page.url().replace(BASE, ""));
+  } else {
+    bad("mobil gezinme", "menü görünür değil");
+  }
 } catch (error) {
   bad("tarayıcı akışı", error instanceof Error ? error.message : String(error));
 } finally {

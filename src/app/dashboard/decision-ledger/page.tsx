@@ -299,7 +299,7 @@ export default function DecisionLedgerPage() {
         desc={t(locale, "ledger.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-4xl">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-4xl">
         {!loading && !error && (
           <div className="mb-4 flex flex-wrap justify-end">
             {entries.length > 0 && (

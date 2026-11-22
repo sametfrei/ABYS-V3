@@ -152,7 +152,7 @@ export default function OrganizationPage() {
         desc={t(locale, "organization.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-4xl">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-4xl">
         {loading ? (
           <p className="text-sm text-abys-muted" role="status">
             {t(locale, "organization.loading")}

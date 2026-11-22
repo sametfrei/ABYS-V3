@@ -225,7 +225,7 @@ export default function DataQualityPage() {
         desc={t(locale, "dataQuality.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-4xl">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-4xl">
         <div className="mb-6 rounded-xl border border-abys-cream-border bg-abys-cream p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs font-semibold tracking-widest text-abys-muted">

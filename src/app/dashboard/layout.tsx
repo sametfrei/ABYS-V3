@@ -140,9 +140,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return true;
   });
 
+  const activeHref =
+    visibleNav.find((item) =>
+      item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href)
+    )?.href ?? "/dashboard";
+
   return (
-    <div className="min-h-screen flex">
-      <aside className="no-print w-60 shrink-0 border-r border-abys-ink/10 flex flex-col py-6 px-4">
+    <div className="min-h-screen">
+      <header className="no-print sticky top-0 z-40 flex items-center gap-2 border-b border-abys-ink/10 bg-abys-cream/95 px-4 py-2.5 backdrop-blur lg:hidden">
+        <LogoMark className="w-6 h-6" />
+        <span className="font-serif text-lg leading-none text-abys-navy">ABYS</span>
+        <select
+          aria-label={t(locale, "shell.navigation")}
+          value={activeHref}
+          onChange={(event) => router.push(event.target.value)}
+          className="ml-auto max-w-[62%] rounded-lg border border-abys-cream-border bg-white/80 px-2 py-1.5 text-xs text-abys-navy"
+        >
+          {visibleNav.map((item) => (
+            <option key={item.href} value={item.href}>
+              {t(locale, item.labelKey)}
+            </option>
+          ))}
+        </select>
+      </header>
+
+      <div className="flex">
+      <aside className="no-print hidden w-60 shrink-0 flex-col border-r border-abys-ink/10 px-4 py-6 lg:flex">
         <div className="flex items-center gap-2 px-2 mb-8">
           <LogoMark className="w-7 h-7" />
           <span className="font-serif text-lg leading-none text-abys-navy">ABYS</span>
@@ -233,6 +256,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </aside>
 
       <main className="flex-1 min-w-0">{children}</main>
+      </div>
     </div>
   );
 }

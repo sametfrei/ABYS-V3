@@ -156,7 +156,7 @@ export default function AuditPage() {
         desc={t(locale, "audit.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-5xl space-y-6">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-5xl space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <label

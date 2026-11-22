@@ -92,7 +92,7 @@ export default function ReportsPage() {
           desc={isTais ? t(locale, "reports.subtitleTais") : t(locale, "reports.subtitle")}
         />
 
-        <div className="px-10 pb-16 max-w-3xl space-y-12">
+        <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-3xl space-y-12">
            {isTais ? (
              <TaisReportSection />
            ) : (

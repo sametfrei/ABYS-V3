@@ -118,7 +118,7 @@ export function ChangePassword() {
 
   return (
     <section
-      className="px-10 pb-16 max-w-2xl"
+      className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl"
       aria-labelledby="change-password-heading"
     >
       <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">

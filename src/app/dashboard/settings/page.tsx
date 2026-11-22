@@ -47,7 +47,7 @@ export default function SettingsPage() {
           accent={t(locale, "settings.sessionAccent")}
           desc={t(locale, "settings.sessionSubtitle")}
         />
-        <div className="px-10 pb-16 max-w-2xl space-y-3 text-sm text-abys-ink">
+        <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl space-y-3 text-sm text-abys-ink">
           <p><span className="text-abys-muted">{t(locale, "settings.organization")} </span>{session.orgName}</p>
           <p><span className="text-abys-muted">{t(locale, "settings.user")} </span>{session.displayName}</p>
           <p><span className="text-abys-muted">{t(locale, "settings.role")} </span>{session.role}</p>
@@ -82,7 +82,7 @@ export default function SettingsPage() {
         desc={t(locale, "settings.profileSubtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-2xl space-y-8">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl space-y-8">
         <div>
           <label className="block text-xs tracking-widest text-abys-muted font-semibold mb-2">
             {t(locale, "settings.companyName")}

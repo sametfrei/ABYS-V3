@@ -106,7 +106,7 @@ export default function DashboardHome() {
   if (session === undefined) return null;
   if (isTais) {
     return (
-      <div className="px-10 py-10">
+      <div className="px-4 sm:px-6 lg:px-10 py-10">
         <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
           {new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}
         </p>
@@ -150,7 +150,7 @@ export default function DashboardHome() {
   const expectedOutcome = recommendedOption?.expectedOutcome?.trim() || "Beklenen sonuç belirtilmemiş.";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 px-10 py-10">
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-8 px-4 sm:px-6 lg:px-10 py-10">
       <div>
         <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
           {new Date().toLocaleDateString("tr-TR", { day: "numeric", month: "long", year: "numeric" })}

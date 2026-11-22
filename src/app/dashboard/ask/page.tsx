@@ -111,7 +111,7 @@ export default function AskPage() {
         desc={t(locale, "ask.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-3xl">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-3xl">
         <div className="flex gap-2 mb-3">
           <input
             value={question}

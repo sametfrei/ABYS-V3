@@ -10,7 +10,7 @@ export function PageHeader({
   desc?: string;
 }) {
   return (
-    <div className="px-10 pt-10 pb-6">
+    <div className="px-4 sm:px-6 lg:px-10 pt-10 pb-6">
       <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
         {eyebrow}
       </p>

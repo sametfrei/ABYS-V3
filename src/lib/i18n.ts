@@ -38,6 +38,7 @@ export type ShellKey =
   | "shell.session"
   | "shell.logout"
   | "shell.language"
+  | "shell.navigation"
   | "shell.user"
   | "login.title"
   | "login.accent"
@@ -1640,6 +1641,7 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "shell.session": { tr: "Kurumsal oturum", en: "Enterprise session" },
   "shell.logout": { tr: "Çıkış yap", en: "Sign out" },
   "shell.language": { tr: "Dil", en: "Language" },
+  "shell.navigation": { tr: "Gezinme", en: "Navigation" },
   "shell.user": { tr: "Kullanıcı", en: "User" },
   "login.title": { tr: "Kurumsal", en: "Enterprise" },
   "login.accent": { tr: "giriş.", en: "sign-in." },

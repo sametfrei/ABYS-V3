@@ -198,7 +198,7 @@ export default function DecisionsPage() {
           accent={t(locale, "decisions.titleAccent")}
           desc={t(locale, "decisions.taisSubtitle")}
         />
-        <div className="px-10 pb-16 space-y-3 max-w-4xl">
+        <div className="px-4 sm:px-6 lg:px-10 pb-16 space-y-3 max-w-4xl">
           {taisCases === null && (
             <p className="text-sm text-abys-muted">{t(locale, "decisions.loading")}</p>
           )}
@@ -233,7 +233,7 @@ export default function DecisionsPage() {
         desc={t(locale, "decisions.subtitle")}
       />
 
-      <div className="px-10 pb-16 space-y-6 max-w-4xl">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 space-y-6 max-w-4xl">
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShowAnalyzer(!showAnalyzer)}

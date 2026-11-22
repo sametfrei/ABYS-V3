@@ -110,7 +110,7 @@ export default function ProcessPage() {
         desc={t(locale, "process.subtitle")}
       />
 
-      <div className="px-10 pb-16 max-w-4xl space-y-5">
+      <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-4xl space-y-5">
         {error && (
           <p role="alert" className="rounded-xl border border-abys-critical/40 bg-abys-critical-soft px-4 py-3 text-sm text-abys-critical">
             {error}

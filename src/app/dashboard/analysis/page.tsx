@@ -89,7 +89,7 @@ export default function AnalysisPage() {
           accent={t(locale, "analysis.tais.titleAccent")}
           desc={t(locale, "analysis.tais.subtitle")}
         />
-        <div className="px-10 pb-16 max-w-2xl">
+        <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl">
           {taisAnalysis === null ? (
             <p className="text-sm text-abys-muted">{t(locale, "analysis.loading")}</p>
           ) : (
@@ -101,7 +101,7 @@ export default function AnalysisPage() {
   }
 
   if (session && !profile) {
-    return <p className="px-10 py-10 text-sm text-abys-muted">
+    return <p className="px-4 sm:px-6 lg:px-10 py-10 text-sm text-abys-muted">
         {t(locale, "analysis.tais.noData")}
       </p>;
   }
@@ -115,7 +115,7 @@ export default function AnalysisPage() {
         desc={t(locale, "analysis.subtitle")}
       />
 
-      <div className="px-10">
+      <div className="px-4 sm:px-6 lg:px-10">
         <div className="flex gap-1 border-b border-abys-ink/10 mb-8">
           <TabButton id="ai" active={tab} onClick={setTab} label={t(locale, "analysis.tab.ai")} />
           <TabButton
