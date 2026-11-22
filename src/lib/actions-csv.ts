@@ -23,6 +23,19 @@ export const ACTIONS_CSV_HEADER = [
   "last_event_by",
   "created_at",
   "updated_at",
+  "expected_impact_value",
+  "expected_impact_currency",
+  "expected_impact_basis",
+  "outcome_result",
+  "outcome_note",
+  "outcome_lesson",
+  "outcome_recorded_by",
+  "outcome_recorded_at",
+  "actual_impact_value",
+  "actual_impact_currency",
+  "measurement_start",
+  "measurement_end",
+  "actual_impact_evidence",
 ] as const;
 
 export function actionToRow(action: ActionRow): string[] {
@@ -41,6 +54,21 @@ export function actionToRow(action: ActionRow): string[] {
     action.last_event_by ?? "",
     action.created_at,
     action.updated_at,
+    action.expected_impact ? String(action.expected_impact.value) : "",
+    action.expected_impact?.currency ?? "",
+    action.expected_impact?.basis ?? "",
+    action.latest_outcome?.result ?? "",
+    action.latest_outcome?.note ?? "",
+    action.latest_outcome?.lesson ?? "",
+    action.latest_outcome?.recorded_by ?? "",
+    action.latest_outcome?.recorded_at ?? "",
+    action.latest_outcome?.actual_impact
+      ? String(action.latest_outcome.actual_impact.value)
+      : "",
+    action.latest_outcome?.actual_impact?.currency ?? "",
+    action.latest_outcome?.actual_impact?.measurement_start ?? "",
+    action.latest_outcome?.actual_impact?.measurement_end ?? "",
+    action.latest_outcome?.actual_impact?.evidence ?? "",
   ];
 }
 

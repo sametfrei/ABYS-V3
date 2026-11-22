@@ -121,6 +121,28 @@ describe("aksiyon CSV dışa aktarımı", () => {
     actionA = await seedAction(ORG_A, 'Geciken "yenileme" araması, acil');
     actionB = await seedAction(ORG_B, "B kurumu gizli aksiyonu");
 
+    const decision = await db.query<{ decision_id: string }>(
+      "SELECT decision_id FROM actions WHERE id = $1 AND org_id = $2",
+      [actionA, ORG_A]
+    );
+    const decisionA = decision.rows[0]?.decision_id;
+    if (!decisionA) throw new Error("test action decision missing");
+    await db.query(
+      `UPDATE decision_records
+          SET expected_value = 120000, value_currency = 'TRY', value_basis = 'yıllık tasarruf'
+        WHERE id = $1 AND org_id = $2`,
+      [decisionA, ORG_A]
+    );
+    await db.query(
+      `INSERT INTO outcomes
+         (id, org_id, decision_id, result, note, lesson, recorded_by,
+          actual_value, value_currency, measurement_start, measurement_end, evidence)
+       VALUES ('outcome-actions-export', $1, $2, 'improved', 'Süre 34 dakikadan 12 dakikaya indi',
+          'Önceliklendirme işe yaradı', 'ceo', 135500, 'TRY',
+          '2026-01-01T00:00:00Z', '2026-06-30T00:00:00Z', 'finans mutabakatı')`,
+      [ORG_A, decisionA]
+    );
+
     ceoA = await createSession("act-export-ceo-a", ORG_A);
     noPermA = await createSession("act-export-none-a", ORG_A);
     ceoB = await createSession("act-export-ceo-b", ORG_B);
@@ -159,6 +181,11 @@ describe("aksiyon CSV dışa aktarımı", () => {
     expect(csv).toContain(actionA);
     expect(csv).not.toContain(actionB);
     expect(csv).toContain('"Geciken ""yenileme"" araması, acil"');
+    expect(csv).toContain("120000,TRY,yıllık tasarruf");
+    expect(csv).toContain(
+      "improved,Süre 34 dakikadan 12 dakikaya indi,Önceliklendirme işe yaradı,ceo,"
+    );
+    expect(csv).toContain("135500,TRY,2026-01-01T00:00:00.000Z,2026-06-30T00:00:00.000Z,finans mutabakatı");
   });
 
   it("durum filtresi ve kurum kapsamı birlikte uygulanır", async () => {
