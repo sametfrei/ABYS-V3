@@ -5,6 +5,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { getAllKpiSeries } from "@/lib/db/repos/forecast";
 import { ANOMALY_MIN_POINTS, detectAnomalies } from "@/lib/anomaly";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * GET /api/anomalies — kurumun sayısal KPI serilerinde sağlam aykırı değer
@@ -15,7 +16,7 @@ export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   }
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });

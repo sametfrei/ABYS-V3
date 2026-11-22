@@ -14,6 +14,7 @@ import {
 } from "@/lib/db/repos/business-context";
 import { getSemanticGraph } from "@/lib/db/repos/semantic-graph";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError, localizedErrorFromCookies } from "@/lib/api-i18n";
 
 const confirmSchema = z.object({
   packId: z.string().trim().min(1).max(100),
@@ -30,7 +31,7 @@ const confirmSchema = z.object({
 export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -84,7 +85,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "confirm_business_profile")) {
     return NextResponse.json({ error: permissionError("confirm_business_profile") }, { status: 403 });
   }

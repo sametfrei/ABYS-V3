@@ -13,6 +13,7 @@ import { TAIS_REFERENCE_NOW } from "@/lib/demo/tais/seed";
 import { answerTaisQuestion } from "@/lib/demo/tais/ask";
 import type { TaisDecisionMeta } from "@/lib/demo/tais/executive-summary";
 import type { AiDecisionCase } from "@/lib/ai/provider";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * Ask ABYS (master plan md.15): yetki-farkındalıklı yönetici asistanı.
@@ -37,7 +38,7 @@ interface Statement {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
   const parsed = await parseBody(req, askSchema);
   if (!parsed.ok) return parsed.response;
   const question = parsed.data.question.trim();
-  if (!question) return NextResponse.json({ error: "Soru gerekli." }, { status: 400 });
+  if (!question) return localizedError(req, "api.ask.questionRequired", 400);
 
   await migrate();
   const db = getDb();

@@ -5,6 +5,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { getLedgerEntries, getLedgerSummary } from "@/lib/db/repos/decision-ledger";
 import { parseListLimit } from "@/lib/data/route-schemas";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * GET /api/decision-ledger — karar geçmişi ve kaydedilmiş sonuçlar.
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return localizedError(req, "api.auth.sessionRequired", 401);
   }
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });

@@ -7,6 +7,7 @@ import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { setConnectorSchedule } from "@/lib/db/repos/connectors";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 const patchSchema = z.object({
   scheduleIntervalMinutes: z.number().int().min(5).max(525_600).nullable(),
@@ -19,7 +20,7 @@ export async function PATCH(
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -32,7 +33,7 @@ export async function PATCH(
     configId: id,
     intervalMinutes: parsed.data.scheduleIntervalMinutes,
   });
-  if (!updated) return NextResponse.json({ error: "Konnektör bulunamadı." }, { status: 404 });
+  if (!updated) return localizedError(req, "api.connectors.notFound", 404);
 
   await recordAuditEvent({
     orgId: session.orgId,

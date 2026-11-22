@@ -7,6 +7,7 @@ import { SESSION_COOKIE } from "../../auth/login/route";
 import { parseAuditLimit } from "@/lib/data/route-schemas";
 import { toAuditCsv, type AuditCsvRow } from "@/lib/audit-csv";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * GET /api/audit/export — denetim günlüğünü CSV indirir (view_audit).
@@ -16,7 +17,7 @@ import { recordAuditEvent } from "@/lib/db/repos/audit";
 export async function GET(req: Request) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_audit")) {
     return NextResponse.json({ error: permissionError("view_audit") }, { status: 403 });
   }

@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../../auth/login/route";
 import { runDueConnectorSyncs } from "@/lib/connectors/scheduler";
+import { localizedError } from "@/lib/api-i18n";
 
 function safeTokenEqual(provided: string, expected: string): boolean {
   const a = Buffer.from(provided);
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
     const expected = process.env.ABYS_SCHEDULER_TOKEN;
     const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
     if (!expected || !token || !safeTokenEqual(token, expected)) {
-      return NextResponse.json({ error: "Zamanlayıcı kimliği geçersiz." }, { status: 401 });
+      return localizedError(req, "api.connectors.invalidSchedulerId", 401);
     }
     const summary = await runDueConnectorSyncs({ limit, actor: "system:scheduler" });
     return NextResponse.json(summary);
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest) {
 
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }

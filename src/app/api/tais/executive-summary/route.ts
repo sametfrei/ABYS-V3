@@ -24,6 +24,7 @@ import {
   type TaisDecisionMeta,
   type TaisActionRow,
 } from "@/lib/demo/tais/executive-summary";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * TAIS "30 saniyelik yönetici ekranı" veri ucu. Yalnızca TAIS demo verisi
@@ -33,7 +34,7 @@ import {
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -47,7 +48,7 @@ export async function GET(req: NextRequest) {
     [orgId]
   );
   if ((customerCountRow.rows[0]?.n ?? 0) === 0) {
-    return NextResponse.json({ error: "Bu kurumda TAIS demo verisi bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.tais.demoDataNotFound", 404);
   }
 
   const url = new URL(req.url);

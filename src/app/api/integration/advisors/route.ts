@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from "../../auth/login/route";
 import { authenticateApiKey, hasScope } from "@/lib/integrations/api-key";
 import { metricsForOrg, timelineFor } from "@/lib/integrations/advisor-analytics";
 import { checkApiKeyRate } from "@/lib/rate-limit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * Danışman analitiği okuma ucu (Faz 2).
@@ -38,10 +39,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!orgId) {
-    return NextResponse.json(
-      { error: "Yetki gerekli: kurumsal oturum ya da read:advisors kapsamlı API anahtarı." },
-      { status: 401 }
-    );
+    return localizedError(req, "api.integration.authorizationRequired", 401);
   }
 
   const sp = req.nextUrl.searchParams;
@@ -51,7 +49,7 @@ export async function GET(req: NextRequest) {
 
   if (sp.get("timeline") === "1") {
     if (!advisorRef) {
-      return NextResponse.json({ error: "timeline için advisor parametresi gerekli." }, { status: 400 });
+      return localizedError(req, "api.integration.advisorRequired", 400);
     }
     const timeline = await timelineFor({ orgId, advisorRef, fromIso, toIso });
     return NextResponse.json({ advisorRef, timeline });

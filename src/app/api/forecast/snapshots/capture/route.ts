@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/repos/forecast-snapshots";
 import { MIN_FORECAST_POINTS, forecastSeries } from "@/lib/forecasting";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /** Aynı etiket için bu süre içinde ikinci anlık görüntü alınmaz (tekrar çalıştırma güvenli). */
 const CAPTURE_IDEMPOTENCY_HOURS = 20;
@@ -28,7 +29,7 @@ interface CapturedItem {
 export async function POST() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "run_analysis")) {
     return NextResponse.json({ error: permissionError("run_analysis") }, { status: 403 });
   }

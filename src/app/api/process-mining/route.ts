@@ -5,6 +5,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { getProcessEvents } from "@/lib/db/repos/process-events";
 import { mineProcess } from "@/lib/process-mining";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * GET /api/process-mining — entegrasyon olay günlüğünden gözlenen süreç akışı.
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return localizedError(req, "api.auth.sessionRequired", 401);
   }
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });

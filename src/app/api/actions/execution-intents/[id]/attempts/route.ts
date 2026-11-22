@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { getExecutionAttemptForIntent } from "@/lib/db/repos/execution-attempts";
 import { SESSION_COOKIE } from "../../../../auth/login/route";
+import { localizedError } from "@/lib/api-i18n";
 
 const MAX_INTENT_ID_LENGTH = 300;
 
@@ -14,19 +15,19 @@ export async function GET(
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(_req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
   const { id } = await params;
   if (!id || id.length > MAX_INTENT_ID_LENGTH) {
-    return NextResponse.json({ error: "Geçersiz yürütme niyeti kimliği." }, { status: 400 });
+    return localizedError(_req, "api.actions.invalidIntentId", 400);
   }
 
   const result = await getExecutionAttemptForIntent({ orgId: session.orgId, intentId: id });
   if (!result.intentExists) {
-    return NextResponse.json({ error: "Yürütme hazırlığı bulunamadı." }, { status: 404 });
+    return localizedError(_req, "api.actions.preparationNotFound", 404);
   }
   return NextResponse.json({ attempt: result.attempt });
 }

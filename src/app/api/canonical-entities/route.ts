@@ -5,6 +5,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { listGoldenRecordSummaries } from "@/lib/db/repos/canonical-records";
 import type { CanonicalEntity } from "@/lib/connectors/types";
+import { localizedError } from "@/lib/api-i18n";
 
 const ENTITIES = new Set<CanonicalEntity>([
   "customer",
@@ -24,14 +25,14 @@ const ENTITIES = new Set<CanonicalEntity>([
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
   const rawEntity = req.nextUrl.searchParams.get("entity");
   if (rawEntity && !ENTITIES.has(rawEntity as CanonicalEntity)) {
-    return NextResponse.json({ error: "Geçersiz kanonik varlık türü." }, { status: 400 });
+    return localizedError(req, "api.canonical.invalidType", 400);
   }
   const parsedLimit = Number(req.nextUrl.searchParams.get("limit") ?? 20);
   const limit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(100, Math.trunc(parsedLimit))) : 20;

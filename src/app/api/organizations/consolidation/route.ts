@@ -8,6 +8,7 @@ import {
   getTopOpenDecisions,
 } from "@/lib/db/repos/organizations";
 import { migrationRequiredPayload, pendingMigration } from "@/lib/db/migration-guard";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * GET /api/organizations/consolidation — holding/şirket/şube konsolide görünüm.
@@ -17,7 +18,7 @@ export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   }
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });

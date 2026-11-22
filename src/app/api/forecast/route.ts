@@ -11,6 +11,7 @@ import {
 } from "@/lib/forecasting";
 import { listForecastSnapshots } from "@/lib/db/repos/forecast-snapshots";
 import { applyIntervalAdjustment, computeIntervalAdjustment } from "@/lib/forecast-calibration";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * GET /api/forecast — KPI serisinden geriye dönük test edilmiş tahmin.
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return localizedError(req, "api.auth.sessionRequired", 401);
   }
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (label.length > 120) {
-    return NextResponse.json({ error: "Etiket çok uzun." }, { status: 400 });
+    return localizedError(req, "api.forecast.labelTooLong", 400);
   }
 
   const series = await getKpiSeries(session.orgId, label);

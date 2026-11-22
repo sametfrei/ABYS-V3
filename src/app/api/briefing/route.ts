@@ -8,6 +8,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { SESSION_COOKIE } from "../auth/login/route";
+import { localizedError } from "@/lib/api-i18n";
 
 export async function POST(req: NextRequest) {
   const cookieStore = await cookies();
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
     // Oturumsuz erişim varsayılan olarak kapalıdır — yalnızca ABYS_PUBLIC_DEMO=1
     // ile açık deneme akışı için geri açılır (bkz. src/lib/public-demo.ts).
     if (!isPublicDemoEnabled()) {
-      return NextResponse.json({ error: "Bu uç oturum gerektirir." }, { status: 401 });
+      return localizedError(req, "api.auth.sessionRequired", 401);
     }
     // Oturumsuz istekler IP başına sınırlıdır (AI kaynak tüketimine karşı).
     const rate = checkAnonymousRate(req, false);
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+    return localizedError(req, "api.common.invalidBody", 400);
   }
 
   // Yanlış tipli alanlar TypeError -> 500 yerine 400 üretmeli.
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
     (typeof body.companyName === "string" ? body.companyName.trim() : undefined);
 
   if (!sector || !role || !companyName) {
-    return NextResponse.json({ error: "Eksik profil bilgisi." }, { status: 400 });
+    return localizedError(req, "api.briefing.missingProfile", 400);
   }
 
   try {

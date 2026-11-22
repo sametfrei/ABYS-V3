@@ -4,6 +4,7 @@ import { verifyWebhook, recordDelivery } from "@/lib/integrations/webhook";
 import { insertDataset } from "@/lib/db/repos/data";
 import { parseKpis } from "@/lib/kpi";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * İmzalı webhook alım ucu (master plan md.16).
@@ -61,13 +62,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ orgId: str
   try {
     body = JSON.parse(rawBody);
   } catch {
-    return NextResponse.json({ error: "Gövde geçerli JSON değil." }, { status: 400 });
+    return localizedError(req, "api.webhook.invalidJson", 400);
   }
 
   const payloadText =
     typeof body.payload === "string" ? body.payload : JSON.stringify(body.payload ?? {}, null, 2);
   if (!payloadText.trim()) {
-    return NextResponse.json({ error: "payload boş olamaz." }, { status: 400 });
+    return localizedError(req, "api.webhook.emptyPayload", 400);
   }
 
   await migrate();

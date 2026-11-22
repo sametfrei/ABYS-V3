@@ -11,8 +11,8 @@ import {
   recordHumanDecision,
 } from "@/lib/db/repos/decision-lifecycle";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
-import { localizedError } from "@/lib/api-i18n";
 import type { ExpectedEconomicImpact } from "@/lib/decision-economics";
+import { localizedError } from "@/lib/api-i18n";
 
 const expectedImpactSchema = z
   .object({

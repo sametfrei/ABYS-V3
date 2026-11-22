@@ -6,9 +6,9 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
-import { localizedError } from "@/lib/api-i18n";
 import { recordOutcome, listLessons, listOutcomesForDecision } from "@/lib/db/repos/actions";
 import type { RealizedEconomicImpact } from "@/lib/decision-economics";
+import { localizedError } from "@/lib/api-i18n";
 
 const actualImpactSchema = z
   .object({

@@ -6,6 +6,7 @@ import { getConfidenceCalibration } from "@/lib/db/repos/decision-ledger";
 import { isOverdue, overdueDays } from "@/lib/action-deadline";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * Yönetim Komuta Merkezi veri omurgası (Faz 4).
@@ -16,7 +17,7 @@ import { SESSION_COOKIE } from "../auth/login/route";
 export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }

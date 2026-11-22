@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from "../../../auth/login/route";
 import { resolveBitrixConfig, getConnectorPublicStatus } from "@/lib/integrations/bitrix24/config";
 import { getLastBitrixSyncRun } from "@/lib/db/repos/bitrix24";
 import { buildDemoDataset } from "@/lib/integrations/bitrix24/demo-source";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * Bitrix24 konnektör durumu — Veri Kaynakları ekranındaki kartı besler.
@@ -15,7 +16,7 @@ import { buildDemoDataset } from "@/lib/integrations/bitrix24/demo-source";
 export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }

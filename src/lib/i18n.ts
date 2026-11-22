@@ -151,6 +151,30 @@ export type ShellKey =
   | "api.risk.invalidBody"
   | "api.risk.dataEmpty"
   | "api.risk.dataTooLong"
+  | "api.common.invalidBody"
+  | "api.common.sectorIdRequired"
+  | "api.actions.invalidIntentId"
+  | "api.actions.preparationNotFound"
+  | "api.ask.questionRequired"
+  | "api.briefing.missingProfile"
+  | "api.canonical.invalidId"
+  | "api.canonical.notFound"
+  | "api.canonical.invalidType"
+  | "api.connectors.invalidSchedulerId"
+  | "api.cases.dataRequired"
+  | "api.cases.dataTooLong"
+  | "api.cases.constraintsString"
+  | "api.cases.memoryString"
+  | "api.cases.sectorString"
+  | "api.demo.productionDisabled"
+  | "api.demo.taisOnly"
+  | "api.twin.invalidAsOf"
+  | "api.forecast.labelTooLong"
+  | "api.integration.authorizationRequired"
+  | "api.integration.advisorRequired"
+  | "api.tais.demoDataNotFound"
+  | "api.webhook.invalidJson"
+  | "api.webhook.emptyPayload"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -2078,6 +2102,66 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     tr: "Veri çok uzun (12000 karakter sınırı).",
     en: "The data is too long (12000 character limit).",
   },
+  "api.common.invalidBody": { tr: "Geçersiz istek gövdesi.", en: "Invalid request body." },
+  "api.common.sectorIdRequired": { tr: "sectorId gerekli.", en: "sectorId is required." },
+  "api.actions.invalidIntentId": {
+    tr: "Geçersiz yürütme niyeti kimliği.",
+    en: "Invalid execution intent id.",
+  },
+  "api.actions.preparationNotFound": {
+    tr: "Yürütme hazırlığı bulunamadı.",
+    en: "Execution preparation not found.",
+  },
+  "api.ask.questionRequired": { tr: "Soru gerekli.", en: "A question is required." },
+  "api.briefing.missingProfile": { tr: "Eksik profil bilgisi.", en: "Missing profile information." },
+  "api.canonical.invalidId": {
+    tr: "Geçersiz kanonik varlık kimliği.",
+    en: "Invalid canonical entity id.",
+  },
+  "api.canonical.notFound": { tr: "Kanonik varlık bulunamadı.", en: "Canonical entity not found." },
+  "api.canonical.invalidType": {
+    tr: "Geçersiz kanonik varlık türü.",
+    en: "Invalid canonical entity type.",
+  },
+  "api.connectors.invalidSchedulerId": {
+    tr: "Zamanlayıcı kimliği geçersiz.",
+    en: "Invalid scheduler id.",
+  },
+  "api.cases.dataRequired": { tr: "Operasyonel veri boş olamaz.", en: "Operational data cannot be empty." },
+  "api.cases.dataTooLong": {
+    tr: "Veri çok uzun ({max} karakter sınırı).",
+    en: "The data is too long ({max} character limit).",
+  },
+  "api.cases.constraintsString": { tr: "Kısıtlar metin olmalı.", en: "Constraints must be text." },
+  "api.cases.memoryString": { tr: "Karar hafızası metin olmalı.", en: "Decision memory must be text." },
+  "api.cases.sectorString": { tr: "sectorId metin olmalı.", en: "sectorId must be text." },
+  "api.demo.productionDisabled": {
+    tr: "Bu uç üretim ortamında kapalıdır.",
+    en: "This endpoint is disabled in production.",
+  },
+  "api.demo.taisOnly": {
+    tr: "Bu işlem yalnızca TAIS demo kurumu için kullanılabilir.",
+    en: "This operation is only available for the TAIS demo organization.",
+  },
+  "api.twin.invalidAsOf": {
+    tr: "asOf geçerli bir ISO zaman damgası olmalı.",
+    en: "asOf must be a valid ISO timestamp.",
+  },
+  "api.forecast.labelTooLong": { tr: "Etiket çok uzun.", en: "The label is too long." },
+  "api.integration.authorizationRequired": {
+    tr: "Yetki gerekli: kurumsal oturum ya da read:advisors kapsamlı API anahtarı.",
+    en: "Authorization required: an organization session or an API key with the read:advisors scope.",
+  },
+  "api.integration.advisorRequired": {
+    tr: "timeline için advisor parametresi gerekli.",
+    en: "The advisor parameter is required for the timeline.",
+  },
+  "api.tais.demoDataNotFound": {
+    tr: "Bu kurumda TAIS demo verisi bulunamadı.",
+    en: "No TAIS demo data was found for this organization.",
+  },
+  "api.webhook.invalidJson": { tr: "Gövde geçerli JSON değil.", en: "The body is not valid JSON." },
+  "api.webhook.emptyPayload": { tr: "payload boş olamaz.", en: "payload cannot be empty." },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "actions.titleAccent": { tr: "yürütülmesi.", en: "of decisions." },

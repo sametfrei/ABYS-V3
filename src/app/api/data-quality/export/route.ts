@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from "../../auth/login/route";
 import { listIssues, type QualityStatus } from "@/lib/db/repos/data-quality";
 import { toDataQualityCsv } from "@/lib/data-quality-csv";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * GET /api/data-quality/export — karantina kayıtlarını CSV olarak indirir.
@@ -17,7 +18,7 @@ const MAX_EXPORT_ROWS = 500;
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }

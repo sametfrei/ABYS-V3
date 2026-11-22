@@ -12,6 +12,7 @@ import {
   SurvivorshipPolicyError,
 } from "@/lib/db/repos/canonical-records";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError, localizedErrorFromCookies } from "@/lib/api-i18n";
 
 const ENTITY = z.enum([
   "customer",
@@ -45,7 +46,7 @@ async function requirePermission(permission: "view_decisions" | "ingest_data"): 
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return { ok: false, response: NextResponse.json({ error: "Oturum gerekli." }, { status: 401 }) };
+    return { ok: false, response: await localizedErrorFromCookies("api.auth.sessionRequired", 401) };
   }
   if (!hasPermission(session.role, permission)) {
     return {
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
   const rawEntity = req.nextUrl.searchParams.get("entity");
   const parsed = rawEntity ? ENTITY.safeParse(rawEntity) : null;
   if (parsed && !parsed.success) {
-    return NextResponse.json({ error: "Geçersiz kanonik varlık türü." }, { status: 400 });
+    return localizedError(req, "api.canonical.invalidType", 400);
   }
   const policies = await listSurvivorshipPolicies(
     auth.session.orgId,

@@ -11,10 +11,10 @@ import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { parseTable } from "@/lib/data/parse-table";
 import { sectorIdSchema } from "@/lib/data/route-schemas";
 import { SESSION_COOKIE } from "../auth/login/route";
+import { localizedError } from "@/lib/api-i18n";
 
 export const maxDuration = 600;
 
-import { localizedError } from "@/lib/api-i18n";
 
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB — sonuç metni 8000 karakter sınırına düşecek, ayrıştırma maliyetini sınırlar
 

@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from "../../auth/login/route";
 import { getLedgerEntries } from "@/lib/db/repos/decision-ledger";
 import { toLedgerCsv } from "@/lib/ledger-csv";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * GET /api/decision-ledger/export — karar defterini CSV olarak indirir.
@@ -17,7 +18,7 @@ const MAX_EXPORT_ROWS = 500;
 export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }

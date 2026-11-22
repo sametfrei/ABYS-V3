@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { cookies } from "next/headers";
 import { LOCALE_COOKIE, parseLocale, t, type Locale, type ShellKey } from "@/lib/i18n";
 
 function cookieFromHeader(header: string | null, name: string): string | undefined {
@@ -11,10 +12,11 @@ function cookieFromHeader(header: string | null, name: string): string | undefin
 }
 
 /** İstek çerezinden arayüz dilini çözer; varsayılan Türkçedir. */
-export function requestLocale(req: Request): Locale {
+export function requestLocale(req?: Request): Locale {
+  if (!req) return parseLocale(undefined);
   const value =
     (req as NextRequest).cookies?.get?.(LOCALE_COOKIE)?.value ??
-    cookieFromHeader(req.headers.get("cookie"), LOCALE_COOKIE);
+    cookieFromHeader(req.headers?.get?.("cookie") ?? null, LOCALE_COOKIE);
   return parseLocale(value);
 }
 
@@ -42,4 +44,18 @@ export function localizedErrorWith(
     { error: t(requestLocale(req), key, params) },
     { status }
   );
+}
+
+/**
+ * İstek parametresi almayan route handler'lar için: dili `abys_lang`
+ * çerezinden okuyup yerelleştirilmiş hata döndürür.
+ */
+export async function localizedErrorFromCookies(
+  key: ShellKey,
+  status: number,
+  init?: { headers?: Record<string, string> }
+): Promise<NextResponse> {
+  const store = await cookies();
+  const locale = parseLocale(store.get(LOCALE_COOKIE)?.value);
+  return NextResponse.json({ error: t(locale, key) }, { status, headers: init?.headers });
 }

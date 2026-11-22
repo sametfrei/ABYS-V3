@@ -6,6 +6,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { loadTaisRiskInputs, computeTaisRisks } from "@/lib/demo/tais/risks";
 import { TAIS_REFERENCE_NOW } from "@/lib/demo/tais/seed";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * TAIS risk motorunun ürettiği TÜM riskler (12 kural, kanıt kayıtlarıyla).
@@ -17,7 +18,7 @@ import { TAIS_REFERENCE_NOW } from "@/lib/demo/tais/seed";
 export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -31,7 +32,7 @@ export async function GET() {
     [orgId]
   );
   if ((customerCountRow.rows[0]?.n ?? 0) === 0) {
-    return NextResponse.json({ error: "Bu kurumda TAIS demo verisi bulunamadı." }, { status: 404 });
+    return await localizedErrorFromCookies("api.tais.demoDataNotFound", 404);
   }
 
   const inputs = await loadTaisRiskInputs(orgId, TAIS_REFERENCE_NOW);

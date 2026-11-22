@@ -6,6 +6,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { linkCaseSignal, listCaseSignals } from "@/lib/db/repos/decision-signals";
 import { SESSION_COOKIE } from "../../../auth/login/route";
+import { localizedError } from "@/lib/api-i18n";
 
 const linkSchema = z.object({
   signalId: z.string().min(1).max(300),
@@ -18,7 +19,7 @@ export async function GET(
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(_req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -33,7 +34,7 @@ export async function POST(
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }

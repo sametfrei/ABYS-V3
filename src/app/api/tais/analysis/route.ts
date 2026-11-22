@@ -13,6 +13,7 @@ import {
   filterExecutiveInputs,
   type TaisExecRange,
 } from "@/lib/demo/tais/executive-summary";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * TAIS demo verisi için hizmet türü / ekip / lokasyon kırılımları (Analiz
@@ -23,7 +24,7 @@ import {
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
     [orgId]
   );
   if ((customerCountRow.rows[0]?.n ?? 0) === 0) {
-    return NextResponse.json({ error: "Bu kurumda TAIS demo verisi bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.tais.demoDataNotFound", 404);
   }
 
   const [kpiInputsFull, riskInputs] = await Promise.all([

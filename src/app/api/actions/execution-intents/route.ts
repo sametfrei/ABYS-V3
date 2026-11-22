@@ -5,7 +5,6 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../../auth/login/route";
-import { localizedError } from "@/lib/api-i18n";
 import {
   EXECUTION_INTENT_MODES,
   ExecutionIntentError,
@@ -13,6 +12,7 @@ import {
   listExecutionIntents,
   prepareExecutionIntent,
 } from "@/lib/db/repos/execution-intents";
+import { localizedError } from "@/lib/api-i18n";
 
 const payloadSchema = z
   .record(z.string(), z.unknown())

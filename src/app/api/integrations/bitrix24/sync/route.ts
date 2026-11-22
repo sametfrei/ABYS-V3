@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/repos/bitrix24";
 import { quarantineIssue } from "@/lib/db/repos/data-quality";
 import { upsertCanonicalRecords } from "@/lib/db/repos/connectors";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * Demo modda sentetik Bitrix24 kayıtlarını mapper/sync zincirinden geçirir;
@@ -22,7 +23,7 @@ import { upsertCanonicalRecords } from "@/lib/db/repos/connectors";
 export async function POST() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }

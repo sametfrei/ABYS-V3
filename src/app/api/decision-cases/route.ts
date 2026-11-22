@@ -16,7 +16,7 @@ import { getConfidenceCalibration } from "@/lib/db/repos/decision-ledger";
 import { logModelRun } from "@/lib/db/repos/model-runs";
 import { getDb } from "@/lib/db/client";
 import { parseBody } from "@/lib/validation";
-import { localizedError } from "@/lib/api-i18n";
+import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 
 /** Kurumun kayıtlı vakaları (oturum gerekli; org daima oturumdan). */
 export async function GET(req: NextRequest) {
@@ -52,14 +52,10 @@ const MAX_DATA_LEN = 12000;
  * `decisionMemory` isteğe bağlıdır ve mevcut varsayılan davranış korunur.
  */
 const decisionCasesBodySchema = z.object({
-  sectorId: z.string({ error: "sectorId metin olmalı." }).optional(),
-  data: z
-    .string({ error: "Operasyonel veri boş olamaz." })
-    .trim()
-    .min(1, "Operasyonel veri boş olamaz.")
-    .max(MAX_DATA_LEN, `Veri çok uzun (${MAX_DATA_LEN} karakter sınırı).`),
-  constraints: z.string({ error: "Kısıtlar metin olmalı." }).optional(),
-  decisionMemory: z.string({ error: "Karar hafızası metin olmalı." }).optional(),
+  sectorId: z.unknown().optional(),
+  data: z.unknown(),
+  constraints: z.unknown().optional(),
+  decisionMemory: z.unknown().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -67,7 +63,25 @@ export async function POST(req: NextRequest) {
   if (!parsedBody.ok) return parsedBody.response;
   const body = parsedBody.data;
 
-  const data = body.data;
+  if (body.sectorId !== undefined && typeof body.sectorId !== "string") {
+    return localizedError(req, "api.cases.sectorString", 400);
+  }
+  if (typeof body.data !== "string") {
+    return localizedError(req, "api.cases.dataRequired", 400);
+  }
+  const data = body.data.trim();
+  if (data.length === 0) {
+    return localizedError(req, "api.cases.dataRequired", 400);
+  }
+  if (data.length > MAX_DATA_LEN) {
+    return localizedErrorWith(req, "api.cases.dataTooLong", 400, { max: MAX_DATA_LEN });
+  }
+  if (body.constraints !== undefined && typeof body.constraints !== "string") {
+    return localizedError(req, "api.cases.constraintsString", 400);
+  }
+  if (body.decisionMemory !== undefined && typeof body.decisionMemory !== "string") {
+    return localizedError(req, "api.cases.memoryString", 400);
+  }
 
   const cookieStore = await cookies();
   const session = await getSession(cookieStore.get(SESSION_COOKIE)?.value);

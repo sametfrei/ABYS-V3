@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/repos/connectors";
 import { getConnectorPromotionCounts } from "@/lib/db/repos/connector-promotion";
 import { classifyConnectorError, summarizeConnectorRuns } from "@/lib/connector-run-health";
+import { localizedError } from "@/lib/api-i18n";
 
 /** GET — konnektörün son senkron çalıştırmaları ve kanonik kayıt sayıları. */
 export async function GET(
@@ -18,14 +19,14 @@ export async function GET(
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(_req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
   const { id } = await params;
   const configRow = await getConnectorConfig(session.orgId, id);
-  if (!configRow) return NextResponse.json({ error: "Konnektör bulunamadı." }, { status: 404 });
+  if (!configRow) return localizedError(_req, "api.connectors.notFound", 404);
 
   const [runs, records, promotion] = await Promise.all([
     listSyncRuns(session.orgId, configRow.id),

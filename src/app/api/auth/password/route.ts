@@ -8,12 +8,12 @@ import { parseBody } from "@/lib/validation";
 import { passwordSchema } from "@/lib/password-policy";
 import { setUserPassword } from "@/lib/db/repos/users";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
-import { localizedError } from "@/lib/api-i18n";
 import {
   checkPasswordRate,
   recordPasswordFailure,
   resetPasswordRate,
 } from "@/lib/rate-limit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * POST /api/auth/password — oturum sahibinin kendi parolasını değiştirmesi.

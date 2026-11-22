@@ -10,6 +10,7 @@ import { detectAnomalies } from "@/lib/anomaly";
 import { buildDecisionBrief, type BriefCase } from "@/lib/decision-brief";
 import { listCaseSignals } from "@/lib/db/repos/decision-signals";
 import type { AiDecisionCase } from "@/lib/ai/provider";
+import { localizedError } from "@/lib/api-i18n";
 
 interface CaseRow {
   id: string;
@@ -33,7 +34,7 @@ export async function GET(
 ) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(_req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -48,7 +49,7 @@ export async function GET(
     [session.orgId, id]
   );
   const row = caseResult.rows[0];
-  if (!row) return NextResponse.json({ error: "Vaka bulunamadı." }, { status: 404 });
+  if (!row) return localizedError(_req, "api.cases.notFound", 404);
 
   const payload = row.payload;
   const metricLabel = typeof payload.metricLabel === "string" ? payload.metricLabel : null;

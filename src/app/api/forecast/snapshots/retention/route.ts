@@ -9,6 +9,7 @@ import {
   planForecastRetention,
   sanitizeRetentionPolicy,
 } from "@/lib/forecast-retention";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * GET — saklama politikasının bu kurum için ne yapacağını SALT OKUNUR raporlar.
@@ -17,7 +18,7 @@ import {
 export async function GET(req: Request) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }

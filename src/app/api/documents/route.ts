@@ -7,12 +7,13 @@ import { SESSION_COOKIE } from "../auth/login/route";
 import { insertDocument, listDocuments } from "@/lib/db/repos/documents";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { documentPostSchema } from "@/lib/data/route-schemas";
+import { localizedError, localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /** Kurumun belgeleri — yalnızca rolün erişebildikleri (yetki-farkındalıklı). */
 export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -29,7 +30,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }

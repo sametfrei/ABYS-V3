@@ -6,6 +6,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { parseBody } from "@/lib/validation";
 import { evaluateOptions, validateInputs } from "@/lib/decision-options";
+import { localizedError } from "@/lib/api-i18n";
 
 const criterionSchema = z.object({
   id: z.string().trim().min(1).max(50),
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return localizedError(req, "api.auth.sessionRequired", 401);
   }
   if (!hasPermission(session.role, "run_analysis")) {
     return NextResponse.json({ error: permissionError("run_analysis") }, { status: 403 });

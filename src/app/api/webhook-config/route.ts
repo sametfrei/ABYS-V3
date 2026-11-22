@@ -6,6 +6,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { ensureSecret, rotateSecret } from "@/lib/integrations/webhook";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * Webhook yapılandırması (uç URL + gizli anahtar). ingest_data izni gerekir.
@@ -15,7 +16,7 @@ import { recordAuditEvent } from "@/lib/db/repos/audit";
 export async function GET() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -44,7 +45,7 @@ export async function GET() {
 export async function POST() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }

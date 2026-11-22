@@ -10,6 +10,7 @@ import {
   MAX_DIGITAL_TWIN_ADJUSTMENT,
   compareDigitalTwinScenario,
 } from "@/lib/digital-twin-comparison";
+import { localizedError } from "@/lib/api-i18n";
 
 const adjustmentNumber = z
   .number()
@@ -63,7 +64,7 @@ const postSchema = z.object({
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "run_analysis")) {
     return NextResponse.json({ error: permissionError("run_analysis") }, { status: 403 });
   }

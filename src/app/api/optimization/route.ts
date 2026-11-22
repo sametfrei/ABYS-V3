@@ -12,6 +12,7 @@ import {
   MAX_OPTIMIZATION_VALUE_PER_UNIT,
   optimizeResourceAllocation,
 } from "@/lib/optimization";
+import { localizedError } from "@/lib/api-i18n";
 
 const resourcesPerUnitSchema = z
   .record(
@@ -50,7 +51,7 @@ const postSchema = z.object({
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "run_analysis")) {
     return NextResponse.json({ error: permissionError("run_analysis") }, { status: 403 });
   }

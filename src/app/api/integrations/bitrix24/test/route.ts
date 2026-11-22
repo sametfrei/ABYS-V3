@@ -6,6 +6,7 @@ import { SESSION_COOKIE } from "../../../auth/login/route";
 import { resolveBitrixConfig } from "@/lib/integrations/bitrix24/config";
 import { testConnection } from "@/lib/integrations/bitrix24/client";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * Yalnızca LIVE mod + kimlik bilgisi varsa gerçek bağlantı testi yapar.
@@ -16,7 +17,7 @@ import { recordAuditEvent } from "@/lib/db/repos/audit";
 export async function POST() {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }

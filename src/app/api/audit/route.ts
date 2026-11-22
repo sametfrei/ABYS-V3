@@ -6,6 +6,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { verifyAuditChain } from "@/lib/db/repos/audit";
 import { parseAuditLimit } from "@/lib/data/route-schemas";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * Kurumun denetim günlüğü — view_audit izni gerekir (denetçi, yönetim).
@@ -14,7 +15,7 @@ import { parseAuditLimit } from "@/lib/data/route-schemas";
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_audit")) {
     return NextResponse.json({ error: permissionError("view_audit") }, { status: 403 });
   }

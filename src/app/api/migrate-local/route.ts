@@ -7,6 +7,7 @@ import { SESSION_COOKIE } from "../auth/login/route";
 import { insertCases } from "@/lib/db/repos/decisions";
 import type { AiDecisionCase } from "@/lib/ai/provider";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * Prototip (localStorage) verisinin tek seferlik sunucu göçü.
@@ -16,7 +17,7 @@ import { recordAuditEvent } from "@/lib/db/repos/audit";
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -29,11 +30,11 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+    return localizedError(req, "api.common.invalidBody", 400);
   }
   const sectorId =
     typeof body.sectorId === "string" ? body.sectorId.trim() : undefined;
-  if (!sectorId) return NextResponse.json({ error: "sectorId gerekli." }, { status: 400 });
+  if (!sectorId) return localizedError(req, "api.common.sectorIdRequired", 400);
   // Yanlış tipli diziler 500 yerine yok sayılır.
   const caseItems = Array.isArray(body.cases) ? body.cases : [];
   const auditItems = Array.isArray(body.auditEvents) ? body.auditEvents : [];

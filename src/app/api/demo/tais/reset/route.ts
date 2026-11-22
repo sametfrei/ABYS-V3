@@ -5,6 +5,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../../auth/login/route";
 import { getDb } from "@/lib/db/client";
 import { resetTaisDemo, TAIS_ORG_CODE } from "@/lib/demo/tais/seed";
+import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
  * TAIS demo verisini kontrollü sıfırlar. YALNIZCA: (1) üretimde değilken,
@@ -14,12 +15,12 @@ import { resetTaisDemo, TAIS_ORG_CODE } from "@/lib/demo/tais/seed";
  */
 export async function POST() {
   if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Bu uç üretim ortamında kapalıdır." }, { status: 403 });
+    return await localizedErrorFromCookies("api.demo.productionDisabled", 403);
   }
 
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return await localizedErrorFromCookies("api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }
@@ -28,7 +29,7 @@ export async function POST() {
     session.orgId,
   ]);
   if (org.rows[0]?.code !== TAIS_ORG_CODE) {
-    return NextResponse.json({ error: "Bu işlem yalnızca TAIS demo kurumu için kullanılabilir." }, { status: 403 });
+    return await localizedErrorFromCookies("api.demo.taisOnly", 403);
   }
 
   const { orgId } = await resetTaisDemo();

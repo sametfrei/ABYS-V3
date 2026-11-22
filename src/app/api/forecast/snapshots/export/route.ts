@@ -5,6 +5,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../../auth/login/route";
 import { listForecastSnapshots } from "@/lib/db/repos/forecast-snapshots";
 import { toSnapshotCsv } from "@/lib/forecast-snapshot-csv";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * GET /api/forecast/snapshots/export — kalibrasyon kayıtlarını CSV indirir.
@@ -15,7 +16,7 @@ const MAX_EXPORT_ROWS = 200;
 export async function GET(req: Request) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }

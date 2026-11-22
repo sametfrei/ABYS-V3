@@ -5,11 +5,11 @@ import { getSector } from "@/lib/sectors";
 import { streamedJsonResponse } from "@/lib/ai/stream-route";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { localizedError } from "@/lib/api-i18n";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { insertDataset, insertRiskSignals } from "@/lib/db/repos/data";
 import { SESSION_COOKIE } from "../auth/login/route";
+import { localizedError } from "@/lib/api-i18n";
 
 export const maxDuration = 600;
 
