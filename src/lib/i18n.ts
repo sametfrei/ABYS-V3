@@ -79,6 +79,14 @@ export type ShellKey =
   | "api.scenarios.invalidSector"
   | "api.scenarios.invalidBody"
   | "api.scenarios.templateNotFound"
+  | "api.common.invalidLabel"
+  | "api.quality.limitInteger"
+  | "api.quality.limitRange"
+  | "api.quality.quarantineNotFound"
+  | "api.quality.maxAgeInteger"
+  | "api.quality.maxAgeRange"
+  | "api.forecast.failed"
+  | "api.forecast.noTimestamp"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -1792,6 +1800,32 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "api.scenarios.templateNotFound": {
     tr: "Senaryo şablonu bulunamadı.",
     en: "Scenario template not found.",
+  },
+  "api.common.invalidLabel": { tr: "Geçersiz etiket.", en: "Invalid label." },
+  "api.quality.limitInteger": {
+    tr: "limit tam sayı olmalı",
+    en: "limit must be an integer",
+  },
+  "api.quality.limitRange": {
+    tr: "limit 1 ile 500 arasında olmalı",
+    en: "limit must be between 1 and 500",
+  },
+  "api.quality.quarantineNotFound": {
+    tr: "Karantina kaydı bulunamadı.",
+    en: "Quarantine record not found.",
+  },
+  "api.quality.maxAgeInteger": {
+    tr: "maxAgeDays tam sayı olmalı",
+    en: "maxAgeDays must be an integer",
+  },
+  "api.quality.maxAgeRange": {
+    tr: "maxAgeDays 1 ile 3650 arasında olmalı",
+    en: "maxAgeDays must be between 1 and 3650",
+  },
+  "api.forecast.failed": { tr: "Tahmin üretilemedi.", en: "Forecast could not be produced." },
+  "api.forecast.noTimestamp": {
+    tr: "Tahmin anlık görüntüsü için zaman damgası yok.",
+    en: "The forecast snapshot has no timestamp.",
   },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },

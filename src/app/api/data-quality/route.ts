@@ -15,6 +15,7 @@ import {
   type QualityStatus,
 } from "@/lib/db/repos/data-quality";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * Veri kalitesi karantinası — yalnızca ingest_data izni (veri yöneticisi).
@@ -38,13 +39,16 @@ const resolveSchema = z.object({
   action: z.enum(["accept_proposed", "keep_existing"]).optional(),
 });
 
-async function requireIngest(): Promise<
+async function requireIngest(req?: NextRequest): Promise<
   { ok: true; session: SessionInfo } | { ok: false; response: NextResponse }
 > {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return { ok: false, response: NextResponse.json({ error: "Oturum gerekli." }, { status: 401 }) };
+    return {
+      ok: false,
+      response: localizedError(req ?? new Request("http://localhost/api/data-quality"), "api.auth.sessionRequired", 401),
+    };
   }
   if (!hasPermission(session.role, "ingest_data")) {
     return {
@@ -56,7 +60,7 @@ async function requireIngest(): Promise<
 }
 
 export async function GET(req: NextRequest) {
-  const auth = await requireIngest();
+  const auth = await requireIngest(req);
   if (!auth.ok) return auth.response;
 
   const rawStatus = req.nextUrl.searchParams.get("status") ?? "pending";
@@ -70,11 +74,11 @@ export async function GET(req: NextRequest) {
   let limit = 100;
   if (rawLimit !== null) {
     if (!/^\d+$/.test(rawLimit.trim())) {
-      return NextResponse.json({ error: "limit tam sayı olmalı" }, { status: 400 });
+      return localizedError(req, "api.quality.limitInteger", 400);
     }
     limit = Number(rawLimit.trim());
     if (limit < 1 || limit > 500) {
-      return NextResponse.json({ error: "limit 1 ile 500 arasında olmalı" }, { status: 400 });
+      return localizedError(req, "api.quality.limitRange", 400);
     }
   }
 
@@ -83,7 +87,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireIngest();
+  const auth = await requireIngest(req);
   if (!auth.ok) return auth.response;
 
   const parsed = await parseBody(req, createSchema);
@@ -119,7 +123,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const auth = await requireIngest();
+  const auth = await requireIngest(req);
   if (!auth.ok) return auth.response;
 
   const parsed = await parseBody(req, resolveSchema);
@@ -180,7 +184,7 @@ export async function PATCH(req: NextRequest) {
     resolvedBy: auth.session.displayName,
   });
   if (!issue) {
-    return NextResponse.json({ error: "Karantina kaydı bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.quality.quarantineNotFound", 404);
   }
 
   await recordAuditEvent({

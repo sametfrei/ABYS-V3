@@ -10,6 +10,7 @@ import { insertForecastSnapshot, listForecastSnapshots, summarizeSnapshots } fro
 import { MAX_FORECAST_HORIZON, MIN_FORECAST_POINTS, forecastSeries } from "@/lib/forecasting";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { parseListLimit } from "@/lib/data/route-schemas";
+import { localizedError } from "@/lib/api-i18n";
 
 const postSchema = z.object({
   label: z.string().trim().min(1).max(200),
@@ -24,13 +25,13 @@ const postSchema = z.object({
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
   const label = req.nextUrl.searchParams.get("label") ?? undefined;
   if (label && label.length > 200) {
-    return NextResponse.json({ error: "Geçersiz etiket." }, { status: 400 });
+    return localizedError(req, "api.common.invalidLabel", 400);
   }
   const rawLimit = req.nextUrl.searchParams.get("limit");
   let limit: number | undefined;
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "run_analysis")) {
     return NextResponse.json({ error: permissionError("run_analysis") }, { status: 403 });
   }
@@ -70,12 +71,12 @@ export async function POST(req: NextRequest) {
   }
   const forecast = forecastSeries(series.values, horizon);
   if (!forecast) {
-    return NextResponse.json({ error: "Tahmin üretilemedi." }, { status: 422 });
+    return localizedError(req, "api.forecast.failed", 422);
   }
   const first = forecast.points[0];
   const lastObservedAt = series.timestamps[series.timestamps.length - 1];
   if (!first || !lastObservedAt) {
-    return NextResponse.json({ error: "Tahmin anlık görüntüsü için zaman damgası yok." }, { status: 422 });
+    return localizedError(req, "api.forecast.noTimestamp", 422);
   }
   const id = await insertForecastSnapshot({
     orgId: session.orgId,
