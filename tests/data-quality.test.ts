@@ -144,6 +144,24 @@ describe("veri kalitesi karantinası API'si", () => {
     expect(data.issues.map((i) => i.id)).toContain(issueId);
   });
 
+  it("limit doğrulanır ve sessiz kırpma bildirilir", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, adminA);
+    for (const bad of ["abc", "0", "-2", "501", "1.5"]) {
+      expect((await dqGet(req("GET", `/api/data-quality?limit=${encodeURIComponent(bad)}`))).status).toBe(400);
+    }
+    const one = (await (
+      await dqGet(req("GET", "/api/data-quality?status=pending&limit=1"))
+    ).json()) as { issues: Array<{ id: string }>; limit: number; truncated: boolean };
+    expect(one.limit).toBe(1);
+    expect(one.issues).toHaveLength(1);
+    expect(one.truncated).toBe(true);
+
+    const all = (await (
+      await dqGet(req("GET", "/api/data-quality?status=pending&limit=500"))
+    ).json()) as { truncated: boolean };
+    expect(all.truncated).toBe(false);
+  });
+
   it("başka org karantina kaydını göremez ve çözemez", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, adminB);
     const list = (await (await dqGet(req("GET", "/api/data-quality?status=all"))).json()) as {

@@ -65,8 +65,21 @@ export async function GET(req: NextRequest) {
       ? rawStatus
       : "pending";
 
-  const issues = await listIssues(auth.session.orgId, status);
-  return NextResponse.json({ issues });
+  // Sessiz kırpma yok: istemci kaç satır istediğini ve kesilip kesilmediğini görür.
+  const rawLimit = req.nextUrl.searchParams.get("limit");
+  let limit = 100;
+  if (rawLimit !== null) {
+    if (!/^\d+$/.test(rawLimit.trim())) {
+      return NextResponse.json({ error: "limit tam sayı olmalı" }, { status: 400 });
+    }
+    limit = Number(rawLimit.trim());
+    if (limit < 1 || limit > 500) {
+      return NextResponse.json({ error: "limit 1 ile 500 arasında olmalı" }, { status: 400 });
+    }
+  }
+
+  const issues = await listIssues(auth.session.orgId, status, limit);
+  return NextResponse.json({ issues, limit, truncated: issues.length >= limit });
 }
 
 export async function POST(req: NextRequest) {

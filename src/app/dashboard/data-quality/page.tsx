@@ -96,6 +96,7 @@ export default function DataQualityPage() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [truncated, setTruncated] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [score, setScore] = useState<ScoreReport | null>(null);
   const [scoreLoading, setScoreLoading] = useState(true);
@@ -161,9 +162,10 @@ export default function DataQualityPage() {
           if (res.status === 403) throw new Error(t(locale, "dataQuality.errorForbidden"));
           throw new Error(await readError(res, locale));
         }
-        const data = (await res.json()) as { issues?: QualityIssue[] };
+        const data = (await res.json()) as { issues?: QualityIssue[]; truncated?: boolean };
         if (cancelled) return;
         setIssues(Array.isArray(data.issues) ? data.issues : []);
+        setTruncated(data.truncated === true);
         setError("");
       } catch (err) {
         if (!cancelled) {
@@ -339,6 +341,11 @@ export default function DataQualityPage() {
           ))}
         </div>
 
+        {truncated && (
+          <p role="status" className="mb-3 text-sm text-abys-warning">
+            {formatMessage(locale, "dataQuality.truncated", { count: issues.length })}
+          </p>
+        )}
         {notice && (
           <p role="status" className="mb-3 text-sm text-abys-healthy">{notice}</p>
         )}

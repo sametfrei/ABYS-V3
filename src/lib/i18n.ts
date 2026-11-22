@@ -636,6 +636,7 @@ export type ShellKey =
   | "dataQuality.filterPending"
   | "dataQuality.filterAll"
   | "dataQuality.exportCsv"
+  | "dataQuality.truncated"
   | "dataQuality.loading"
   | "dataQuality.emptyPending"
   | "dataQuality.emptyAll"
@@ -2708,6 +2709,7 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "dataQuality.filterPending": { tr: "Bekleyen", en: "Pending" },
   "dataQuality.filterAll": { tr: "Tümü", en: "All" },
   "dataQuality.exportCsv": { tr: "CSV indir", en: "Download CSV" },
+  "dataQuality.truncated": { tr: "İlk {count} kayıt gösteriliyor; tamamı için CSV indirin.", en: "Showing the first {count} records; download the CSV for all of them." },
   "dataQuality.loading": { tr: "Yükleniyor…", en: "Loading…" },
   "dataQuality.emptyPending": {
     tr: "Bekleyen karantina kaydı yok.",
