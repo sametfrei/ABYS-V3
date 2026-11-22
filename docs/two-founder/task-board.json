@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T01:05:10Z",
+  "updatedAt": "2026-11-22T01:16:14Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1765,6 +1765,29 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "GET /api/data-quality validates limit (1..500) with 400 on bad input, echoes the effective limit and a truncated flag, and the quarantine screen tells the user when more records exist than shown. No silent truncation.",
       "evidence": "Gates: tsc clean, eslint clean, data-quality tests 6/6 (bad limits 400, limit=1 truncated true, limit=500 truncated false), full suite 834 passed (9 skipped), build OK, smoke 71/71."
+    },
+    {
+      "id": "TB-090",
+      "commit": "66bfd21",
+      "title": "Governed CSV export of action list",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "backend-engineer",
+        "security-engineer"
+      ],
+      "files": [
+        "src/lib/db/repos/actions.ts",
+        "src/lib/actions-csv.ts",
+        "src/app/api/actions/export/route.ts",
+        "src/app/dashboard/actions/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/actions-export.test.ts",
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "GET /api/actions/export requires view_decisions, validates the status filter (400 on unknown), exports at most 500 org-scoped actions with an RFC 4180 header including decision state and last-event evidence, writes an audit event, and is linked from the actions screen. listActions gains an optional bounded limit.",
+      "evidence": "Gates: tsc clean, eslint clean, actions export tests 5/5 (anon 401, no-permission 403, bad status 400, escaped CSV, cross-org/filter isolation), full suite 839 passed (9 skipped), build OK, smoke 75/75."
     }
   ]
 }
