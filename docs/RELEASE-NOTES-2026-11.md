@@ -3,7 +3,7 @@
 Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
 başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
 modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
-(TB-001…TB-109), ürün durumu `docs/ROADMAP.md` içindedir.
+(TB-001…TB-110), ürün durumu `docs/ROADMAP.md` içindedir.
 
 ## Doğrulama kapıları
 
@@ -16,6 +16,7 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 | Tarayıcı smoke | `BASE_URL=... npm run smoke:browser` | 76 geçti / 0 başarısız (Chrome, 22 rota + mobil) |
 | Sürüm parmak izi | `node scripts/verify-deploy.mjs --base=... --expect=origin` | commit EŞLEŞTİ, exit 0 |
 | Hepsi bir arada | `BASE_URL=... DEPLOY_EXPECT=origin npm run release:check` | tsc + lint + test + build + smoke + commit parmak izi |
+| Yerel demo | `npm run build && npm run start:preview` | http://127.0.0.1:3100 (demo hesabıyla) |
 
 ## Doğrulanmış ürün kapsamı
 

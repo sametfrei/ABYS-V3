@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T20:56:00Z",
+  "updatedAt": "2026-11-22T21:40:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2171,6 +2171,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "OIDC callback user-visible errors (unconfigured SSO, state mismatch, provider rejection, missing code, discovery, token exchange, ID token verification, unknown email) follow the abys_lang cookie; Turkish remains the default.",
       "evidence": "tests/oidc-callback-locale.test.ts: TR default, EN state mismatch and localized 404 pass; full suite 864 passed / 9 skipped; npm run build clean."
+    },
+    {
+      "id": "TB-110",
+      "commit": "61df4dd",
+      "title": "Reliable local demo preview and hardened browser smoke",
+      "priority": "P0",
+      "primaryFounder": "A",
+      "specialists": [
+        "devops-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "scripts/browser-smoke.mjs",
+        "package.json",
+        "README.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "npm run start:preview serves the production build on 127.0.0.1:3100 against .data/dev-preview with the demo account; browser smoke waits for form hydration, dev compile time and asynchronous action filters instead of fixed sleeps or generic role groups.",
+      "evidence": "npm run start:preview + login ceo@tais.demo 200; browser smoke 76/76 and e2e smoke 80/80 on 127.0.0.1:3100; npm run verify clean."
     }
   ]
 }
