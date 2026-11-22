@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T00:32:27Z",
+  "updatedAt": "2026-11-22T00:59:17Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1727,6 +1727,24 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "GET /api/data-quality/export requires ingest_data, honours the status filter, exports at most 500 org-scoped rows with an RFC 4180 header, never includes payload, writes an audit event, and is reachable from the quarantine screen. Anonymous requests get 401 and roles without ingest_data get 403.",
       "evidence": "Gates: tsc clean, eslint clean, export tests 4/4 (anon 401, ceo 403, escaped CSV, cross-org isolation), full suite 833 passed (9 skipped), build OK, smoke 71/71 including anon 401 and ceo 403."
+    },
+    {
+      "id": "TB-088",
+      "commit": "dadc52b",
+      "title": "Production-mode runtime and fingerprint verification",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer",
+        "devops-engineer"
+      ],
+      "files": [
+        "docs/ROADMAP.md",
+        "docs/two-founder/task-board.json"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Current origin/main build served by next start on 127.0.0.1:3102 passes the full smoke suite and scripts/verify-deploy.mjs reports build.commit equal to origin/main with exit code 0.",
+      "evidence": "next build at HEAD; next start 3102: smoke 71 geçti / 0 başarısız; verify-deploy --expect=origin → build.commit dadc52b… EŞLEŞTİ, SAĞLIKLI, exit 0."
     }
   ]
 }
