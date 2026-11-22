@@ -122,6 +122,36 @@ type AuditWriter = (
   }
 ) => Promise<string>;
 
+export interface OutcomeHistoryRow {
+  id: string;
+  result: "improved" | "unchanged" | "worsened";
+  note: string;
+  lesson: string | null;
+  recorded_by: string;
+  recorded_at: string;
+  actual_impact: {
+    value: number;
+    currency: string;
+    measurement_start: string | null;
+    measurement_end: string | null;
+    evidence: string | null;
+  } | null;
+}
+
+interface OutcomeHistoryDbRow {
+  id: string;
+  result: string;
+  note: string;
+  lesson: string | null;
+  recorded_by: string;
+  recorded_at: string | Date;
+  actual_value: number | string | null;
+  value_currency: string | null;
+  measurement_start: string | Date | null;
+  measurement_end: string | Date | null;
+  evidence: string | null;
+}
+
 function asStatus(value: string): ActionStatus | null {
   return ACTION_STATUSES.includes(value as ActionStatus) ? (value as ActionStatus) : null;
 }
@@ -611,4 +641,56 @@ export async function listLessons(orgId: string, limit = 20): Promise<{ result: 
     [orgId, limit]
   );
   return r.rows;
+}
+
+/**
+ * Kurumsal karar hafızası: tek bir kararın tüm ölçüm geçmişi, yeniden eskiye.
+ * org_id zorunludur; başka kurumun kararı bu sorguyla okunamaz.
+ */
+export async function listOutcomesForDecision(
+  orgId: string,
+  decisionId: string,
+  limit = 20
+): Promise<OutcomeHistoryRow[]> {
+  await migrate();
+  const safeLimit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
+  const r = await getDb().query<OutcomeHistoryDbRow>(
+    `SELECT id, result, note, lesson, recorded_by, created_at AS recorded_at,
+            actual_value, value_currency, measurement_start, measurement_end, evidence
+       FROM outcomes
+      WHERE org_id = $1 AND decision_id = $2
+      ORDER BY created_at DESC, id DESC
+      LIMIT $3`,
+    [orgId, decisionId, safeLimit]
+  );
+  return r.rows.flatMap((row) => {
+    const recordedAt = asIso(row.recorded_at);
+    if (
+      (row.result !== "improved" && row.result !== "unchanged" && row.result !== "worsened") ||
+      recordedAt === null
+    ) {
+      return [];
+    }
+    const actualValue = row.actual_value === null ? null : Number(row.actual_value);
+    return [
+      {
+        id: row.id,
+        result: row.result,
+        note: row.note,
+        lesson: row.lesson,
+        recorded_by: row.recorded_by,
+        recorded_at: recordedAt,
+        actual_impact:
+          actualValue !== null && Number.isFinite(actualValue) && row.value_currency
+            ? {
+                value: actualValue,
+                currency: row.value_currency,
+                measurement_start: asIso(row.measurement_start),
+                measurement_end: asIso(row.measurement_end),
+                evidence: row.evidence,
+              }
+            : null,
+      },
+    ];
+  });
 }

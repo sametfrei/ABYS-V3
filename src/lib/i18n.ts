@@ -80,6 +80,11 @@ export type ShellKey =
   | "actions.addAnotherOutcome"
   | "actions.latestOutcomeHeading"
   | "actions.latestOutcomeMeta"
+  | "actions.outcomeHistory"
+  | "actions.hideOutcomeHistory"
+  | "actions.outcomeHistoryHint"
+  | "actions.outcomeHistoryCount"
+  | "actions.outcomeHistoryLoadFailed"
   | "actions.lessonHeading"
   | "actions.closePreparation"
   | "actions.executePrep"
@@ -1695,6 +1700,17 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "actions.latestOutcomeMeta": {
     tr: "{actor} tarafından {date} tarihinde kaydedildi",
     en: "Recorded by {actor} on {date}",
+  },
+  "actions.outcomeHistory": { tr: "Sonuç geçmişi", en: "Outcome history" },
+  "actions.hideOutcomeHistory": { tr: "Geçmişi gizle", en: "Hide history" },
+  "actions.outcomeHistoryHint": {
+    tr: "Bu karar için kaydedilen tüm ölçümler, yeniden eskiye.",
+    en: "Every measurement recorded for this decision, newest first.",
+  },
+  "actions.outcomeHistoryCount": { tr: "{count} kayıt", en: "{count} records" },
+  "actions.outcomeHistoryLoadFailed": {
+    tr: "Sonuç geçmişi yüklenemedi.",
+    en: "Outcome history could not be loaded.",
   },
   "actions.lessonHeading": { tr: "Kurumsal ders", en: "Institutional lesson" },
   "actions.closePreparation": { tr: "Hazırlığı kapat", en: "Close preparation" },

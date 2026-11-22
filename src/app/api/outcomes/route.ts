@@ -6,7 +6,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
-import { recordOutcome, listLessons } from "@/lib/db/repos/actions";
+import { recordOutcome, listLessons, listOutcomesForDecision } from "@/lib/db/repos/actions";
 import type { RealizedEconomicImpact } from "@/lib/decision-economics";
 
 const actualImpactSchema = z
@@ -39,13 +39,32 @@ const postSchema = z.object({
   actualImpact: actualImpactSchema.optional(),
 });
 
-/** Kurumsal dersler (sonucu kaydedilmiş kararlardan) — hafıza görünümü. */
-export async function GET() {
+/**
+ * Kurumsal dersler — hafıza görünümü.
+ * `?decisionId=` verilirse yalnızca o kararın kurum kapsamlı ölçüm geçmişi döner.
+ */
+export async function GET(req?: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
+  }
+  const decisionId = req?.nextUrl.searchParams.get("decisionId")?.trim() ?? "";
+  if (decisionId) {
+    if (decisionId.length > 300) {
+      return NextResponse.json({ error: "Geçersiz karar kimliği." }, { status: 400 });
+    }
+    const db = getDb();
+    const owns = await db.query(
+      "SELECT 1 FROM decision_records WHERE id = $1 AND org_id = $2",
+      [decisionId, session.orgId]
+    );
+    if (owns.rows.length === 0) {
+      return NextResponse.json({ error: "Karar kaydı bulunamadı." }, { status: 404 });
+    }
+    const outcomes = await listOutcomesForDecision(session.orgId, decisionId);
+    return NextResponse.json({ outcomes });
   }
   const lessons = await listLessons(session.orgId);
   return NextResponse.json({ lessons });
