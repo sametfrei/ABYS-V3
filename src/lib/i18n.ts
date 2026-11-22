@@ -124,6 +124,23 @@ export type ShellKey =
   | "actions.outcomeNotePlaceholder"
   | "actions.lessonPlaceholder"
   | "actions.saveOutcomeFull"
+  | "actions.expectedImpact"
+  | "actions.expectedImpactBasis"
+  | "actions.actualImpactHint"
+  | "actions.actualImpactHeading"
+  | "actions.actualImpactAmount"
+  | "actions.actualImpactCurrency"
+  | "actions.actualImpactStart"
+  | "actions.actualImpactEnd"
+  | "actions.actualImpactEvidence"
+  | "actions.actualImpactEvidencePlaceholder"
+  | "actions.actualImpactAmountRequired"
+  | "actions.actualImpactAmountInvalid"
+  | "actions.actualImpactCurrencyInvalid"
+  | "actions.actualImpactStartInvalid"
+  | "actions.actualImpactEndInvalid"
+  | "actions.actualImpactRangeInvalid"
+  | "actions.actualImpactEvidenceTooLong"
   | "actions.attemptStatus"
   | "actions.attemptLoading"
   | "actions.attemptNone"
@@ -1739,6 +1756,59 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     en: "Institutional lesson (optional — feeds later analyses)",
   },
   "actions.saveOutcomeFull": { tr: "Sonucu ve dersi kaydet", en: "Save outcome and lesson" },
+  "actions.expectedImpact": {
+    tr: "Beklenen etki: {value} {currency}",
+    en: "Expected impact: {value} {currency}",
+  },
+  "actions.expectedImpactBasis": {
+    tr: "Dayanak: {basis}",
+    en: "Basis: {basis}",
+  },
+  "actions.actualImpactHint": {
+    tr: "Finansal etki isteğe bağlıdır. Girerseniz karar defterindeki beklenen–gerçekleşen farkı hesaplanır; boş alanlar sessizce atılmaz, birlikte doğrulanır.",
+    en: "Financial impact is optional. If entered, the decision ledger computes expected-vs-actual variance; partial input is never silently discarded.",
+  },
+  "actions.actualImpactHeading": {
+    tr: "Gerçekleşen finansal etki (opsiyonel)",
+    en: "Actual financial impact (optional)",
+  },
+  "actions.actualImpactAmount": { tr: "Gerçekleşen tutar", en: "Actual amount" },
+  "actions.actualImpactCurrency": { tr: "Para birimi (ISO)", en: "Currency (ISO)" },
+  "actions.actualImpactStart": { tr: "Ölçüm başlangıcı", en: "Measurement start" },
+  "actions.actualImpactEnd": { tr: "Ölçüm bitişi", en: "Measurement end" },
+  "actions.actualImpactEvidence": { tr: "Kanıt", en: "Evidence" },
+  "actions.actualImpactEvidencePlaceholder": {
+    tr: "Finans raporu, mutabakat no veya ölçüm kaynağı (opsiyonel)",
+    en: "Finance report, reconciliation ID or measurement source (optional)",
+  },
+  "actions.actualImpactAmountRequired": {
+    tr: "Finansal etki alanlarından biri dolduruldu; gerçekleşen tutar zorunlu.",
+    en: "A financial-impact field was filled; the actual amount is required.",
+  },
+  "actions.actualImpactAmountInvalid": {
+    tr: "Gerçekleşen tutar geçerli ve desteklenen aralıkta bir sayı olmalı.",
+    en: "Actual amount must be a valid number within the supported range.",
+  },
+  "actions.actualImpactCurrencyInvalid": {
+    tr: "Para birimi üç büyük harfli ISO kodu olmalı (ör. TRY, USD).",
+    en: "Currency must be a three-letter uppercase ISO code (e.g. TRY, USD).",
+  },
+  "actions.actualImpactStartInvalid": {
+    tr: "Ölçüm başlangıcı geçerli bir tarih olmalı.",
+    en: "Measurement start must be a valid date.",
+  },
+  "actions.actualImpactEndInvalid": {
+    tr: "Ölçüm bitişi geçerli bir tarih olmalı.",
+    en: "Measurement end must be a valid date.",
+  },
+  "actions.actualImpactRangeInvalid": {
+    tr: "Ölçüm bitişi başlangıçtan önce olamaz.",
+    en: "Measurement end cannot be before the start.",
+  },
+  "actions.actualImpactEvidenceTooLong": {
+    tr: "Kanıt açıklaması 5.000 karakteri aşamaz.",
+    en: "Evidence cannot exceed 5,000 characters.",
+  },
   "actions.attemptStatus": { tr: "Adaptör denemesi", en: "Adapter attempt" },
   "actions.attemptLoading": { tr: "Deneme durumu yükleniyor…", en: "Loading attempt status…" },
   "actions.attemptNone": {

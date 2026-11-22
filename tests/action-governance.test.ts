@@ -100,6 +100,12 @@ describe("aksiyon yönetişimi ve karar-yürütme bağlantısı", () => {
       [ORG_A, ORG_B]
     );
     decisionA = "decision-action-a";
+    await db.query(
+      `UPDATE decision_records
+          SET expected_value = 120000, value_currency = 'TRY', value_basis = 'yıllık maliyet tasarrufu'
+        WHERE id = $1 AND org_id = $2`,
+      [decisionA, ORG_A]
+    );
     actionA = await createAction({
       orgId: ORG_A,
       decisionId: decisionA,
@@ -141,6 +147,11 @@ describe("aksiyon yönetişimi ve karar-yürütme bağlantısı", () => {
     expect(actions.find((row) => row.id === actionA)).toMatchObject({
       status: "open",
       decision_state: "approved",
+      expected_impact: {
+        value: 120000,
+        currency: "TRY",
+        basis: "yıllık maliyet tasarrufu",
+      },
       event_count: 1,
     });
   });

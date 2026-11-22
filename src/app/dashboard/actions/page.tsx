@@ -5,6 +5,7 @@ import { ExecutionAttemptStatus } from "@/components/ExecutionAttemptStatus";
 import { PageHeader } from "@/components/PageHeader";
 import { ExportLink } from "@/components/ExportLink";
 import { overdueDays } from "@/lib/action-deadline";
+import { buildActualImpact, type ActualImpactInputError } from "@/lib/outcome-impact";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -33,6 +34,11 @@ interface ActionRow {
   progress_note: string | null;
   related_risk_id: string | null;
   decision_state: string;
+  expected_impact: {
+    value: number;
+    currency: string;
+    basis: string | null;
+  } | null;
   event_count: number;
   last_event_at: string | null;
   last_event_by: string | null;
@@ -77,8 +83,29 @@ const DECISION_STATE_LABEL: Record<string, ShellKey> = {
   closed: "actions.decisionClosed",
 };
 
+const IMPACT_ERROR_KEY: Record<ActualImpactInputError, ShellKey> = {
+  amount_required: "actions.actualImpactAmountRequired",
+  amount_invalid: "actions.actualImpactAmountInvalid",
+  currency_invalid: "actions.actualImpactCurrencyInvalid",
+  measurement_start_invalid: "actions.actualImpactStartInvalid",
+  measurement_end_invalid: "actions.actualImpactEndInvalid",
+  measurement_range_invalid: "actions.actualImpactRangeInvalid",
+  evidence_too_long: "actions.actualImpactEvidenceTooLong",
+};
+
 function useLocale(): Locale {
   return useSyncExternalStore(subscribeLocale, readLocale, () => DEFAULT_LOCALE);
+}
+
+function formatMessage(
+  locale: Locale,
+  key: ShellKey,
+  values: Record<string, string | number>
+): string {
+  return Object.entries(values).reduce(
+    (text, [name, value]) => text.replace(`{${name}}`, String(value)),
+    t(locale, key)
+  );
 }
 
 interface ActionSummaryCounts {
@@ -315,6 +342,23 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
       <p className="text-[11px] text-abys-muted mb-3">
         {t(locale, "actions.relatedRisk")}: <span className="font-mono">{action.related_risk_id ? action.related_risk_id : t(locale, "actions.noRiskReference")}</span>
       </p>
+      {action.expected_impact && (
+        <div className="mb-3 rounded-lg bg-white/60 px-3 py-2 text-[11px] text-abys-muted">
+          <p className="font-semibold text-abys-ink">
+            {formatMessage(locale, "actions.expectedImpact", {
+              value: action.expected_impact.value.toLocaleString(locale),
+              currency: action.expected_impact.currency,
+            })}
+          </p>
+          {action.expected_impact.basis && (
+            <p className="mt-0.5">
+              {formatMessage(locale, "actions.expectedImpactBasis", {
+                basis: action.expected_impact.basis,
+              })}
+            </p>
+          )}
+        </div>
+      )}
       {error && <p className="text-xs text-abys-critical mb-3">{error}</p>}
 
       <textarea
@@ -356,7 +400,13 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
         )}
       </div>
 
-      {showOutcome && <OutcomeForm decisionId={action.decision_id} onDone={() => { setShowOutcome(false); onChanged(); }} />}
+      {showOutcome && (
+        <OutcomeForm
+          decisionId={action.decision_id}
+          expectedImpact={action.expected_impact}
+          onDone={() => { setShowOutcome(false); onChanged(); }}
+        />
+      )}
       {showExecution && <ExecutionIntentPanel actionId={action.id} />}
     </div>
   );
@@ -529,11 +579,24 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
   );
 }
 
-function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () => void }) {
+function OutcomeForm({
+  decisionId,
+  expectedImpact,
+  onDone,
+}: {
+  decisionId: string;
+  expectedImpact: ActionRow["expected_impact"];
+  onDone: () => void;
+}) {
   const locale = useLocale();
   const [result, setResult] = useState<"improved" | "unchanged" | "worsened">("improved");
   const [outNote, setOutNote] = useState("");
   const [lesson, setLesson] = useState("");
+  const [amount, setAmount] = useState("");
+  const [currency, setCurrency] = useState(expectedImpact?.currency ?? "");
+  const [measurementStart, setMeasurementStart] = useState("");
+  const [measurementEnd, setMeasurementEnd] = useState("");
+  const [evidence, setEvidence] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -542,19 +605,44 @@ function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () =>
       setErr(t(locale, "actions.outcomeRequired"));
       return;
     }
-    setBusy(true);
-    setErr(null);
-    const res = await fetch("/api/outcomes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decisionId, result, note: outNote, lesson: lesson || undefined }),
+    const actualImpact = buildActualImpact({
+      amount,
+      currency,
+      measurementStart,
+      measurementEnd,
+      evidence,
     });
-    setBusy(false);
-    if (!res.ok) {
-      setErr((await res.json().catch(() => null))?.error ?? t(locale, "actions.outcomeSaveFailed"));
+    if (actualImpact.error) {
+      setErr(t(locale, IMPACT_ERROR_KEY[actualImpact.error]));
       return;
     }
-    onDone();
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/outcomes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          decisionId,
+          result,
+          note: outNote,
+          lesson: lesson || undefined,
+          actualImpact: actualImpact.impact ?? undefined,
+        }),
+      });
+      if (!res.ok) {
+        setErr(
+          ((await res.json().catch(() => null)) as { error?: string } | null)?.error ??
+            t(locale, "actions.outcomeSaveFailed")
+        );
+        return;
+      }
+      onDone();
+    } catch {
+      setErr(t(locale, "actions.outcomeSaveFailed"));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -562,6 +650,23 @@ function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () =>
       <p className="text-xs font-semibold text-abys-muted uppercase">
         {t(locale, "actions.outcomeHeading")}
       </p>
+      {expectedImpact && (
+        <div className="rounded-lg bg-white/60 px-3 py-2 text-[11px] text-abys-muted">
+          <p className="font-semibold text-abys-ink">
+            {formatMessage(locale, "actions.expectedImpact", {
+              value: expectedImpact.value.toLocaleString(locale),
+              currency: expectedImpact.currency,
+            })}
+          </p>
+          {expectedImpact.basis && (
+            <p className="mt-0.5">
+              {formatMessage(locale, "actions.expectedImpactBasis", {
+                basis: expectedImpact.basis,
+              })}
+            </p>
+          )}
+        </div>
+      )}
       <div className="flex gap-2">
         {(["improved", "unchanged", "worsened"] as const).map((r) => (
           <button
@@ -579,6 +684,65 @@ function OutcomeForm({ decisionId, onDone }: { decisionId: string; onDone: () =>
       </div>
       <textarea value={outNote} onChange={(e) => setOutNote(e.target.value)} rows={2} placeholder={t(locale, "actions.outcomeNotePlaceholder")} className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent" />
       <textarea value={lesson} onChange={(e) => setLesson(e.target.value)} rows={2} placeholder={t(locale, "actions.lessonPlaceholder")} className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent" />
+      <fieldset className="rounded-lg border border-abys-cream-border bg-white/40 p-3 space-y-2">
+        <legend className="px-1 text-[11px] font-semibold text-abys-muted uppercase">
+          {t(locale, "actions.actualImpactHeading")}
+        </legend>
+        <p className="text-[11px] text-abys-muted m-0">{t(locale, "actions.actualImpactHint")}</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          <label className="text-[11px] text-abys-muted">
+            {t(locale, "actions.actualImpactAmount")}
+            <input
+              type="number"
+              step="any"
+              inputMode="decimal"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="mt-1 w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
+            />
+          </label>
+          <label className="text-[11px] text-abys-muted">
+            {t(locale, "actions.actualImpactCurrency")}
+            <input
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+              maxLength={3}
+              placeholder="TRY"
+              className="mt-1 w-full text-sm uppercase rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
+            />
+          </label>
+          <label className="text-[11px] text-abys-muted">
+            {t(locale, "actions.actualImpactEvidence")}
+            <input
+              value={evidence}
+              onChange={(e) => setEvidence(e.target.value)}
+              maxLength={5000}
+              placeholder={t(locale, "actions.actualImpactEvidencePlaceholder")}
+              className="mt-1 w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
+            />
+          </label>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="text-[11px] text-abys-muted">
+            {t(locale, "actions.actualImpactStart")}
+            <input
+              type="date"
+              value={measurementStart}
+              onChange={(e) => setMeasurementStart(e.target.value)}
+              className="mt-1 w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
+            />
+          </label>
+          <label className="text-[11px] text-abys-muted">
+            {t(locale, "actions.actualImpactEnd")}
+            <input
+              type="date"
+              value={measurementEnd}
+              onChange={(e) => setMeasurementEnd(e.target.value)}
+              className="mt-1 w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
+            />
+          </label>
+        </div>
+      </fieldset>
       {err && <p className="text-xs text-abys-critical">{err}</p>}
       <button onClick={save} disabled={busy} className="text-xs rounded-full bg-abys-accent text-white px-4 py-1.5 hover:opacity-90 disabled:opacity-50">
         {busy ? t(locale, "actions.saving") : t(locale, "actions.saveOutcomeFull")}

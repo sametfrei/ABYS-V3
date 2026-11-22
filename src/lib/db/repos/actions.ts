@@ -53,6 +53,12 @@ export interface ActionRow {
   /** Bu aksiyonun dayandigi risk kaydinin kimligi (varsa) — bkz. migration 17. */
   related_risk_id: string | null;
   decision_state: string;
+  /** Karar kaydında beyan edilen beklenen ekonomik etki (varsa). */
+  expected_impact: {
+    value: number;
+    currency: string;
+    basis: string | null;
+  } | null;
   event_count: number;
   last_event_at: string | null;
   last_event_by: string | null;
@@ -72,8 +78,11 @@ export interface ActionEventRow {
   created_at: string;
 }
 
-interface ActionDbRow extends Omit<ActionRow, "event_count"> {
+interface ActionDbRow extends Omit<ActionRow, "event_count" | "expected_impact"> {
   event_count: number | string;
+  expected_value: number | string | null;
+  value_currency: string | null;
+  value_basis: string | null;
 }
 
 type AuditWriter = (
@@ -207,6 +216,7 @@ export async function listActions(
     `SELECT a.id, a.decision_id, a.case_id, a.title, a.owner, a.due_at,
             a.status, a.progress_note, a.related_risk_id, a.created_at, a.updated_at,
             d.state AS decision_state,
+            d.expected_value, d.value_currency, d.value_basis,
             COALESCE(ec.event_count, 0)::int AS event_count,
             le.created_at AS last_event_at, le.actor_name AS last_event_by
        FROM actions a
@@ -227,12 +237,24 @@ export async function listActions(
       ORDER BY a.created_at DESC${limitClause}`,
     params
   );
-  return r.rows.map((row) => ({
-    ...row,
-    status: asStatus(row.status) ?? "open",
-    event_count: Number(row.event_count),
-    decision_state: row.decision_state,
-  }));
+  return r.rows.map((row) => {
+    const { expected_value: rawExpected, value_currency, value_basis, ...action } = row;
+    const expectedValue = rawExpected === null ? null : Number(rawExpected);
+    return {
+      ...action,
+      status: asStatus(row.status) ?? "open",
+      expected_impact:
+        expectedValue !== null && Number.isFinite(expectedValue) && value_currency
+          ? {
+              value: expectedValue,
+              currency: value_currency,
+              basis: value_basis,
+            }
+          : null,
+      event_count: Number(row.event_count),
+      decision_state: row.decision_state,
+    };
+  });
 }
 
 export async function listActionEvents(
