@@ -9,6 +9,7 @@ import { roleSchema } from "@/lib/data/route-schemas";
 import { passwordSchema } from "@/lib/password-policy";
 import { createUser, findUserByEmail, listUsers } from "@/lib/db/repos/users";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * Kurum kullanıcıları — yalnızca `manage_users` izni (sys_admin).
@@ -31,13 +32,17 @@ const createUserSchema = z.object({
   password: passwordSchema,
 });
 
-async function requireManageUsers(): Promise<
+async function requireManageUsers(req?: NextRequest): Promise<
   { ok: true; session: SessionInfo } | { ok: false; response: NextResponse }
 > {
+  const localeRequest = req ?? new NextRequest("http://localhost/api/users");
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return { ok: false, response: NextResponse.json({ error: "Oturum gerekli." }, { status: 401 }) };
+    return {
+      ok: false,
+      response: localizedError(localeRequest, "api.auth.sessionRequired", 401),
+    };
   }
   if (!hasPermission(session.role, "manage_users")) {
     return {
@@ -49,8 +54,8 @@ async function requireManageUsers(): Promise<
 }
 
 /** GET /api/users — kurumun kullanıcıları (parola hash'i asla dönmez). */
-export async function GET() {
-  const auth = await requireManageUsers();
+export async function GET(req?: NextRequest) {
+  const auth = await requireManageUsers(req);
   if (!auth.ok) return auth.response;
 
   const users = await listUsers(auth.session.orgId);
@@ -59,7 +64,7 @@ export async function GET() {
 
 /** POST /api/users — yeni kullanıcı oluşturur; parola scrypt ile hash'lenir. */
 export async function POST(req: NextRequest) {
-  const auth = await requireManageUsers();
+  const auth = await requireManageUsers(req);
   if (!auth.ok) return auth.response;
 
   const parsed = await parseBody(req, createUserSchema);
@@ -70,7 +75,7 @@ export async function POST(req: NextRequest) {
   // E-posta şema düzeyinde global UNIQUE; çakışmayı 409 ile bildir.
   const existing = await findUserByEmail(auth.session.orgId, email);
   if (existing) {
-    return NextResponse.json({ error: "Bu e-posta ile bir kullanıcı zaten var." }, { status: 409 });
+    return localizedError(req, "api.users.emailExists", 409);
   }
 
   let user: Awaited<ReturnType<typeof createUser>>;
@@ -86,10 +91,7 @@ export async function POST(req: NextRequest) {
     // users.email şema düzeyinde global UNIQUE; başka bir org'da da olsa
     // çakışmayı 500 yerine 409 olarak bildir (ayrıntı sızdırmadan).
     if ((err as { code?: string }).code === "23505") {
-      return NextResponse.json(
-        { error: "Bu e-posta ile bir kullanıcı zaten var." },
-        { status: 409 }
-      );
+      return localizedError(req, "api.users.emailExists", 409);
     }
     throw err;
   }

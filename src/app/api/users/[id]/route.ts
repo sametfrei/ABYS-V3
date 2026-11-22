@@ -13,6 +13,7 @@ import {
   updateUser,
 } from "@/lib/db/repos/users";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * Tek kullanıcı güncelleme — yalnızca `manage_users` (sys_admin).
@@ -37,13 +38,17 @@ const updateUserSchema = z
     { message: "en az bir alan (role, status veya password) gerekli" }
   );
 
-async function requireManageUsers(): Promise<
+async function requireManageUsers(req?: NextRequest): Promise<
   { ok: true; session: SessionInfo } | { ok: false; response: NextResponse }
 > {
+  const localeRequest = req ?? new NextRequest("http://localhost/api/users");
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
-    return { ok: false, response: NextResponse.json({ error: "Oturum gerekli." }, { status: 401 }) };
+    return {
+      ok: false,
+      response: localizedError(localeRequest, "api.auth.sessionRequired", 401),
+    };
   }
   if (!hasPermission(session.role, "manage_users")) {
     return {
@@ -59,13 +64,13 @@ export async function PATCH(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireManageUsers();
+  const auth = await requireManageUsers(req);
   if (!auth.ok) return auth.response;
 
   const { id } = await ctx.params;
   const target = await getUser(auth.session.orgId, id);
   if (!target) {
-    return NextResponse.json({ error: "Kullanıcı bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.auth.userNotFound", 404);
   }
 
   const parsed = await parseBody(req, updateUserSchema);
@@ -79,10 +84,7 @@ export async function PATCH(
   if (losesAdmin) {
     const activeAdmins = await countActiveSysAdmins(auth.session.orgId);
     if (activeAdmins <= 1) {
-      return NextResponse.json(
-        { error: "Son aktif sistem yöneticisi düşürülemez veya devre dışı bırakılamaz." },
-        { status: 400 }
-      );
+      return localizedError(req, "api.users.lastAdminProtected", 400);
     }
   }
 
@@ -90,7 +92,7 @@ export async function PATCH(
   if (role !== undefined || status !== undefined) {
     const result = await updateUser({ orgId: auth.session.orgId, id, role, status });
     if (!result) {
-      return NextResponse.json({ error: "Kullanıcı bulunamadı." }, { status: 404 });
+      return localizedError(req, "api.auth.userNotFound", 404);
     }
     updated = result;
   }
@@ -102,7 +104,7 @@ export async function PATCH(
       passwordHash: hashPassword(password),
     });
     if (!result) {
-      return NextResponse.json({ error: "Kullanıcı bulunamadı." }, { status: 404 });
+      return localizedError(req, "api.auth.userNotFound", 404);
     }
     updated = result;
   }

@@ -16,12 +16,13 @@ import { getConfidenceCalibration } from "@/lib/db/repos/decision-ledger";
 import { logModelRun } from "@/lib/db/repos/model-runs";
 import { getDb } from "@/lib/db/client";
 import { parseBody } from "@/lib/validation";
+import { localizedError } from "@/lib/api-i18n";
 
 /** Kurumun kayıtlı vakaları (oturum gerekli; org daima oturumdan). */
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   const sectorId = req.nextUrl.searchParams.get("sectorId") ?? undefined;
   const [cases, calibration] = await Promise.all([
     listCasesForOrg(session.orgId, sectorId),
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest) {
   const sector = getSector(session?.sectorId ?? body.sectorId);
 
   if (!sector) {
-    return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });
+    return localizedError(req, "api.scenarios.invalidSector", 400);
   }
 
   const constraints =
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
     // Oturumsuz erişim varsayılan olarak kapalıdır — yalnızca ABYS_PUBLIC_DEMO=1
     // ile açık deneme akışı için geri açılır (bkz. src/lib/public-demo.ts).
     if (!isPublicDemoEnabled()) {
-      return NextResponse.json({ error: "Bu uç oturum gerektirir." }, { status: 401 });
+      return localizedError(req, "api.auth.sessionRequired", 401);
     }
     // Oturumsuz istekler IP başına sınırlıdır (AI kaynak tüketimine karşı).
     const rate = checkAnonymousRate(req, false);

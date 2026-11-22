@@ -9,6 +9,7 @@ import { getSector, type SectorId } from "@/lib/sectors";
 import { getTemplates, getTemplate, runComparison } from "@/lib/scenario-engine";
 import { runMonteCarlo } from "@/lib/scenario-simulation";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * Senaryo Laboratuvarı (master plan md.13).
@@ -21,14 +22,14 @@ import { recordAuditEvent } from "@/lib/db/repos/audit";
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
   const sectorId = (req.nextUrl.searchParams.get("sectorId") ?? "other") as SectorId;
   const sector = getSector(sectorId);
-  if (!sector) return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });
+  if (!sector) return localizedError(req, "api.scenarios.invalidSector", 400);
 
   await migrate();
   const saved = await getDb().query(
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "run_analysis")) {
     return NextResponse.json({ error: permissionError("run_analysis") }, { status: 403 });
   }
@@ -72,13 +73,13 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+    return localizedError(req, "api.scenarios.invalidBody", 400);
   }
 
   const sector = getSector(body.sectorId);
-  if (!sector) return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });
+  if (!sector) return localizedError(req, "api.scenarios.invalidSector", 400);
   const template = getTemplate(sector.id, body.templateId ?? "");
-  if (!template) return NextResponse.json({ error: "Senaryo şablonu bulunamadı." }, { status: 400 });
+  if (!template) return localizedError(req, "api.scenarios.templateNotFound", 400);
 
   // Girdiler sayısal ve şablon sınırları içinde olmalı (deterministik güvenlik).
   const inputs: Record<string, number> = {};

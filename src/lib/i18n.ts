@@ -74,6 +74,11 @@ export type ShellKey =
   | "api.outcomes.invalidLimit"
   | "api.outcomes.limitRange"
   | "api.outcomes.decisionNotFound"
+  | "api.users.emailExists"
+  | "api.users.lastAdminProtected"
+  | "api.scenarios.invalidSector"
+  | "api.scenarios.invalidBody"
+  | "api.scenarios.templateNotFound"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -1770,6 +1775,23 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "api.outcomes.decisionNotFound": {
     tr: "Karar kaydı bulunamadı.",
     en: "Decision record not found.",
+  },
+  "api.users.emailExists": {
+    tr: "Bu e-posta ile bir kullanıcı zaten var.",
+    en: "A user with this email already exists.",
+  },
+  "api.users.lastAdminProtected": {
+    tr: "Son aktif sistem yöneticisi düşürülemez veya devre dışı bırakılamaz.",
+    en: "The last active system administrator cannot be demoted or disabled.",
+  },
+  "api.scenarios.invalidSector": { tr: "Geçersiz sektör.", en: "Invalid sector." },
+  "api.scenarios.invalidBody": {
+    tr: "Geçersiz istek gövdesi.",
+    en: "Invalid request body.",
+  },
+  "api.scenarios.templateNotFound": {
+    tr: "Senaryo şablonu bulunamadı.",
+    en: "Scenario template not found.",
   },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },
