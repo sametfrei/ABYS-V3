@@ -5,6 +5,8 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { createApiKey, listApiKeys, revokeApiKey, type Scope } from "@/lib/integrations/api-key";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError, localizedErrorWith, requestLocale } from "@/lib/api-i18n";
+import { t } from "@/lib/i18n";
 
 /**
  * API anahtarı yönetimi (insan oturumu gerekir — makine anahtarı kendi
@@ -13,10 +15,11 @@ import { recordAuditEvent } from "@/lib/db/repos/audit";
 
 const VALID_SCOPES: Scope[] = ["events:write", "read:advisors", "read:all"];
 
-export async function GET() {
+export async function GET(req?: NextRequest) {
+  const localeRequest = req ?? new Request("http://localhost/api/integration/keys");
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(localeRequest, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -26,7 +29,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
@@ -35,20 +38,19 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+    return localizedError(req, "api.scenarios.invalidBody", 400);
   }
   const name = typeof body.name === "string" ? body.name.trim() : undefined;
-  if (!name) return NextResponse.json({ error: "Anahtar adı gerekli." }, { status: 400 });
+  if (!name) return localizedError(req, "api.integration.keyNameRequired", 400);
 
   // Yanlış tipli scopes 500 yerine varsayılana düşer; geçersiz kapsamlar elenir.
   const scopes = (Array.isArray(body.scopes) ? body.scopes : ["events:write"]).filter(
     (s): s is Scope => VALID_SCOPES.includes(s as Scope)
   );
   if (scopes.length === 0) {
-    return NextResponse.json(
-      { error: `Geçerli kapsam gerekli: ${VALID_SCOPES.join(", ")}` },
-      { status: 400 }
-    );
+    return localizedErrorWith(req, "api.integration.invalidScope", 400, {
+      scopes: VALID_SCOPES.join(", "),
+    });
   }
 
   const created = await createApiKey({ orgId: session.orgId, name, scopes, createdBy: session.displayName });
@@ -66,22 +68,22 @@ export async function POST(req: NextRequest) {
     key: created.plainKey,
     prefix: created.prefix,
     scopes,
-    warning: "Bu anahtar bir daha gösterilmeyecek. Güvenli bir yere kaydedin.",
+    warning: t(requestLocale(req), "api.integration.keyWarning"),
   });
 }
 
 export async function DELETE(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
   const keyId = req.nextUrl.searchParams.get("id");
-  if (!keyId) return NextResponse.json({ error: "id gerekli." }, { status: 400 });
+  if (!keyId) return localizedError(req, "api.integration.keyIdRequired", 400);
 
   const ok = await revokeApiKey(session.orgId, keyId);
-  if (!ok) return NextResponse.json({ error: "Anahtar bulunamadı ya da zaten iptal." }, { status: 404 });
+  if (!ok) return localizedError(req, "api.integration.keyNotFound", 404);
 
   await recordAuditEvent({
     orgId: session.orgId,

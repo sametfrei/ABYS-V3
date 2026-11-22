@@ -110,6 +110,25 @@ export type ShellKey =
   | "api.connectors.querySingle"
   | "api.connectors.querySelectOnly"
   | "api.connectors.queryForbidden"
+  | "api.ingest.fileTooLarge"
+  | "api.ingest.invalidForm"
+  | "api.ingest.fileRequired"
+  | "api.ingest.emptyFile"
+  | "api.ingest.emptyText"
+  | "api.ingest.textTooLong"
+  | "api.kpi.labelTooLong"
+  | "api.kpi.notFound"
+  | "api.integration.invalidKey"
+  | "api.integration.missingScope"
+  | "api.integration.bodyTooLarge"
+  | "api.integration.invalidJson"
+  | "api.integration.emptyEvents"
+  | "api.integration.batchLimit"
+  | "api.integration.keyNameRequired"
+  | "api.integration.invalidScope"
+  | "api.integration.keyIdRequired"
+  | "api.integration.keyNotFound"
+  | "api.integration.keyWarning"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -1926,6 +1945,61 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "api.connectors.queryForbidden": {
     tr: "Salt-okunur olmayan anahtar kelime tespit edildi: {keyword}.",
     en: "A non-read-only keyword was detected: {keyword}.",
+  },
+  "api.ingest.fileTooLarge": {
+    tr: "Dosya çok büyük (5MB sınırı).",
+    en: "The file is too large (5MB limit).",
+  },
+  "api.ingest.invalidForm": { tr: "Geçersiz form verisi.", en: "Invalid form data." },
+  "api.ingest.fileRequired": { tr: "Dosya gerekli.", en: "A file is required." },
+  "api.ingest.emptyFile": { tr: "Dosya boş.", en: "The file is empty." },
+  "api.ingest.emptyText": { tr: "Metin boş olamaz.", en: "Text cannot be empty." },
+  "api.ingest.textTooLong": {
+    tr: "Metin çok uzun (8000 karakter sınırı).",
+    en: "The text is too long (8000 character limit).",
+  },
+  "api.kpi.labelTooLong": { tr: "Etiket çok uzun.", en: "The label is too long." },
+  "api.kpi.notFound": { tr: "Kayıt bulunamadı.", en: "Record not found." },
+  "api.integration.invalidKey": {
+    tr: "Geçersiz ya da eksik API anahtarı (Authorization: Bearer abys_...).",
+    en: "Invalid or missing API key (Authorization: Bearer abys_...).",
+  },
+  "api.integration.missingScope": {
+    tr: "Bu anahtarda events:write kapsamı yok.",
+    en: "This key does not have the events:write scope.",
+  },
+  "api.integration.bodyTooLarge": {
+    tr: "Gövde çok büyük (2 MB sınırı).",
+    en: "The body is too large (2 MB limit).",
+  },
+  "api.integration.invalidJson": {
+    tr: "Gövde geçerli JSON değil.",
+    en: "The body is not valid JSON.",
+  },
+  "api.integration.emptyEvents": {
+    tr: "Olay listesi boş.",
+    en: "The event list is empty.",
+  },
+  "api.integration.batchLimit": {
+    tr: "Toplu gönderim sınırı {max} olay.",
+    en: "The batch limit is {max} events.",
+  },
+  "api.integration.keyNameRequired": {
+    tr: "Anahtar adı gerekli.",
+    en: "A key name is required.",
+  },
+  "api.integration.invalidScope": {
+    tr: "Geçerli kapsam gerekli: {scopes}",
+    en: "A valid scope is required: {scopes}",
+  },
+  "api.integration.keyIdRequired": { tr: "id gerekli.", en: "id is required." },
+  "api.integration.keyNotFound": {
+    tr: "Anahtar bulunamadı ya da zaten iptal.",
+    en: "The key was not found or is already revoked.",
+  },
+  "api.integration.keyWarning": {
+    tr: "Bu anahtar bir daha gösterilmeyecek. Güvenli bir yere kaydedin.",
+    en: "This key will not be shown again. Store it in a safe place.",
   },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },

@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/repos/kpi-values";
 import { listKpiLabels } from "@/lib/db/repos/forecast";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 const labelSchema = z.string().trim().min(1).max(120);
 const observedAtSchema = z
@@ -43,7 +44,7 @@ const deleteSchema = z.object({ id: z.string().trim().min(1).max(100) });
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ labels });
   }
   if (label.length > 120) {
-    return NextResponse.json({ error: "Etiket çok uzun." }, { status: 400 });
+    return localizedError(req, "api.kpi.labelTooLong", 400);
   }
   const points = await listKpiPoints(session.orgId, label);
   return NextResponse.json({ label, points });
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "edit_kpi")) {
     return NextResponse.json({ error: permissionError("edit_kpi") }, { status: 403 });
   }
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "edit_kpi")) {
     return NextResponse.json({ error: permissionError("edit_kpi") }, { status: 403 });
   }
@@ -100,7 +101,7 @@ export async function DELETE(req: NextRequest) {
   if (!parsed.ok) return parsed.response;
 
   const deleted = await deleteKpiPoint(session.orgId, parsed.data.id);
-  if (!deleted) return NextResponse.json({ error: "Kayıt bulunamadı." }, { status: 404 });
+  if (!deleted) return localizedError(req, "api.kpi.notFound", 404);
 
   await recordAuditEvent({
     orgId: session.orgId,

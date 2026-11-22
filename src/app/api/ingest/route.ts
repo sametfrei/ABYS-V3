@@ -14,27 +14,34 @@ import { SESSION_COOKIE } from "../auth/login/route";
 
 export const maxDuration = 600;
 
+import { localizedError } from "@/lib/api-i18n";
+
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // 5MB — sonuç metni 8000 karakter sınırına düşecek, ayrıştırma maliyetini sınırlar
 
-async function readRawTextFromForm(req: NextRequest): Promise<{ rawText: string; sectorId?: string } | { error: string; status: number }> {
+type FormReadResult =
+  | { rawText: string; sectorId?: string }
+  | { errorKey: "api.ingest.fileTooLarge" | "api.ingest.invalidForm" | "api.ingest.fileRequired" | "api.ingest.emptyFile"; status: number }
+  | { error: string; status: number };
+
+async function readRawTextFromForm(req: NextRequest): Promise<FormReadResult> {
   const contentLength = Number(req.headers.get("content-length") ?? 0);
   if (contentLength > MAX_UPLOAD_BYTES) {
-    return { error: "Dosya çok büyük (5MB sınırı).", status: 413 };
+    return { errorKey: "api.ingest.fileTooLarge", status: 413 };
   }
 
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
-    return { error: "Geçersiz form verisi.", status: 400 };
+    return { errorKey: "api.ingest.invalidForm", status: 400 };
   }
 
   const file = form.get("file");
   if (!(file instanceof File)) {
-    return { error: "Dosya gerekli.", status: 400 };
+    return { errorKey: "api.ingest.fileRequired", status: 400 };
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    return { error: "Dosya çok büyük (5MB sınırı).", status: 413 };
+    return { errorKey: "api.ingest.fileTooLarge", status: 413 };
   }
 
   const sectorId = form.get("sectorId");
@@ -49,7 +56,7 @@ async function readRawTextFromForm(req: NextRequest): Promise<{ rawText: string;
   }
 
   if (table.headers.length === 0 && table.rows.length === 0) {
-    return { error: "Dosya boş.", status: 400 };
+    return { errorKey: "api.ingest.emptyFile", status: 400 };
   }
 
   const rawText = Papa.unparse({ fields: table.headers, data: table.rows });
@@ -64,7 +71,7 @@ export async function POST(req: NextRequest) {
     // Oturumsuz erişim varsayılan olarak kapalıdır — yalnızca ABYS_PUBLIC_DEMO=1
     // ile açık deneme akışı için geri açılır (bkz. src/lib/public-demo.ts).
     if (!isPublicDemoEnabled()) {
-      return NextResponse.json({ error: "Bu uç oturum gerektirir." }, { status: 401 });
+      return localizedError(req, "api.auth.sessionRequired", 401);
     }
     // Oturumsuz istekler IP başına sınırlıdır (AI kaynak tüketimine karşı).
     const rate = checkAnonymousRate(req, false);
@@ -85,6 +92,9 @@ export async function POST(req: NextRequest) {
   if (contentType.includes("multipart/form-data")) {
     // Dosyadan içe alma (CSV/TSV/XLSX/XLS) — düz metin/yapıştırma yolu aşağıda değişmeden kalır.
     const result = await readRawTextFromForm(req);
+    if ("errorKey" in result) {
+      return localizedError(req, result.errorKey, result.status);
+    }
     if ("error" in result) {
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
@@ -95,7 +105,7 @@ export async function POST(req: NextRequest) {
     try {
       body = await req.json();
     } catch {
-      return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+      return localizedError(req, "api.scenarios.invalidBody", 400);
     }
     rawTextInput = body.rawText?.trim();
     sectorIdInput = body.sectorId;
@@ -108,13 +118,13 @@ export async function POST(req: NextRequest) {
   const sector = sectorParsed.success ? getSector(sectorParsed.data) : undefined;
 
   if (!rawText) {
-    return NextResponse.json({ error: "Metin boş olamaz." }, { status: 400 });
+    return localizedError(req, "api.ingest.emptyText", 400);
   }
   if (rawText.length > 8000) {
-    return NextResponse.json({ error: "Metin çok uzun (8000 karakter sınırı)." }, { status: 400 });
+    return localizedError(req, "api.ingest.textTooLong", 400);
   }
   if (!sector) {
-    return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });
+    return localizedError(req, "api.scenarios.invalidSector", 400);
   }
 
   return streamedJsonResponse(async () => {

@@ -5,6 +5,7 @@ import { authenticateApiKey, hasScope } from "@/lib/integrations/api-key";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { integrationEventSchema, integrationSourceSchema } from "@/lib/validation";
 import { checkApiKeyRate } from "@/lib/rate-limit";
+import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 
 /**
  * Integration Gateway — olay alıcısı (Faz 1).
@@ -48,13 +49,10 @@ interface IncomingEvent {
 export async function POST(req: NextRequest) {
   const ctx = await authenticateApiKey(req);
   if (!ctx) {
-    return NextResponse.json(
-      { error: "Geçersiz ya da eksik API anahtarı (Authorization: Bearer abys_...)." },
-      { status: 401 }
-    );
+    return localizedError(req, "api.integration.invalidKey", 401);
   }
   if (!hasScope(ctx, "events:write")) {
-    return NextResponse.json({ error: "Bu anahtarda events:write kapsamı yok." }, { status: 403 });
+    return localizedError(req, "api.integration.missingScope", 403);
   }
 
   const rate = checkApiKeyRate(ctx.keyId, "events", 120);
@@ -67,14 +65,14 @@ export async function POST(req: NextRequest) {
 
   const raw = await req.text();
   if (raw.length > MAX_BODY) {
-    return NextResponse.json({ error: "Gövde çok büyük (2 MB sınırı)." }, { status: 413 });
+    return localizedError(req, "api.integration.bodyTooLarge", 413);
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch {
-    return NextResponse.json({ error: "Gövde geçerli JSON değil." }, { status: 400 });
+    return localizedError(req, "api.integration.invalidJson", 400);
   }
 
   const body = parsed as { source?: string; events?: IncomingEvent[] } & IncomingEvent;
@@ -86,10 +84,12 @@ export async function POST(req: NextRequest) {
   const incoming: IncomingEvent[] = Array.isArray(body.events) ? body.events : [body];
 
   if (incoming.length === 0) {
-    return NextResponse.json({ error: "Olay listesi boş." }, { status: 400 });
+    return localizedError(req, "api.integration.emptyEvents", 400);
   }
   if (incoming.length > MAX_BATCH) {
-    return NextResponse.json({ error: `Toplu gönderim sınırı ${MAX_BATCH} olay.` }, { status: 400 });
+    return localizedErrorWith(req, "api.integration.batchLimit", 400, {
+      max: MAX_BATCH,
+    });
   }
 
   await migrate();
