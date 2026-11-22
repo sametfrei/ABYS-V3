@@ -161,6 +161,30 @@ async function main() {
   }
   const actBadStatus = await req("/api/actions/export?status=bogus", { cookie });
   expectStatus("aksiyon CSV geçersiz durum -> 400", actBadStatus.status, 400);
+  const actionsHeader =
+    "action_id,decision_id,case_id,title,owner,due_at,status,progress_note,decision_state," +
+    "event_count,last_event_at,last_event_by,created_at,updated_at,expected_impact_value," +
+    "expected_impact_currency,expected_impact_basis,outcome_result,outcome_note,outcome_lesson," +
+    "outcome_recorded_by,outcome_recorded_at,actual_impact_value,actual_impact_currency," +
+    "measurement_start,measurement_end,actual_impact_evidence";
+  if (String(actExport.text ?? "").startsWith(`${actionsHeader}\r\n`)) {
+    ok("aksiyon CSV tam başlığı");
+  } else {
+    bad("aksiyon CSV tam başlığı", "kapanış kolonları eksik veya sıra değişmiş");
+  }
+
+  // 4d) Sonuç geçmişi: anonim 401, bilinmeyen karar 404, ders listesi 200.
+  const outcomesAnon = await req("/api/outcomes");
+  expectStatus("sonuç geçmişi anonim erişim -> 401", outcomesAnon.status, 401);
+  const outcomesMissing = await req("/api/outcomes?decisionId=__smoke_yok__", { cookie });
+  expectStatus("bilinmeyen karar geçmişi -> 404", outcomesMissing.status, 404);
+  const outcomesLessons = await req("/api/outcomes", { cookie });
+  expectStatus("kurumsal dersler", outcomesLessons.status, 200);
+  if (Array.isArray(outcomesLessons.json?.lessons)) {
+    ok("kurumsal ders listesi", `${outcomesLessons.json.lessons.length} kayıt`);
+  } else {
+    bad("kurumsal ders listesi", "lessons dizisi yok");
+  }
 
   // 5) Yetki sınırı: ceo kullanıcı yönetemez
   const users = await req("/api/users", { cookie });
