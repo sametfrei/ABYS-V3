@@ -651,7 +651,7 @@ export async function listOutcomesForDecision(
   orgId: string,
   decisionId: string,
   limit = 20
-): Promise<OutcomeHistoryRow[]> {
+): Promise<{ items: OutcomeHistoryRow[]; truncated: boolean }> {
   await migrate();
   const safeLimit = Number.isInteger(limit) ? Math.min(Math.max(limit, 1), 100) : 20;
   const r = await getDb().query<OutcomeHistoryDbRow>(
@@ -661,12 +661,14 @@ export async function listOutcomesForDecision(
       WHERE org_id = $1 AND decision_id = $2
       ORDER BY created_at DESC, id DESC
       LIMIT $3`,
-    [orgId, decisionId, safeLimit]
+    [orgId, decisionId, safeLimit + 1]
   );
-  return r.rows.flatMap((row) => {
+  const truncated = r.rows.length > safeLimit;
+  const items = r.rows.slice(0, safeLimit).flatMap((row): OutcomeHistoryRow[] => {
     const recordedAt = asIso(row.recorded_at);
+    const result = row.result;
     if (
-      (row.result !== "improved" && row.result !== "unchanged" && row.result !== "worsened") ||
+      (result !== "improved" && result !== "unchanged" && result !== "worsened") ||
       recordedAt === null
     ) {
       return [];
@@ -675,7 +677,7 @@ export async function listOutcomesForDecision(
     return [
       {
         id: row.id,
-        result: row.result,
+        result,
         note: row.note,
         lesson: row.lesson,
         recorded_by: row.recorded_by,
@@ -693,4 +695,5 @@ export async function listOutcomesForDecision(
       },
     ];
   });
+  return { items, truncated };
 }

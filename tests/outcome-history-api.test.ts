@@ -173,4 +173,46 @@ describe("karar sonuç geçmişi API'si", () => {
     const res = await outcomesGET(historyRequest("a".repeat(301)));
     expect(res.status).toBe(400);
   });
+
+  it("limit uygular ve daha eski kayıtları truncated ile bildirir", async () => {
+    const db = getDb();
+    for (let index = 0; index < 21; index += 1) {
+      const day = String(index + 1).padStart(2, "0");
+      await db.query(
+        `INSERT INTO outcomes
+           (id, org_id, decision_id, result, note, recorded_by, created_at)
+         VALUES ($1, $2, 'hist-rec-a', 'unchanged', $3, 'bulk', $4)`,
+        [`hist-bulk-${index}`, ORG_A, `Toplu ölçüm ${index}`, `2026-04-${day}T10:00:00Z`]
+      );
+    }
+
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const res = await outcomesGET(
+      new NextRequest("http://localhost/api/outcomes?decisionId=hist-rec-a&limit=5")
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      outcomes: Array<{ id: string }>;
+      limit: number;
+      truncated: boolean;
+    };
+    expect(body.limit).toBe(5);
+    expect(body.truncated).toBe(true);
+    expect(body.outcomes).toHaveLength(5);
+    expect(body.outcomes[0]?.id).toBe("hist-bulk-20");
+    expect(body.outcomes.at(-1)?.id).toBe("hist-bulk-16");
+
+    expect(
+      (await outcomesGET(new NextRequest("http://localhost/api/outcomes?decisionId=hist-rec-a&limit=0")))
+        .status
+    ).toBe(400);
+    expect(
+      (await outcomesGET(new NextRequest("http://localhost/api/outcomes?decisionId=hist-rec-a&limit=abc")))
+        .status
+    ).toBe(400);
+    expect(
+      (await outcomesGET(new NextRequest("http://localhost/api/outcomes?decisionId=hist-rec-a&limit=101")))
+        .status
+    ).toBe(400);
+  });
 });

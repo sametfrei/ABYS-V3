@@ -84,6 +84,7 @@ export type ShellKey =
   | "actions.hideOutcomeHistory"
   | "actions.outcomeHistoryHint"
   | "actions.outcomeHistoryCount"
+  | "actions.outcomeHistoryTruncated"
   | "actions.outcomeHistoryLoadFailed"
   | "actions.lessonHeading"
   | "actions.closePreparation"
@@ -1708,6 +1709,10 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     en: "Every measurement recorded for this decision, newest first.",
   },
   "actions.outcomeHistoryCount": { tr: "{count} kayıt", en: "{count} records" },
+  "actions.outcomeHistoryTruncated": {
+    tr: "En yeni {limit} kayıt gösteriliyor; daha eski ölçümler var.",
+    en: "Showing the newest {limit} records; older measurements exist.",
+  },
   "actions.outcomeHistoryLoadFailed": {
     tr: "Sonuç geçmişi yüklenemedi.",
     en: "Outcome history could not be loaded.",

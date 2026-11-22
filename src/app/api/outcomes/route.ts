@@ -55,6 +55,17 @@ export async function GET(req?: NextRequest) {
     if (decisionId.length > 300) {
       return NextResponse.json({ error: "Geçersiz karar kimliği." }, { status: 400 });
     }
+    const rawLimit = req?.nextUrl.searchParams.get("limit");
+    let limit = 20;
+    if (rawLimit !== null && rawLimit !== undefined) {
+      if (!/^\d+$/.test(rawLimit)) {
+        return NextResponse.json({ error: "Geçersiz limit." }, { status: 400 });
+      }
+      limit = Number(rawLimit);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        return NextResponse.json({ error: "Limit 1 ile 100 arasında olmalı." }, { status: 400 });
+      }
+    }
     const db = getDb();
     const owns = await db.query(
       "SELECT 1 FROM decision_records WHERE id = $1 AND org_id = $2",
@@ -63,8 +74,8 @@ export async function GET(req?: NextRequest) {
     if (owns.rows.length === 0) {
       return NextResponse.json({ error: "Karar kaydı bulunamadı." }, { status: 404 });
     }
-    const outcomes = await listOutcomesForDecision(session.orgId, decisionId);
-    return NextResponse.json({ outcomes });
+    const { items, truncated } = await listOutcomesForDecision(session.orgId, decisionId, limit);
+    return NextResponse.json({ outcomes: items, limit, truncated });
   }
   const lessons = await listLessons(session.orgId);
   return NextResponse.json({ lessons });

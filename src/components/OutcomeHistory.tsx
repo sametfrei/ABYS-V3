@@ -67,6 +67,7 @@ export function OutcomeHistory({
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const [entries, setEntries] = useState<OutcomeHistoryEntry[] | null>(null);
+  const [truncated, setTruncated] = useState<{ limit: number } | null>(null);
 
   async function toggle() {
     if (open) {
@@ -80,8 +81,17 @@ export function OutcomeHistory({
     try {
       const response = await fetch(`/api/outcomes?decisionId=${encodeURIComponent(decisionId)}`);
       if (!response.ok) throw new Error("history unavailable");
-      const payload = (await response.json()) as { outcomes?: OutcomeHistoryEntry[] };
+      const payload = (await response.json()) as {
+        outcomes?: OutcomeHistoryEntry[];
+        limit?: number;
+        truncated?: boolean;
+      };
       setEntries(Array.isArray(payload.outcomes) ? payload.outcomes : []);
+      setTruncated(
+        payload.truncated === true
+          ? { limit: typeof payload.limit === "number" ? payload.limit : 20 }
+          : null
+      );
     } catch {
       setFailed(true);
     } finally {
@@ -152,6 +162,13 @@ export function OutcomeHistory({
                 );
               })}
             </ol>
+          )}
+          {truncated && (
+            <p className="mt-2 text-[11px] text-abys-warning" role="status">
+              {formatMessage(locale, "actions.outcomeHistoryTruncated", {
+                limit: truncated.limit,
+              })}
+            </p>
           )}
         </div>
       )}
