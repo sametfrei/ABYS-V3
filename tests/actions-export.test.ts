@@ -46,16 +46,19 @@ const SECTOR = "aviation";
 function decisionCase(title: string): AiDecisionCase {
   return {
     categoryId: "test:actions-csv",
-    sectorId: SECTOR,
+    categoryLabel: "Test",
     title,
     severity: "warning",
     confidence: 60,
     businessImpact: "test",
-    nextDevelopment: "",
+    confidenceRationale: "test",
+    evidence: [],
+    assumptions: [],
+    historicalComparison: "",
     counterfactual: { narrative: "", projectedImpact: "", timeHorizon: "" },
     options: [],
     recommendedOptionRank: 1,
-  } as AiDecisionCase;
+  };
 }
 
 async function seedAction(orgId: string, title: string): Promise<string> {

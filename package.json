@@ -21,7 +21,8 @@
     "demo:tais:reset": "tsx scripts/demo-tais-reset.ts",
     "desktop:stage": "node scripts/build-desktop.mjs",
     "desktop:run": "electron .",
-    "desktop:package": "npm run desktop:stage && electron-builder --win nsis --x64"
+    "desktop:package": "npm run desktop:stage && electron-builder --win nsis --x64",
+    "release:check": "bash scripts/release-check.sh"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

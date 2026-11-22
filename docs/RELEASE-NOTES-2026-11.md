@@ -1,0 +1,67 @@
+# ABYS-V3 — Teslim Notları (23 Kasım 2026 hedefi)
+
+Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
+başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
+modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
+(TB-001…TB-090), ürün durumu `docs/ROADMAP.md` içindedir.
+
+## Doğrulama kapıları
+
+| Kapı | Komut | Son sonuç |
+|---|---|---|
+| Tip + lint | `npm run verify` | temiz |
+| Testler | `npm test` | 94 dosya, 839 geçti / 9 atlandı |
+| Üretim derlemesi | `npm run build` | başarılı |
+| Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 75 geçti / 0 başarısız |
+| Sürüm parmak izi | `node scripts/verify-deploy.mjs --base=... --expect=origin` | commit EŞLEŞTİ, exit 0 |
+| Hepsi bir arada | `BASE_URL=... npm run release:check` | tsc + lint + test + build + smoke |
+
+## Doğrulanmış ürün kapsamı
+
+- **Karar merkezi:** vaka listesi, analizör, güven ve kalibrasyon, nedensellik
+  zinciri, izleme modalı, seçenekler; tümü TR/EN. (`/dashboard/decisions`)
+- **Yönetici deneyimi:** Yönetim Komuta Merkezi (30 saniyelik odak, brifing,
+  kanıt, kalibrasyon notu), TAIS yönetici ekranı ve KPI verisi ekranı TR/EN.
+- **Veri kalitesi:** dört boyutlu deterministik skor, metrik etiketine göre
+  filtre, karantina listesi (`limit` doğrulaması + `truncated` bildirimi) ve
+  yetki/kurum kapsamlı CSV dışa aktarımı (payload hariç, denetim kayıtlı).
+- **Aksiyonlar:** durum geçişleri, gecikme görünürlüğü, yürütme niyeti ve
+  deneme durumu; sahiplik/tarih/olay kanıtıyla CSV dışa aktarımı.
+- **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
+  sürümleme, idempotent kanonik kayıt, karantina ve zamanlayıcı sağlığı.
+- **Kimlik ve güvenlik:** RBAC, tenant izolasyonu, oturum cihazı ve son
+  görülme (migration 36), parola değiştirme, oturum iptali, denetim hash zinciri.
+- **i18n:** dashboard ekranları ve komuta merkezi TR/EN; dil çerez + localStorage.
+- **Dağıtım:** `/api/health` build parmak izi, `verify-deploy` kapısı,
+  Docker build argümanları, `release:check`.
+
+## Bilinen sınırlar (teslimde açıkça belirtilmeli)
+
+- **Tarayıcı E2E yapılmadı:** bu ortamda tarayıcı host'u yok. HTTP smoke ve
+  sunucu-taraflı render doğrulandı; görsel/etkileşim kontrolü yapılmadı.
+- **Gerçek sunucu doğrulanmadı:** yeni sunucunun URL/SSH erişimi verilmedi.
+  `verify-deploy` ve smoke hazır; adres verildiğinde tek komutla çalıştırılır.
+- **Canlı ERP/CRM kimlikleri yok:** SAP/Oracle/Dynamics/Salesforce/HubSpot/
+  NetSuite/Odoo/Infor/IFS/Sage adaptörleri sözleşme düzeyinde; müşteri uç
+  noktası olmadan canlı doğrulanmadı.
+- **Migration 18** (organizasyon hiyerarşisi + ülke/para birimi) açık insan
+  onayı bekliyor; bu nedenle `schemaReady` üretimde onay sonrası kontrol edilmeli.
+- **Sunucu tarafı serbest metinler Türkçe:** API hata/özet metinleri ve Ask ABYS
+  eşleştiricisi Türkçe çalışır; arayüz kabuğu TR/EN'dir.
+- **SOAP/JDBC** adaptörleri planlı; kapsam dışı.
+
+## Dağıtım adımları (özet)
+
+1. `GIT_SHA=$(git rev-parse HEAD)` ve `BUILD_TIME` ile imajı derle (Docker
+   `--build` olmadan eski katman kalır).
+2. `next start` sürecini yeniden başlat (build sonrası eski süreç eski kodu sunar).
+3. `node scripts/verify-deploy.mjs --base=https://<sunucu> --expect=origin`.
+4. `BASE_URL=https://<sunucu> npm run smoke:e2e`.
+5. Tarayıcıda: Komuta Merkezi, karar kanıtı, tahmin şeffaflığı, aksiyon durumu,
+   Bitrix24 senkronu, veri kalitesi paneli, TR/EN geçişi.
+
+## İnsan onayı gerektiren işlemler
+
+Migration 18, yıkıcı veritabanı işlemleri, üretim dağıtımı, canlı müşteri verisi
+değişiklikleri ve gerçek vendor write-back işlemleri bu teslimle **yapılmadı**;
+açık onay gerektirir.
