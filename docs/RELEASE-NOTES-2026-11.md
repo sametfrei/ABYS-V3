@@ -30,7 +30,9 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   (tutar/ISO para birimi/ölçüm aralığı/kanıt), son kaydedilen sonucun ders ve
   kanıtıyla geri görünürlüğü, kayıttan önce deterministik beklenen–gerçekleşen
   fark önizlemesi, sonuç + karar özeti + denetim kaydının tek transaction'da
-  yazılması ve sahiplik/tarih/olay kanıtıyla CSV dışa aktarımı.
+  yazılması ve sahiplik/tarih/olay kanıtıyla CSV dışa aktarımı. CSV ayrıca
+  beklenen etkiyi, son sonucu (ders/kaydeden) ve gerçekleşen etkiyi ölçüm
+  aralığı/kanıtıyla birlikte taşır.
 - **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
   sürümleme, idempotent kanonik kayıt, karantina ve zamanlayıcı sağlığı.
 - **Kimlik ve güvenlik:** RBAC, tenant izolasyonu, oturum cihazı ve son

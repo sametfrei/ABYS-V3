@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T01:36:09Z",
+  "updatedAt": "2026-11-22T11:49:44Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1910,6 +1910,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Recording an outcome inserts the outcome row, updates the decision aggregate and appends the hash-chained audit event in one database transaction. A missing decision update aborts and rolls back the whole operation; the route no longer writes audit separately.",
       "evidence": "Gates: tsc clean, eslint clean, decision-ledger 9/9 including outcome audit detail and verified audit chain, full suite 95 files / 845 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-097",
+      "commit": "edd52c2",
+      "title": "Outcome and impact evidence in action CSV export",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "backend-engineer",
+        "product-manager",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/actions-csv.ts",
+        "tests/actions-export.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The org- and permission-scoped actions CSV keeps its existing columns and appends the expected impact (value/currency/basis) plus the latest outcome (result/note/lesson/recorder/recorded_at) and its realized impact (value/currency/measurement window/evidence). Empty fields stay blank; a decision without an outcome exports blanks instead of fabricated values.",
+      "evidence": "Gates: tsc+eslint clean (npm run verify), actions-export 5/5, full suite 95 files / 845 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
     }
   ]
 }
