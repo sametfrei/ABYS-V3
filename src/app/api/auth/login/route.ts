@@ -6,6 +6,7 @@ import { authCookieIsSecure, verifyPassword, createSession } from "@/lib/auth/co
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { checkLoginRate, recordLoginFailure, resetLoginRate } from "@/lib/rate-limit";
 import { parseBody } from "@/lib/validation";
+import { LOCALE_COOKIE, parseLocale, t } from "@/lib/i18n";
 
 export const SESSION_COOKIE = "abys_session";
 
@@ -16,6 +17,7 @@ const loginBodySchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const locale = parseLocale(req.cookies.get(LOCALE_COOKIE)?.value);
   const parsed = await parseBody(req, loginBodySchema);
   if (!parsed.ok) return parsed.response;
 
@@ -24,14 +26,17 @@ export async function POST(req: NextRequest) {
   // edilirse baş/son boşluklu parolalar hiç giriş yapamaz hale gelir.
   const password = parsed.data.password ?? "";
   if (!email || !password) {
-    return NextResponse.json({ error: "E-posta ve parola gerekli." }, { status: 400 });
+    return NextResponse.json(
+      { error: t(locale, "login.error.emailRequired") },
+      { status: 400 }
+    );
   }
 
   // Kaba kuvvet koruması: başarısız denemeler e-posta+IP ve IP bazında sınırlanır.
   const rate = checkLoginRate(req, email);
   if (!rate.allowed) {
     return NextResponse.json(
-      { error: rate.message ?? "Çok fazla giriş denemesi." },
+      { error: t(locale, "login.error.tooMany") },
       {
         status: 429,
         headers: { "Retry-After": String(rate.retryAfterSec ?? 60) },
@@ -54,7 +59,10 @@ export async function POST(req: NextRequest) {
   const ok = user ? verifyPassword(password, user.password_hash) : verifyPassword(password, "00:00");
   if (!user || !ok) {
     recordLoginFailure(req, email);
-    return NextResponse.json({ error: "E-posta ya da parola hatalı." }, { status: 401 });
+    return NextResponse.json(
+      { error: t(locale, "login.error.invalid") },
+      { status: 401 }
+    );
   }
 
   resetLoginRate(req, email);

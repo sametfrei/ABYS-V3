@@ -47,10 +47,20 @@ const { checkLoginRate, recordLoginFailure, resetRateLimits } = await import(
   "../src/lib/rate-limit"
 );
 
-function loginRequest(email: string, password: string, ip = "203.0.113.10") {
+function loginRequest(
+  email: string,
+  password: string,
+  ip = "203.0.113.10",
+  locale?: "tr" | "en"
+) {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    "x-forwarded-for": ip,
+  };
+  if (locale) headers.cookie = `abys_lang=${locale}`;
   return new NextRequest("http://127.0.0.1/api/auth/login", {
     method: "POST",
-    headers: { "content-type": "application/json", "x-forwarded-for": ip },
+    headers,
     body: JSON.stringify({ email, password }),
   });
 }
@@ -100,6 +110,25 @@ describe("Kurumsal login akışı", () => {
     expect(getLoginErrorMessage(401, { error: LOGIN_INVALID_ERROR })).toBe(
       LOGIN_INVALID_ERROR
     );
+  });
+
+  it("login errors follow the abys_lang cookie for English users", async () => {
+    const invalid = await POST(
+      loginRequest(TEST_EMAIL, "yanlis-parola", "203.0.113.55", "en")
+    );
+    expect(invalid.status).toBe(401);
+    expect(await invalid.json()).toEqual({ error: "Incorrect email or password." });
+
+    const missing = await POST(
+      loginRequest(TEST_EMAIL, "", "203.0.113.56", "en")
+    );
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toEqual({ error: "Email and password are required." });
+
+    expect(getLoginErrorMessage(502, null, "en")).toBe(
+      "The server could not process the sign-in request. Please try again."
+    );
+    expect(getLoginErrorMessage(500, null, "en")).not.toBe(LOGIN_SERVER_ERROR);
   });
 
   it("valid credentials tolerate email casing and surrounding whitespace", async () => {

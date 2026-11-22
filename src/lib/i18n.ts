@@ -49,6 +49,11 @@ export type ShellKey =
   | "login.submitting"
   | "login.forgot"
   | "login.sso"
+  | "login.error.invalid"
+  | "login.error.emailRequired"
+  | "login.error.tooMany"
+  | "login.error.network"
+  | "login.error.server"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -1658,6 +1663,26 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     en: "If you forgot your password, contact your organization administrator.",
   },
   "login.sso": { tr: "Kurumsal hesapla giriş →", en: "Sign in with enterprise account →" },
+  "login.error.invalid": {
+    tr: "E-posta ya da parola hatalı.",
+    en: "Incorrect email or password.",
+  },
+  "login.error.emailRequired": {
+    tr: "E-posta ve parola gerekli.",
+    en: "Email and password are required.",
+  },
+  "login.error.tooMany": {
+    tr: "Çok fazla giriş denemesi.",
+    en: "Too many sign-in attempts.",
+  },
+  "login.error.network": {
+    tr: "ABYS yerel hizmetine ulaşılamadı. Uygulamayı kapatıp yeniden açın.",
+    en: "Could not reach the ABYS local service. Restart the app and try again.",
+  },
+  "login.error.server": {
+    tr: "Sunucu giriş isteğini işleyemedi. Lütfen tekrar deneyin.",
+    en: "The server could not process the sign-in request. Please try again.",
+  },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "actions.titleAccent": { tr: "yürütülmesi.", en: "of decisions." },

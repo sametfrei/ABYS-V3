@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { LogoBox } from "@/components/Logo";
 import {
   getLoginErrorMessage,
-  LOGIN_NETWORK_ERROR,
+  loginNetworkError,
 } from "@/lib/auth/login-messages";
 import { LOCALES, persistLocale, t, type Locale } from "@/lib/i18n";
 
@@ -39,7 +39,7 @@ export function LoginForm({
           body: JSON.stringify({ email, password }),
         });
       } catch {
-        setError(LOGIN_NETWORK_ERROR);
+        setError(loginNetworkError(locale));
         return;
       }
 
@@ -51,7 +51,7 @@ export function LoginForm({
       }
 
       if (!response.ok) {
-        setError(getLoginErrorMessage(response.status, payload));
+        setError(getLoginErrorMessage(response.status, payload, locale));
         return;
       }
 
