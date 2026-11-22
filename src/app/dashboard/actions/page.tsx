@@ -6,6 +6,7 @@ import { OutcomeHistory, OUTCOME_META } from "@/components/OutcomeHistory";
 import { PageHeader } from "@/components/PageHeader";
 import { ExportLink } from "@/components/ExportLink";
 import { overdueDays } from "@/lib/action-deadline";
+import { filterActions, type ActionFilter } from "@/lib/action-filters";
 import { computeEconomicVariance } from "@/lib/decision-economics";
 import { buildActualImpact, type ActualImpactInputError } from "@/lib/outcome-impact";
 import {
@@ -87,6 +88,15 @@ const STATUS_META: Record<string, { labelKey: ShellKey; color: string }> = {
   cancelled: { labelKey: "actions.statusCancelled", color: "var(--abys-critical)" },
 };
 
+const ACTION_FILTERS: { key: ActionFilter; labelKey: ShellKey }[] = [
+  { key: "all", labelKey: "actions.filterAll" },
+  { key: "open", labelKey: "actions.statusOpen" },
+  { key: "in_progress", labelKey: "actions.statusInProgress" },
+  { key: "overdue", labelKey: "actions.filterOverdue" },
+  { key: "done", labelKey: "actions.statusDone" },
+  { key: "cancelled", labelKey: "actions.statusCancelled" },
+];
+
 const DECISION_STATE_LABEL: Record<string, ShellKey> = {
   draft: "actions.decisionDraft",
   under_review: "actions.decisionUnderReview",
@@ -153,6 +163,7 @@ export default function ActionsPage() {
   const [actions, setActions] = useState<ActionRow[] | null>(null);
   const [error, setError] = useState<ShellKey | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [filter, setFilter] = useState<ActionFilter>("all");
   const load = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
@@ -186,6 +197,7 @@ export default function ActionsPage() {
   }, [session, reloadKey]);
 
   const summary = actions === null ? null : summarizeActions(actions);
+  const visibleActions = actions === null ? [] : filterActions(actions, filter);
 
   return (
     <div>
@@ -208,6 +220,33 @@ export default function ActionsPage() {
           <p className="text-sm text-abys-muted">{t(locale, "actions.loading")}</p>
         )}
         {actions !== null && actions.length > 0 && summary && <ActionSummary counts={summary} />}
+        {actions !== null && actions.length > 0 && (
+          <div
+            role="group"
+            aria-label={t(locale, "actions.filterLabel")}
+            className="mb-3 flex flex-wrap gap-2"
+          >
+            {ACTION_FILTERS.map((option) => {
+              const active = filter === option.key;
+              const count = filterActions(actions, option.key).length;
+              return (
+                <button
+                  key={option.key}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setFilter(option.key)}
+                  className={
+                    active
+                      ? "text-xs rounded-full bg-abys-navy text-white px-3 py-1.5"
+                      : "text-xs rounded-full border border-abys-ink/15 px-3 py-1.5 hover:bg-white/60"
+                  }
+                >
+                  {t(locale, option.labelKey)} ({count})
+                </button>
+              );
+            })}
+          </div>
+        )}
         {actions !== null && actions.length === 0 && !error && (
           <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-8 text-center">
             <p className="text-sm text-abys-muted">
@@ -215,8 +254,13 @@ export default function ActionsPage() {
             </p>
           </div>
         )}
+        {actions !== null && actions.length > 0 && visibleActions.length === 0 && (
+          <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-6 text-center">
+            <p className="text-sm text-abys-muted">{t(locale, "actions.filterEmpty")}</p>
+          </div>
+        )}
         <div className="space-y-3">
-          {actions?.map((a) => (
+          {visibleActions.map((a) => (
             <ActionCard key={a.id} action={a} onChanged={load} />
           ))}
         </div>

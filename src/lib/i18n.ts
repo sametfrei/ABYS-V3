@@ -90,6 +90,10 @@ export type ShellKey =
   | "actions.closePreparation"
   | "actions.executePrep"
   | "actions.summaryHeading"
+  | "actions.filterLabel"
+  | "actions.filterAll"
+  | "actions.filterOverdue"
+  | "actions.filterEmpty"
   | "actions.openWork"
   | "actions.completedWork"
   | "actions.statusOpen"
@@ -1721,6 +1725,13 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "actions.closePreparation": { tr: "Hazırlığı kapat", en: "Close preparation" },
   "actions.executePrep": { tr: "Yürütme hazırlığı", en: "Execution preparation" },
   "actions.summaryHeading": { tr: "Yönetici özeti", en: "Executive summary" },
+  "actions.filterLabel": { tr: "Aksiyon filtresi", en: "Action filter" },
+  "actions.filterAll": { tr: "Tümü", en: "All" },
+  "actions.filterOverdue": { tr: "Geciken", en: "Overdue" },
+  "actions.filterEmpty": {
+    tr: "Bu filtrede aksiyon yok.",
+    en: "No actions in this filter.",
+  },
   "actions.openWork": { tr: "Açık iş", en: "Open work" },
   "actions.completedWork": { tr: "Tamamlanan iş", en: "Completed work" },
   "actions.statusOpen": { tr: "Açık", en: "Open" },
