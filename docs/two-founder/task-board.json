@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T15:24:30Z",
+  "updatedAt": "2026-11-22T16:46:38Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2009,6 +2009,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Every CSV exporter using the shared cell writer prefixes user-controlled text that begins with =, +, -, @, tab or CR with an apostrophe so Excel/Sheets treats it as text. Pure numeric strings and numbers (including negative variance) remain numeric. Commas, quotes, CR/LF and tabs stay RFC 4180 quoted.",
       "evidence": "Gates: tsc clean, eslint clean, ledger/actions/decision-ledger/data-quality/audit/forecast CSV tests 31/31, npm run verify clean, live smoke 80/80 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-102",
+      "commit": "257abd8",
+      "title": "SQL connector results use shared CSV escaping",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-engineer",
+        "backend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/sql-result-csv.ts",
+        "src/app/api/connectors/sql/route.ts",
+        "tests/sql-result-csv.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "SQL connector field names and values are treated as untrusted input and rendered through the shared csvCell writer, preserving field order and LF row separators while applying RFC 4180 quoting and formula-injection neutralization. Null/undefined cells remain empty and negative numeric values stay numeric.",
+      "evidence": "Gates: tsc clean, eslint clean, sql-result/ledger CSV tests 10/10."
     }
   ]
 }

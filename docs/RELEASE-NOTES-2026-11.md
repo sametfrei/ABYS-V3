@@ -35,7 +35,8 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   aralığı/kanıtıyla birlikte taşır. Aksiyon kartı ve karar defteri, kararın tüm
   ölçüm geçmişini kurum kapsamlı API üzerinden istek üzerine yeniden eskiye gösterir.
 - **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
-  sürümleme, idempotent kanonik kayıt, karantina ve zamanlayıcı sağlığı.
+  sürümleme, idempotent kanonik kayıt, karantina, zamanlayıcı sağlığı ve
+  harici SQL sonuçlarında ortak CSV güvenliği.
 - **Kimlik ve güvenlik:** RBAC, tenant izolasyonu, oturum cihazı ve son
   görülme (migration 36), parola değiştirme, oturum iptali, denetim hash zinciri
   ve tüm CSV dışa aktarımlarında formül enjeksiyonu koruması.
