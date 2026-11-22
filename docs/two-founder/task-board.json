@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T18:06:52Z",
+  "updatedAt": "2026-11-22T20:41:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2131,6 +2131,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The optional Chrome smoke visits all 22 dashboard routes, asserting HTTP 200, rendered content, no visible application/runtime error text and no uncaught page errors; it keeps the overdue-filter, TR/EN, six-screen mobile overflow and mobile-navigation checks.",
       "evidence": "Gates: browser smoke 76/76 against production build on 127.0.0.1:3101 (Chrome)."
+    },
+    {
+      "id": "TB-108",
+      "commit": "14c4e53",
+      "title": "Localized sign-in error messages (TR/EN)",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/i18n.ts",
+        "src/lib/auth/login-messages.ts",
+        "src/app/api/auth/login/route.ts",
+        "src/app/login/LoginForm.tsx",
+        "tests/login-flow.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Missing-field, invalid-credential and rate-limit login errors follow the abys_lang cookie; the browser form falls back to localized network and server messages in the selected locale; Turkish remains the default.",
+      "evidence": "tests/login-flow.test.ts EN cookie 401/400 plus 5xx fallback; curl on production build 127.0.0.1:3102 returned EN messages with abys_lang=en and TR by default; full suite 861 passed / 9 skipped; npm run build clean."
     }
   ]
 }

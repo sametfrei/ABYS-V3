@@ -3,14 +3,14 @@
 Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
 başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
 modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
-(TB-001…TB-105), ürün durumu `docs/ROADMAP.md` içindedir.
+(TB-001…TB-108), ürün durumu `docs/ROADMAP.md` içindedir.
 
 ## Doğrulama kapıları
 
 | Kapı | Komut | Son sonuç |
 |---|---|---|
 | Tip + lint | `npm run verify` | temiz |
-| Testler | `npm test` | 98 dosya, 860 geçti / 9 atlandı |
+| Testler | `npm test` | 98 dosya, 861 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
 | Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 80 geçti / 0 başarısız |
 | Tarayıcı smoke | `BASE_URL=... npm run smoke:browser` | 76 geçti / 0 başarısız (Chrome, 22 rota + mobil) |
@@ -23,6 +23,9 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   zinciri, izleme modalı, seçenekler; tümü TR/EN. (`/dashboard/decisions`)
 - **Yönetici deneyimi:** Yönetim Komuta Merkezi (30 saniyelik odak, brifing,
   kanıt, kalibrasyon notu), TAIS yönetici ekranı ve KPI verisi ekranı TR/EN.
+- **Giriş deneyimi:** Giriş ekranı ve API hata mesajları (eksik alan, hatalı
+  kimlik, kaba kuvvet sınırı, ağ/sunucu hatası) `abys_lang` çerezine göre
+  TR/EN döner; varsayılan Türkçedir.
 - **Veri kalitesi:** dört boyutlu deterministik skor, metrik etiketine göre
   filtre, karantina listesi (`limit` doğrulaması + `truncated` bildirimi) ve
   yetki/kurum kapsamlı CSV dışa aktarımı (payload hariç, denetim kayıtlı).
