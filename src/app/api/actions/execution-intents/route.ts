@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../../auth/login/route";
+import { localizedError } from "@/lib/api-i18n";
 import {
   EXECUTION_INTENT_MODES,
   ExecutionIntentError,
@@ -48,13 +49,13 @@ function intentErrorResponse(err: ExecutionIntentError) {
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
   const actionId = req.nextUrl.searchParams.get("actionId") ?? undefined;
   if (actionId && actionId.length > 300) {
-    return NextResponse.json({ error: "Geçersiz aksiyon kimliği." }, { status: 400 });
+    return localizedError(req, "api.actions.invalidId", 400);
   }
   const intents = await listExecutionIntents({ orgId: session.orgId, actionId });
   return NextResponse.json({ intents });
@@ -63,7 +64,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }

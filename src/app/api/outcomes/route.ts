@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
+import { localizedError } from "@/lib/api-i18n";
 import { recordOutcome, listLessons, listOutcomesForDecision } from "@/lib/db/repos/actions";
 import type { RealizedEconomicImpact } from "@/lib/decision-economics";
 
@@ -44,26 +45,27 @@ const postSchema = z.object({
  * `?decisionId=` verilirse yalnızca o kararın kurum kapsamlı ölçüm geçmişi döner.
  */
 export async function GET(req?: NextRequest) {
+  const request = req ?? new NextRequest("http://localhost/api/outcomes");
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(request, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
-  const decisionId = req?.nextUrl.searchParams.get("decisionId")?.trim() ?? "";
+  const decisionId = request.nextUrl.searchParams.get("decisionId")?.trim() ?? "";
   if (decisionId) {
     if (decisionId.length > 300) {
-      return NextResponse.json({ error: "Geçersiz karar kimliği." }, { status: 400 });
+      return localizedError(request, "api.outcomes.invalidDecisionId", 400);
     }
-    const rawLimit = req?.nextUrl.searchParams.get("limit");
+    const rawLimit = request.nextUrl.searchParams.get("limit");
     let limit = 20;
     if (rawLimit !== null && rawLimit !== undefined) {
       if (!/^\d+$/.test(rawLimit)) {
-        return NextResponse.json({ error: "Geçersiz limit." }, { status: 400 });
+        return localizedError(request, "api.outcomes.invalidLimit", 400);
       }
       limit = Number(rawLimit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
-        return NextResponse.json({ error: "Limit 1 ile 100 arasında olmalı." }, { status: 400 });
+        return localizedError(request, "api.outcomes.limitRange", 400);
       }
     }
     const db = getDb();
@@ -72,7 +74,7 @@ export async function GET(req?: NextRequest) {
       [decisionId, session.orgId]
     );
     if (owns.rows.length === 0) {
-      return NextResponse.json({ error: "Karar kaydı bulunamadı." }, { status: 404 });
+      return localizedError(request, "api.outcomes.decisionNotFound", 404);
     }
     const { items, truncated } = await listOutcomesForDecision(session.orgId, decisionId, limit);
     return NextResponse.json({ outcomes: items, limit, truncated });
@@ -88,7 +90,7 @@ export async function GET(req?: NextRequest) {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }
@@ -112,7 +114,7 @@ export async function POST(req: NextRequest) {
     [body.decisionId, session.orgId]
   );
   if (owns.rows.length === 0) {
-    return NextResponse.json({ error: "Karar kaydı bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.outcomes.decisionNotFound", 404);
   }
 
   const outcomeId = await recordOutcome({

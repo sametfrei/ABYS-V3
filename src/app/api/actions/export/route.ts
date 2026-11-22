@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../auth/login/route";
+import { localizedError } from "@/lib/api-i18n";
 import { ACTION_STATUSES, listActions } from "@/lib/db/repos/actions";
 import { toActionsCsv } from "@/lib/actions-csv";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
@@ -17,14 +18,14 @@ const MAX_EXPORT_ROWS = 500;
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
   const status = req.nextUrl.searchParams.get("status") ?? undefined;
   if (status !== undefined && !(ACTION_STATUSES as readonly string[]).includes(status)) {
-    return NextResponse.json({ error: "Geçersiz aksiyon durumu." }, { status: 400 });
+    return localizedError(req, "api.actions.invalidStatus", 400);
   }
 
   const actions = await listActions(session.orgId, status, MAX_EXPORT_ROWS);

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { authCookieIsSecure } from "@/lib/auth/core";
 import {
@@ -12,12 +12,14 @@ import {
   OIDC_NONCE_COOKIE,
   OIDC_COOKIE_TTL_SECONDS,
 } from "@/lib/auth/oidc";
+import { localizedError, requestLocale } from "@/lib/api-i18n";
+import { t } from "@/lib/i18n";
 
 /** GET /api/auth/oidc/start — yetkilendirme URL'ine yönlendirir. SSO yapılandırılmamışsa 404. */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const config = getOidcConfig();
   if (!config) {
-    return NextResponse.json({ error: "Kurumsal giriş (SSO) yapılandırılmamış." }, { status: 404 });
+    return localizedError(req, "login.error.ssoNotConfigured", 404);
   }
 
   let discovery;
@@ -25,7 +27,12 @@ export async function GET() {
     discovery = await getDiscoveryDocument(config.issuer);
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "OIDC yapılandırması alınamadı." },
+      {
+        error:
+          err instanceof Error
+            ? err.message
+            : t(requestLocale(req), "login.error.ssoDiscovery"),
+      },
       { status: 502 }
     );
   }

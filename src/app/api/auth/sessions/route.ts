@@ -6,6 +6,7 @@ import { getSession } from "@/lib/auth/core";
 import { SESSION_COOKIE } from "../login/route";
 import { parseBody } from "@/lib/validation";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 /**
  * GET    /api/auth/sessions — oturum sahibinin AKTİF oturumları.
@@ -36,10 +37,11 @@ async function currentSession(): Promise<
   return { session, sessionId };
 }
 
-export async function GET() {
+export async function GET(req?: NextRequest) {
+  const localeRequest = req ?? new NextRequest("http://localhost/api/auth/sessions");
   const auth = await currentSession();
   if (!auth) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return localizedError(localeRequest, "api.auth.sessionRequired", 401);
   }
 
   const r = await getDb().query<{
@@ -70,7 +72,7 @@ export async function GET() {
 export async function DELETE(req: NextRequest) {
   const auth = await currentSession();
   if (!auth) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return localizedError(req, "api.auth.sessionRequired", 401);
   }
 
   const parsed = await parseBody(req, revokeSchema);
@@ -100,7 +102,7 @@ export async function DELETE(req: NextRequest) {
     [id, auth.session.userId, auth.session.orgId]
   );
   if (r.rows.length === 0) {
-    return NextResponse.json({ error: "Oturum bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.auth.sessionNotFound", 404);
   }
 
   await recordAuditEvent({

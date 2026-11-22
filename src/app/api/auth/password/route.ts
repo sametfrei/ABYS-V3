@@ -8,6 +8,7 @@ import { parseBody } from "@/lib/validation";
 import { passwordSchema } from "@/lib/password-policy";
 import { setUserPassword } from "@/lib/db/repos/users";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 import {
   checkPasswordRate,
   recordPasswordFailure,
@@ -30,15 +31,17 @@ export async function POST(req: NextRequest) {
   const currentSessionId = store.get(SESSION_COOKIE)?.value;
   const session = await getSession(currentSessionId);
   if (!session) {
-    return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+    return localizedError(req, "api.auth.sessionRequired", 401);
   }
 
   // Mevcut parola denemelerini sınırla (oturum çalınmış olsa bile kaba kuvvet).
   const rate = checkPasswordRate(session.userId);
   if (!rate.allowed) {
-    return NextResponse.json(
-      { error: rate.message ?? "Çok fazla hatalı parola denemesi." },
-      { status: 429, headers: { "Retry-After": String(rate.retryAfterSec ?? 60) } }
+    return localizedError(
+      req,
+      "api.auth.tooManyPasswordAttempts",
+      429,
+      { headers: { "Retry-After": String(rate.retryAfterSec ?? 60) } }
     );
   }
 
@@ -53,15 +56,12 @@ export async function POST(req: NextRequest) {
   const stored = r.rows[0];
   if (!stored || !verifyPassword(currentPassword, stored.password_hash)) {
     recordPasswordFailure(session.userId);
-    return NextResponse.json({ error: "Mevcut parola hatalı." }, { status: 400 });
+    return localizedError(req, "api.auth.currentPasswordInvalid", 400);
   }
   resetPasswordRate(session.userId);
 
   if (currentPassword === newPassword) {
-    return NextResponse.json(
-      { error: "Yeni parola mevcut parolayla aynı olamaz." },
-      { status: 400 }
-    );
+    return localizedError(req, "api.auth.passwordSame", 400);
   }
 
   const updated = await setUserPassword({
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     passwordHash: hashPassword(newPassword),
   });
   if (!updated) {
-    return NextResponse.json({ error: "Kullanıcı bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.auth.userNotFound", 404);
   }
 
   // Parola değişince kullanıcının DİĞER oturumlarını iptal et; çalınmış bir

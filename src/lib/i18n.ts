@@ -62,6 +62,18 @@ export type ShellKey =
   | "login.error.ssoExchange"
   | "login.error.ssoVerify"
   | "login.error.ssoUnknownUser"
+  | "api.auth.sessionRequired"
+  | "api.auth.currentPasswordInvalid"
+  | "api.auth.passwordSame"
+  | "api.auth.userNotFound"
+  | "api.auth.sessionNotFound"
+  | "api.auth.tooManyPasswordAttempts"
+  | "api.actions.invalidId"
+  | "api.actions.invalidStatus"
+  | "api.outcomes.invalidDecisionId"
+  | "api.outcomes.invalidLimit"
+  | "api.outcomes.limitRange"
+  | "api.outcomes.decisionNotFound"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -1722,6 +1734,42 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "login.error.ssoUnknownUser": {
     tr: "Bu e-posta ABYS'de tanımlı değil; yöneticinize başvurun.",
     en: "This email is not registered in ABYS; contact your administrator.",
+  },
+  "api.auth.sessionRequired": { tr: "Oturum gerekli.", en: "Sign-in required." },
+  "api.auth.currentPasswordInvalid": {
+    tr: "Mevcut parola hatalı.",
+    en: "The current password is incorrect.",
+  },
+  "api.auth.passwordSame": {
+    tr: "Yeni parola mevcut parolayla aynı olamaz.",
+    en: "The new password cannot be the same as the current password.",
+  },
+  "api.auth.userNotFound": { tr: "Kullanıcı bulunamadı.", en: "User not found." },
+  "api.auth.sessionNotFound": { tr: "Oturum bulunamadı.", en: "Session not found." },
+  "api.auth.tooManyPasswordAttempts": {
+    tr: "Çok fazla hatalı parola denemesi.",
+    en: "Too many incorrect password attempts.",
+  },
+  "api.actions.invalidId": {
+    tr: "Geçersiz aksiyon kimliği.",
+    en: "Invalid action id.",
+  },
+  "api.actions.invalidStatus": {
+    tr: "Geçersiz aksiyon durumu.",
+    en: "Invalid action status.",
+  },
+  "api.outcomes.invalidDecisionId": {
+    tr: "Geçersiz karar kimliği.",
+    en: "Invalid decision id.",
+  },
+  "api.outcomes.invalidLimit": { tr: "Geçersiz limit.", en: "Invalid limit." },
+  "api.outcomes.limitRange": {
+    tr: "Limit 1 ile 100 arasında olmalı.",
+    en: "The limit must be between 1 and 100.",
+  },
+  "api.outcomes.decisionNotFound": {
+    tr: "Karar kaydı bulunamadı.",
+    en: "Decision record not found.",
   },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },
