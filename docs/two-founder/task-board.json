@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T17:46:30Z",
+  "updatedAt": "2026-11-22T18:01:41Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2092,6 +2092,28 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "npm run smoke:browser logs in through the real UI with Playwright against installed Chrome, visits the command center, actions, decision ledger, forecast, connectors and data-quality screens, checks HTTP status/content/uncaught errors, writes screenshots under .data/browser-smoke, exercises the overdue filter, and verifies the TR/EN switch. It remains outside the default test suite so environments without Chrome are unaffected.",
       "evidence": "Gates: 21/21 browser checks passed against production build on 127.0.0.1:3101 (Chrome/Playwright); full suite 98 files / 860 passed (9 skipped); npm run verify clean."
+    },
+    {
+      "id": "TB-106",
+      "commit": "6624674",
+      "title": "Mobile navigation shell and responsive gutters",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "product-manager",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/layout.tsx",
+        "src/lib/i18n.ts",
+        "src/components/PageHeader.tsx",
+        "src/app/dashboard/*/page.tsx",
+        "scripts/browser-smoke.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Below lg the fixed 240px sidebar is replaced by a compact sticky header with a navigation select; the desktop sidebar is unchanged. Dashboard screens use 16px/24px/40px responsive gutters, long risk ids wrap, and the six critical screens have no horizontal overflow at 390px. The browser smoke checks all six mobile routes and the select navigation.",
+      "evidence": "Gates: tsc clean, eslint clean, npm run verify clean; browser smoke 28/28 on Chrome (desktop 21 + mobile overflow six routes + mobile navigation); prior full suite 98 files / 860 passed."
     }
   ]
 }

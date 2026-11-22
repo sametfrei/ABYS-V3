@@ -13,7 +13,7 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 | Testler | `npm test` | 98 dosya, 860 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
 | Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 80 geçti / 0 başarısız |
-| Tarayıcı smoke | `BASE_URL=... npm run smoke:browser` | 21 geçti / 0 başarısız (Chrome, 6 ekran) |
+| Tarayıcı smoke | `BASE_URL=... npm run smoke:browser` | 28 geçti / 0 başarısız (Chrome, masaüstü + mobil) |
 | Sürüm parmak izi | `node scripts/verify-deploy.mjs --base=... --expect=origin` | commit EŞLEŞTİ, exit 0 |
 | Hepsi bir arada | `BASE_URL=... DEPLOY_EXPECT=origin npm run release:check` | tsc + lint + test + build + smoke + commit parmak izi |
 
@@ -44,14 +44,17 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   görülme (migration 36), parola değiştirme, oturum iptali, denetim hash zinciri
   ve tüm CSV dışa aktarımlarında formül enjeksiyonu koruması.
 - **i18n:** dashboard ekranları ve komuta merkezi TR/EN; dil çerez + localStorage.
+- **Mobil:** lg altında sabit kenar çubuğu yerine kompakt gezinme menüsü;
+  altı kritik ekran 390px genişlikte yatay taşma olmadan açılır.
 - **Dağıtım:** `/api/health` build parmak izi, `verify-deploy` kapısı,
   Docker build argümanları, `release:check`.
 
 ## Bilinen sınırlar (teslimde açıkça belirtilmeli)
 
 - **Tarayıcı smoke:** Chrome/Playwright ile giriş, 6 kritik ekran, geciken
-  filtresi ve TR/EN geçişi 21/21 doğrulandı; ekran görüntüleri `.data/browser-smoke`
-  altında. Piksel-diff tabanlı görsel regresyon testi yoktur.
+  filtresi, TR/EN geçişi, 6 mobil ekranda taşma kontrolü ve mobil menü 28/28
+  doğrulandı; ekran görüntüleri `.data/browser-smoke` altında. Piksel-diff
+  tabanlı görsel regresyon testi yoktur.
 - **Gerçek sunucu doğrulanmadı:** yeni sunucunun URL/SSH erişimi verilmedi.
   `verify-deploy` ve smoke hazır; adres verildiğinde tek komutla çalıştırılır.
 - **Canlı ERP/CRM kimlikleri yok:** SAP/Oracle/Dynamics/Salesforce/HubSpot/
