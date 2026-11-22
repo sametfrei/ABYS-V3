@@ -3,6 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ExportLink } from "@/components/ExportLink";
+import { OutcomeHistory } from "@/components/OutcomeHistory";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -738,6 +739,9 @@ export default function DecisionLedgerPage() {
                         </p>
                       )}
                     </div>
+                  )}
+                  {entry.outcome && (
+                    <OutcomeHistory decisionId={entry.decisionId} className="mt-2" />
                   )}
                 </li>
               ))}
