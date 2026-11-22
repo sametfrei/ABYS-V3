@@ -1890,6 +1890,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "While entering a completed action's actual amount, the outcome form computes and shows the variance against the decision's expected impact before save. The calculation uses computeEconomicVariance, never combines different currencies, handles zero-basis variance without a percentage, and explains a currency mismatch in TR/EN.",
       "evidence": "Gates: tsc clean, eslint clean, targeted decision-economics/ledger/action-governance/i18n tests 44/44, full suite 95 files / 845 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-096",
+      "commit": "29ba851",
+      "title": "Atomic outcome, decision aggregate and audit persistence",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "backend-engineer",
+        "security-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/db/repos/actions.ts",
+        "src/app/api/outcomes/route.ts",
+        "tests/decision-ledger.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Recording an outcome inserts the outcome row, updates the decision aggregate and appends the hash-chained audit event in one database transaction. A missing decision update aborts and rolls back the whole operation; the route no longer writes audit separately.",
+      "evidence": "Gates: tsc clean, eslint clean, decision-ledger 9/9 including outcome audit detail and verified audit chain, full suite 95 files / 845 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
     }
   ]
 }
