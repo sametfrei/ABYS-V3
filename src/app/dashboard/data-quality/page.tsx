@@ -312,6 +312,12 @@ export default function DataQualityPage() {
         </div>
 
         <div className="mb-4 flex flex-wrap items-center gap-2">
+          <a
+            href={`/api/data-quality/export?status=${scope}`}
+            className="ml-auto rounded-full border border-abys-accent/40 px-4 py-1.5 text-xs font-semibold text-abys-accent hover:bg-abys-accent/10"
+          >
+            {t(locale, "dataQuality.exportCsv")}
+          </a>
           {(["pending", "all"] as const).map((s) => (
             <button
               key={s}

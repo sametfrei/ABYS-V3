@@ -139,6 +139,13 @@ async function main() {
     bad("veri kalitesi filtre kapsamı", "etiket kapsamı uygulanmadı");
   }
 
+  // 4b) Karantina CSV dışa aktarımı: anonim 401, yetkili CSV başlığı
+  const dqExportAnon = await req("/api/data-quality/export");
+  expectStatus("veri kalitesi CSV anonim erişim -> 401", dqExportAnon.status, 401);
+  // ceo rolünde ingest_data yok: dışa aktarım 403 kalmalı (en az yetki).
+  const dqExport = await req("/api/data-quality/export?status=all", { cookie });
+  expectStatus("veri kalitesi CSV ceo -> 403", dqExport.status, 403);
+
   // 5) Yetki sınırı: ceo kullanıcı yönetemez
   const users = await req("/api/users", { cookie });
   expectStatus("ceo /api/users -> 403", users.status, 403);
