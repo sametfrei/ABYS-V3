@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-21T23:51:25Z",
+  "updatedAt": "2026-11-22T00:32:27Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1705,6 +1705,28 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Smoke run logs in with an identifying user agent, asserts the session-owner device/last-seen response, checks the data-quality score label filter, and requests all 20 dashboard routes with an authenticated session.",
       "evidence": "Live run against 127.0.0.1:3100: 69 geçti, 0 başarısız; oturum cihazı ABYS-Smoke/1.0; etiket filtresi 0 satır."
+    },
+    {
+      "id": "TB-087",
+      "commit": "999d177",
+      "title": "Governed CSV export of quarantine issues",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "backend-engineer",
+        "security-engineer"
+      ],
+      "files": [
+        "src/lib/data-quality-csv.ts",
+        "src/app/api/data-quality/export/route.ts",
+        "src/app/dashboard/data-quality/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/data-quality-export.test.ts",
+        "scripts/smoke-e2e.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "GET /api/data-quality/export requires ingest_data, honours the status filter, exports at most 500 org-scoped rows with an RFC 4180 header, never includes payload, writes an audit event, and is reachable from the quarantine screen. Anonymous requests get 401 and roles without ingest_data get 403.",
+      "evidence": "Gates: tsc clean, eslint clean, export tests 4/4 (anon 401, ceo 403, escaped CSV, cross-org isolation), full suite 833 passed (9 skipped), build OK, smoke 71/71 including anon 401 and ceo 403."
     }
   ]
 }
