@@ -31,6 +31,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
   __setTestCookie: (name: string, value: string | undefined) => void;
 };
 const { migrate, getDb } = await import("../src/lib/db/client");
+const { verifyAuditChain } = await import("../src/lib/db/repos/audit");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
 const { GET: ledger } = await import("../src/app/api/decision-ledger/route");
@@ -411,6 +412,15 @@ describe("Decision Value Ledger API'si", () => {
       })
     );
     expect(outcome.status).toBe(200);
+
+    const audit = await getDb().query<{ detail: string | null; actor: string }>(
+      `SELECT detail, actor FROM audit_events
+        WHERE org_id = $1 AND type = 'outcome_recorded' AND detail = $2
+        ORDER BY created_at DESC LIMIT 1`,
+      [ORG_A, decisionId]
+    );
+    expect(audit.rows[0]?.detail).toBe(decisionId);
+    expect((await verifyAuditChain(ORG_A)).valid).toBe(true);
 
     const body = (await (await ledger(new Request("http://localhost/api/decision-ledger"))).json()) as {
       entries: Array<{

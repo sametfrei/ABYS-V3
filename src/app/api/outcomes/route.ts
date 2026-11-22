@@ -7,7 +7,6 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { recordOutcome, listLessons } from "@/lib/db/repos/actions";
-import { recordAuditEvent } from "@/lib/db/repos/audit";
 import type { RealizedEconomicImpact } from "@/lib/decision-economics";
 
 const actualImpactSchema = z
@@ -94,14 +93,6 @@ export async function POST(req: NextRequest) {
     lesson: body.lesson?.trim(),
     recordedBy: session.displayName,
     actualImpact,
-  });
-
-  await recordAuditEvent({
-    orgId: session.orgId,
-    actor: session.displayName,
-    type: "outcome_recorded",
-    summary: `Sonuç kaydedildi: ${body.result}`,
-    detail: body.decisionId,
   });
 
   return NextResponse.json({ outcomeId });

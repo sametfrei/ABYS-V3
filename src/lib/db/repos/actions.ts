@@ -554,40 +554,52 @@ export async function recordOutcome(params: {
   await migrate();
   const id = randomBytes(8).toString("hex");
   const actual = params.actualImpact ?? null;
-  await getDb().query(
-    `INSERT INTO outcomes
-       (id, org_id, decision_id, result, note, lesson, recorded_by,
-        actual_value, value_currency, measurement_start, measurement_end, evidence)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-    [
-      id,
-      params.orgId,
-      params.decisionId,
-      params.result,
-      params.note,
-      params.lesson ?? null,
-      params.recordedBy,
-      actual?.value ?? null,
-      actual?.currency ?? null,
-      actual?.measurementStart ?? null,
-      actual?.measurementEnd ?? null,
-      actual?.evidence ?? null,
-    ]
-  );
-  await getDb().query(
-    `UPDATE decision_records SET outcome = $3 WHERE id = $1 AND org_id = $2`,
-    [
-      params.decisionId,
-      params.orgId,
-      JSON.stringify({
-        result: params.result,
-        note: params.note,
-        lesson: params.lesson ?? "",
-        actualImpact: actual,
-      }),
-    ]
-  );
-  return id;
+  return getDb().transaction(async (tx) => {
+    await tx.query(
+      `INSERT INTO outcomes
+         (id, org_id, decision_id, result, note, lesson, recorded_by,
+          actual_value, value_currency, measurement_start, measurement_end, evidence)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      [
+        id,
+        params.orgId,
+        params.decisionId,
+        params.result,
+        params.note,
+        params.lesson ?? null,
+        params.recordedBy,
+        actual?.value ?? null,
+        actual?.currency ?? null,
+        actual?.measurementStart ?? null,
+        actual?.measurementEnd ?? null,
+        actual?.evidence ?? null,
+      ]
+    );
+    const updated = await tx.query(
+      `UPDATE decision_records SET outcome = $3 WHERE id = $1 AND org_id = $2`,
+      [
+        params.decisionId,
+        params.orgId,
+        JSON.stringify({
+          result: params.result,
+          note: params.note,
+          lesson: params.lesson ?? "",
+          actualImpact: actual,
+        }),
+      ]
+    );
+    if ((updated.affectedRows ?? 0) !== 1) {
+      throw new Error("Sonuç bağlanacak karar kaydı bulunamadı.");
+    }
+    await recordAuditEventInTransaction(tx, {
+      orgId: params.orgId,
+      actor: params.recordedBy,
+      type: "outcome_recorded",
+      summary: `Sonuç kaydedildi: ${params.result}`,
+      detail: params.decisionId,
+    });
+    return id;
+  });
 }
 
 /** Kurumsal hafıza beslemesi: sonucu kaydedilmiş kararlardan çıkarılan dersler. */
