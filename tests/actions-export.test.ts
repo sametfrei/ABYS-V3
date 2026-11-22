@@ -92,6 +92,7 @@ describe("aksiyon CSV dışa aktarımı", () => {
   let ceoB: string;
   let actionA: string;
   let actionB: string;
+  let actionInjection: string;
 
   beforeAll(async () => {
     await migrate();
@@ -120,6 +121,7 @@ describe("aksiyon CSV dışa aktarımı", () => {
 
     actionA = await seedAction(ORG_A, 'Geciken "yenileme" araması, acil');
     actionB = await seedAction(ORG_B, "B kurumu gizli aksiyonu");
+    actionInjection = await seedAction(ORG_A, "=cmd|' /C calc'!A0");
 
     const decision = await db.query<{ decision_id: string }>(
       "SELECT decision_id FROM actions WHERE id = $1 AND org_id = $2",
@@ -197,5 +199,13 @@ describe("aksiyon CSV dışa aktarımı", () => {
     const other = await (await exportActions(get())).text();
     expect(other).toContain(actionB);
     expect(other).not.toContain(actionA);
+  });
+
+  it("formül enjeksiyonu denemesi düz metin olarak dışa aktarılır", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const csv = await (await exportActions(get())).text();
+    expect(csv).toContain(actionInjection);
+    expect(csv).toContain("'=cmd|' /C calc'!A0");
+    expect(csv).not.toContain(",=cmd|' /C calc'!A0");
   });
 });

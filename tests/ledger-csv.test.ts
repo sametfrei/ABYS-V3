@@ -60,6 +60,19 @@ describe("karar defteri CSV üretimi", () => {
     expect(csvCell(0)).toBe("0");
   });
 
+  it("formül tetikleyen metinleri düz metne sabitler, sayıları korur", () => {
+    expect(csvCell("=1+1")).toBe("'=1+1");
+    expect(csvCell("+1+1")).toBe("'+1+1");
+    expect(csvCell("-1+1")).toBe("'-1+1");
+    expect(csvCell("@SUM(A1)")).toBe("'@SUM(A1)");
+    expect(csvCell("  =1+1")).toBe("'  =1+1");
+    expect(csvCell("\t=cmd")).toBe("\"'\t=cmd\"");
+    expect(csvCell("=cmd|' /C calc'!A0")).toBe("'=cmd|' /C calc'!A0");
+    expect(csvCell(-20000)).toBe("-20000");
+    expect(csvCell("-20000")).toBe("-20000");
+    expect(csvCell("-1.5e3")).toBe("-1.5e3");
+  });
+
   it("başlık sırası sabittir ve satır uzunluğu başlıkla eşleşir", () => {
     const row = ledgerEntryToRow(entry());
     expect(row).toHaveLength(LEDGER_CSV_HEADER.length);

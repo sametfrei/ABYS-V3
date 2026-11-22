@@ -37,12 +37,26 @@ export const LEDGER_CSV_HEADER = [
   "recorded_at",
 ] as const;
 
-/** RFC 4180: alan tırnak, virgül veya satır sonu içeriyorsa çift tırnakla sarılır. */
+const NUMERIC_TEXT = /^-?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+const FORMULA_LEAD = /^[=+\-@\t\r]/;
+
+/**
+ * RFC 4180 kaçışı + formül enjeksiyonu koruması.
+ *
+ * Excel/Sheets, `=`, `+`, `-`, `@`, sekme veya CR ile başlayan hücreleri
+ * formül olarak çalıştırabilir. Kullanıcı kontrollü başlık, not ve kanıt
+ * alanları dışa aktarıldığı için bu tür metinlerin başına kesme işareti
+ * eklenir; böylece hücre düz metin olarak açılır. Saf sayısal metinler
+ * (ör. negatif varyans `-20000`) değiştirilmez ki BI tarafında sayı kalsın.
+ */
 export function csvCell(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return "";
   const text = String(value);
-  if (/[",\r\n]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
-  return text;
+  const lead = text.trimStart();
+  const safe =
+    FORMULA_LEAD.test(lead) && !NUMERIC_TEXT.test(lead) ? `'${text}` : text;
+  if (/[",\r\n\t]/.test(safe)) return `"${safe.replace(/"/g, '""')}"`;
+  return safe;
 }
 
 function num(value: number | null | undefined): string {
