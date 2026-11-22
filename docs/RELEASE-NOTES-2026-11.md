@@ -3,14 +3,14 @@
 Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
 başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
 modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
-(TB-001…TB-090), ürün durumu `docs/ROADMAP.md` içindedir.
+(TB-001…TB-101), ürün durumu `docs/ROADMAP.md` içindedir.
 
 ## Doğrulama kapıları
 
 | Kapı | Komut | Son sonuç |
 |---|---|---|
 | Tip + lint | `npm run verify` | temiz |
-| Testler | `npm test` | 95 dosya, 845 geçti / 9 atlandı |
+| Testler | `npm test` | 96 dosya, 849 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
 | Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 80 geçti / 0 başarısız |
 | Sürüm parmak izi | `node scripts/verify-deploy.mjs --base=... --expect=origin` | commit EŞLEŞTİ, exit 0 |
@@ -37,7 +37,8 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 - **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
   sürümleme, idempotent kanonik kayıt, karantina ve zamanlayıcı sağlığı.
 - **Kimlik ve güvenlik:** RBAC, tenant izolasyonu, oturum cihazı ve son
-  görülme (migration 36), parola değiştirme, oturum iptali, denetim hash zinciri.
+  görülme (migration 36), parola değiştirme, oturum iptali, denetim hash zinciri
+  ve tüm CSV dışa aktarımlarında formül enjeksiyonu koruması.
 - **i18n:** dashboard ekranları ve komuta merkezi TR/EN; dil çerez + localStorage.
 - **Dağıtım:** `/api/health` build parmak izi, `verify-deploy` kapısı,
   Docker build argümanları, `release:check`.

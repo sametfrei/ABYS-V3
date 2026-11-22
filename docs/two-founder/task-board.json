@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T12:33:07Z",
+  "updatedAt": "2026-11-22T15:24:30Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1989,6 +1989,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The outcome-history UI is one shared component used by both action cards and decision-ledger entries. Each instance lazily fetches the org-scoped history for its decision, shows loading, failure and empty states, and never fabricates measurements. The actions page keeps the same latest-outcome card behaviour.",
       "evidence": "Gates: tsc clean, eslint clean, outcome-history/action-governance/decision-ledger/i18n 44/44, npm run verify clean, production build OK, live smoke 80/80 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-101",
+      "commit": "d2f170c",
+      "title": "CSV formula-injection neutralization across all exports",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-engineer",
+        "backend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/ledger-csv.ts",
+        "tests/ledger-csv.test.ts",
+        "tests/actions-export.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Every CSV exporter using the shared cell writer prefixes user-controlled text that begins with =, +, -, @, tab or CR with an apostrophe so Excel/Sheets treats it as text. Pure numeric strings and numbers (including negative variance) remain numeric. Commas, quotes, CR/LF and tabs stay RFC 4180 quoted.",
+      "evidence": "Gates: tsc clean, eslint clean, ledger/actions/decision-ledger/data-quality/audit/forecast CSV tests 31/31, npm run verify clean, live smoke 80/80 against 127.0.0.1:3100."
     }
   ]
 }
