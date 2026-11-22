@@ -1850,6 +1850,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "release:check rejects DEPLOY_EXPECT without BASE_URL with exit 3; when both are provided it runs verify, tests, production build, smoke and scripts/verify-deploy.mjs with the exact base URL and expected commit; without DEPLOY_EXPECT the fingerprint step is explicitly skipped.",
       "evidence": "bash -n clean; missing-BASE_URL guard exited 3; isolated command harness recorded verify → test → build → smoke → node scripts/verify-deploy.mjs --base=http://example.test --expect=origin and exited 0."
+    },
+    {
+      "id": "TB-094",
+      "commit": "20eadaa",
+      "title": "Latest outcome shown on action cards",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "product-manager",
+        "frontend-engineer",
+        "backend-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/actions/page.tsx",
+        "src/lib/db/repos/actions.ts",
+        "src/lib/i18n.ts",
+        "tests/action-governance.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "listActions returns the latest org-scoped outcome for each action's decision with deterministic newest-first ordering, normalized ISO timestamps and optional realized impact evidence. The action card displays the latest result, note, institutional lesson, actual amount/currency, measurement window, evidence and recorder in TR/EN; the button becomes 'Add another measurement' when an outcome exists.",
+      "evidence": "Gates: tsc clean, eslint clean, action-governance 8/8 including two-outcome newest-first mapping and cross-org-safe query, full suite 95 files / 845 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
     }
   ]
 }

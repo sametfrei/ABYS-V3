@@ -257,7 +257,7 @@ Görev dağıtımı, dosya sahipliği ve teslim yaklaşımı Lead Architect tara
   baştan üretebilir — dış saldırgana değil, kazara satır değişikliğine
   karşı bir kanıt.
 - Ürün yol haritası ve yetenek durum matrisi: `docs/ROADMAP.md`.
-- Otomatik test süiti VAR: 95 dosya geçti, 1 governance dosyası atlandı; 844 test geçti, 9 test atlandı (`npm test`, vitest) + `evals/` süiti
+- Otomatik test süiti VAR: 95 dosya geçti, 1 governance dosyası atlandı; 845 test geçti, 9 test atlandı (`npm test`, vitest) + `evals/` süiti
   (sahiplik ve doğrulama: `docs/agents/README.md`).
 - Teslim kapısı: `BASE_URL=http://127.0.0.1:3100 npm run release:check` →
   tsc + eslint + tam test + üretim derlemesi + çalışan örneğe karşı smoke;
