@@ -5,6 +5,7 @@ import { getSector } from "@/lib/sectors";
 import { streamedJsonResponse } from "@/lib/ai/stream-route";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
+import { localizedError } from "@/lib/api-i18n";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { insertDataset, insertRiskSignals } from "@/lib/db/repos/data";
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Geçersiz istek gövdesi." }, { status: 400 });
+    return localizedError(req, "api.risk.invalidBody", 400);
   }
 
   // Yanlış tipli alanlar TypeError -> 500 yerine 400 üretmeli.
@@ -25,13 +26,13 @@ export async function POST(req: NextRequest) {
   const data = typeof body.data === "string" ? body.data.trim() : undefined;
 
   if (!sector) {
-    return NextResponse.json({ error: "Geçersiz sektör." }, { status: 400 });
+    return localizedError(req, "api.scenarios.invalidSector", 400);
   }
   if (!data) {
-    return NextResponse.json({ error: "Veri boş olamaz." }, { status: 400 });
+    return localizedError(req, "api.risk.dataEmpty", 400);
   }
   if (data.length > 12000) {
-    return NextResponse.json({ error: "Veri çok uzun (12000 karakter sınırı)." }, { status: 400 });
+    return localizedError(req, "api.risk.dataTooLong", 400);
   }
 
   // Oturum stream başlamadan okunur.
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
     // Oturumsuz erişim varsayılan olarak kapalıdır — yalnızca ABYS_PUBLIC_DEMO=1
     // ile açık deneme akışı için geri açılır (bkz. src/lib/public-demo.ts).
     if (!isPublicDemoEnabled()) {
-      return NextResponse.json({ error: "Bu uç oturum gerektirir." }, { status: 401 });
+      return localizedError(req, "api.auth.sessionRequired", 401);
     }
     // Oturumsuz istekler IP başına sınırlıdır (AI kaynak tüketimine karşı).
     const rate = checkAnonymousRate(req, false);

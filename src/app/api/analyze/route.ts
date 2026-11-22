@@ -5,6 +5,7 @@ import { getRole } from "@/lib/roles";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
+import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { parseBody } from "@/lib/validation";
@@ -18,17 +19,8 @@ const MAX_SCENARIO_LEN = 4000;
  * şemada trim edilir; boşluktan ibaret senaryo 400 döner.
  */
 const analyzeBodySchema = z.object({
-  roleId: z
-    .string({ error: "Geçersiz rol." })
-    .refine((id) => getRole(id) !== undefined, "Geçersiz rol."),
-  scenario: z
-    .string({ error: "Senaryo metni boş olamaz." })
-    .trim()
-    .min(1, "Senaryo metni boş olamaz.")
-    .max(
-      MAX_SCENARIO_LEN,
-      `Senaryo metni çok uzun (${MAX_SCENARIO_LEN} karakter sınırı).`
-    ),
+  roleId: z.unknown(),
+  scenario: z.unknown(),
 });
 
 export async function POST(req: NextRequest) {
@@ -39,7 +31,7 @@ export async function POST(req: NextRequest) {
     // Oturumsuz erişim varsayılan olarak kapalıdır — yalnızca ABYS_PUBLIC_DEMO=1
     // ile açık deneme akışı için geri açılır (bkz. src/lib/public-demo.ts).
     if (!isPublicDemoEnabled()) {
-      return NextResponse.json({ error: "Bu uç oturum gerektirir." }, { status: 401 });
+      return localizedError(req, "api.auth.sessionRequired", 401);
     }
     // Oturumsuz istekler IP başına sınırlıdır (AI kaynak tüketimine karşı).
     const rate = checkAnonymousRate(req, false);
@@ -55,11 +47,22 @@ export async function POST(req: NextRequest) {
   const parsed = await parseBody(req, analyzeBodySchema);
   if (!parsed.ok) return parsed.response;
 
+  if (typeof parsed.data.roleId !== "string") {
+    return localizedError(req, "api.analyze.invalidRole", 400);
+  }
+  if (typeof parsed.data.scenario !== "string") {
+    return localizedError(req, "api.analyze.scenarioRequired", 400);
+  }
   const role = getRole(parsed.data.roleId);
-  const scenario = parsed.data.scenario;
-
   if (!role) {
-    return NextResponse.json({ error: "Geçersiz rol." }, { status: 400 });
+    return localizedError(req, "api.analyze.invalidRole", 400);
+  }
+  const scenario = parsed.data.scenario.trim();
+  if (scenario.length === 0) {
+    return localizedError(req, "api.analyze.scenarioRequired", 400);
+  }
+  if (scenario.length > MAX_SCENARIO_LEN) {
+    return localizedErrorWith(req, "api.analyze.scenarioTooLong", 400, { max: MAX_SCENARIO_LEN });
   }
 
   try {

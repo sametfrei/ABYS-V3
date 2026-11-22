@@ -9,6 +9,7 @@ import {
   MAX_EVENT_PAYLOAD_BYTES,
 } from "@/lib/integrations/bitrix24/events";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 
 const AUDIT_TYPE = "bitrix24_webhook_event";
 
@@ -26,19 +27,19 @@ const AUDIT_TYPE = "bitrix24_webhook_event";
 export async function POST(req: NextRequest) {
   const orgId = req.nextUrl.searchParams.get("orgId");
   if (!orgId) {
-    return NextResponse.json({ error: "orgId sorgu parametresi gerekli." }, { status: 400 });
+    return localizedError(req, "api.bitrix.orgIdRequired", 400);
   }
 
   const rawBody = await req.text();
   if (Buffer.byteLength(rawBody, "utf-8") > MAX_EVENT_PAYLOAD_BYTES) {
-    return NextResponse.json({ error: `Gövde ${MAX_EVENT_PAYLOAD_BYTES} bayt sınırını aşıyor.` }, { status: 413 });
+    return localizedErrorWith(req, "api.bitrix.payloadTooLarge", 413, { max: MAX_EVENT_PAYLOAD_BYTES });
   }
 
   let raw: unknown;
   try {
     raw = parseEventBody(rawBody, req.headers.get("content-type"));
   } catch {
-    return NextResponse.json({ error: "Gövde ayrıştırılamadı." }, { status: 400 });
+    return localizedError(req, "api.bitrix.invalidBody", 400);
   }
 
   const parsed = parseIncomingWebhookEvent(raw);
@@ -49,14 +50,14 @@ export async function POST(req: NextRequest) {
 
   const config = resolveBitrixConfig();
   if (!verifyWebhookToken(config, event.auth?.application_token)) {
-    return NextResponse.json({ error: "Geçersiz veya eksik application_token." }, { status: 401 });
+    return localizedError(req, "api.bitrix.invalidToken", 401);
   }
 
   await migrate();
   const db = getDb();
   const org = await db.query("SELECT 1 FROM organizations WHERE id = $1", [orgId]);
   if (org.rows.length === 0) {
-    return NextResponse.json({ error: "Kurum bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.bitrix.orgNotFound", 404);
   }
 
   const idempotencyKey = computeEventIdempotencyKey(event);

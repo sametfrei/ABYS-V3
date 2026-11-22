@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
+import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { insertDocument } from "@/lib/db/repos/documents";
 import { extractText } from "@/lib/documents/extract";
@@ -17,29 +18,29 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }
 
   const contentLength = Number(req.headers.get("content-length") ?? 0);
   if (contentLength > MAX_BYTES) {
-    return NextResponse.json({ error: "Dosya çok büyük (10MB sınırı)." }, { status: 413 });
+    return localizedError(req, "api.documents.fileTooLarge", 413);
   }
 
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: "Geçersiz form verisi." }, { status: 400 });
+    return localizedError(req, "api.documents.invalidForm", 400);
   }
 
   const file = form.get("file");
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "Dosya gerekli." }, { status: 400 });
+    return localizedError(req, "api.documents.fileRequired", 400);
   }
   if (file.size > MAX_BYTES) {
-    return NextResponse.json({ error: "Dosya çok büyük (10MB sınırı)." }, { status: 413 });
+    return localizedError(req, "api.documents.fileTooLarge", 413);
   }
 
   // Başlık: trim + 200 karakter sınırı; boşsa dosya adına düş (mevcut davranış).
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
     const message = titleParsed.error.issues
       .map((issue) => `${issue.path.join(".") || "başlık"}: ${issue.message}`)
       .join("; ");
-    return NextResponse.json({ error: `Geçersiz başlık: ${message}` }, { status: 400 });
+    return localizedErrorWith(req, "api.documents.invalidTitle", 400, { details: message });
   }
   const title = titleParsed.data;
 

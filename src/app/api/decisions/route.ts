@@ -11,6 +11,7 @@ import {
   recordHumanDecision,
 } from "@/lib/db/repos/decision-lifecycle";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 import type { ExpectedEconomicImpact } from "@/lib/decision-economics";
 
 const expectedImpactSchema = z
@@ -52,7 +53,7 @@ const patchSchema = z.object({
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }
@@ -95,7 +96,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }
@@ -106,7 +107,7 @@ export async function PATCH(req: NextRequest) {
 
   const updated = await updateDecisionState(session.orgId, body.decisionId, body.state);
   if (!updated) {
-    return NextResponse.json({ error: "Karar kaydı bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.outcomes.decisionNotFound", 404);
   }
 
   await recordAuditEvent({

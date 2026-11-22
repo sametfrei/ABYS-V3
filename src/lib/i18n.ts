@@ -129,6 +129,28 @@ export type ShellKey =
   | "api.integration.keyIdRequired"
   | "api.integration.keyNotFound"
   | "api.integration.keyWarning"
+  | "api.cases.caseIdRequired"
+  | "api.cases.notFound"
+  | "api.causal.linkNotFound"
+  | "api.graph.rootRequired"
+  | "api.graph.invalidDirection"
+  | "api.graph.nodeNotFound"
+  | "api.graph.ambiguousRoot"
+  | "api.bitrix.orgIdRequired"
+  | "api.bitrix.payloadTooLarge"
+  | "api.bitrix.invalidBody"
+  | "api.bitrix.invalidToken"
+  | "api.bitrix.orgNotFound"
+  | "api.analyze.invalidRole"
+  | "api.analyze.scenarioRequired"
+  | "api.analyze.scenarioTooLong"
+  | "api.documents.fileTooLarge"
+  | "api.documents.invalidForm"
+  | "api.documents.fileRequired"
+  | "api.documents.invalidTitle"
+  | "api.risk.invalidBody"
+  | "api.risk.dataEmpty"
+  | "api.risk.dataTooLong"
   | "actions.title"
   | "actions.exportCsv"
   | "actions.titleAccent"
@@ -2000,6 +2022,61 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "api.integration.keyWarning": {
     tr: "Bu anahtar bir daha gösterilmeyecek. Güvenli bir yere kaydedin.",
     en: "This key will not be shown again. Store it in a safe place.",
+  },
+  "api.cases.caseIdRequired": { tr: "caseId gerekli.", en: "caseId is required." },
+  "api.cases.notFound": { tr: "Vaka bulunamadı.", en: "Case not found." },
+  "api.causal.linkNotFound": { tr: "Bağlantı bulunamadı.", en: "Link not found." },
+  "api.graph.rootRequired": {
+    tr: "root parametresi gerekli.",
+    en: "The root parameter is required.",
+  },
+  "api.graph.invalidDirection": {
+    tr: "direction outbound, inbound veya both olmalı.",
+    en: "direction must be outbound, inbound or both.",
+  },
+  "api.graph.nodeNotFound": {
+    tr: "Grafik düğümü bulunamadı.",
+    en: "Graph node not found.",
+  },
+  "api.graph.ambiguousRoot": {
+    tr: "root birden fazla varlıkla eşleşiyor; node id veya entity parametresi belirtin.",
+    en: "root matches more than one entity; specify the node id or entity parameter.",
+  },
+  "api.bitrix.orgIdRequired": {
+    tr: "orgId sorgu parametresi gerekli.",
+    en: "The orgId query parameter is required.",
+  },
+  "api.bitrix.payloadTooLarge": {
+    tr: "Gövde {max} bayt sınırını aşıyor.",
+    en: "The body exceeds the {max} byte limit.",
+  },
+  "api.bitrix.invalidBody": { tr: "Gövde ayrıştırılamadı.", en: "The body could not be parsed." },
+  "api.bitrix.invalidToken": {
+    tr: "Geçersiz veya eksik application_token.",
+    en: "Invalid or missing application_token.",
+  },
+  "api.bitrix.orgNotFound": { tr: "Kurum bulunamadı.", en: "Organization not found." },
+  "api.analyze.invalidRole": { tr: "Geçersiz rol.", en: "Invalid role." },
+  "api.analyze.scenarioRequired": { tr: "Senaryo metni boş olamaz.", en: "The scenario text cannot be empty." },
+  "api.analyze.scenarioTooLong": {
+    tr: "Senaryo metni çok uzun ({max} karakter sınırı).",
+    en: "The scenario text is too long ({max} character limit).",
+  },
+  "api.documents.fileTooLarge": {
+    tr: "Dosya çok büyük (10MB sınırı).",
+    en: "The file is too large (10MB limit).",
+  },
+  "api.documents.invalidForm": { tr: "Geçersiz form verisi.", en: "Invalid form data." },
+  "api.documents.fileRequired": { tr: "Dosya gerekli.", en: "A file is required." },
+  "api.documents.invalidTitle": {
+    tr: "Geçersiz başlık: {details}",
+    en: "Invalid title: {details}",
+  },
+  "api.risk.invalidBody": { tr: "Geçersiz istek gövdesi.", en: "Invalid request body." },
+  "api.risk.dataEmpty": { tr: "Veri boş olamaz.", en: "Data cannot be empty." },
+  "api.risk.dataTooLong": {
+    tr: "Veri çok uzun (12000 karakter sınırı).",
+    en: "The data is too long (12000 character limit).",
   },
   "actions.title": { tr: "Kararların", en: "Execution" },
   "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },

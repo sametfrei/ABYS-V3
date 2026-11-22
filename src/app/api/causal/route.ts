@@ -8,6 +8,7 @@ import { parseBody } from "@/lib/validation";
 import { SESSION_COOKIE } from "../auth/login/route";
 import { insertLink, listLinks, updateStatus, RELATION_STATUSES } from "@/lib/db/repos/causal";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { localizedError } from "@/lib/api-i18n";
 
 export const CAUSAL_METHODS = [
   "randomized_controlled_trial",
@@ -41,14 +42,14 @@ const patchSchema = z.object({
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
   const caseId = req.nextUrl.searchParams.get("caseId");
   if (!caseId) {
-    return NextResponse.json({ error: "caseId gerekli." }, { status: 400 });
+    return localizedError(req, "api.cases.caseIdRequired", 400);
   }
 
   const links = await listLinks(session.orgId, caseId);
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
     [body.caseId, session.orgId]
   );
   if (owns.rows.length === 0) {
-    return NextResponse.json({ error: "Vaka bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.cases.notFound", 404);
   }
 
   const linkId = await insertLink({
@@ -110,7 +111,7 @@ export async function POST(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "record_decision")) {
     return NextResponse.json({ error: permissionError("record_decision") }, { status: 403 });
   }
@@ -121,7 +122,7 @@ export async function PATCH(req: NextRequest) {
 
   const updated = await updateStatus(session.orgId, body.linkId, body.relationStatus);
   if (!updated) {
-    return NextResponse.json({ error: "Bağlantı bulunamadı." }, { status: 404 });
+    return localizedError(req, "api.causal.linkNotFound", 404);
   }
 
   await recordAuditEvent({

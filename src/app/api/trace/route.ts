@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
+import { localizedError } from "@/lib/api-i18n";
 import { SESSION_COOKIE } from "../auth/login/route";
 
 /**
@@ -18,13 +19,13 @@ import { SESSION_COOKIE } from "../auth/login/route";
 export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return NextResponse.json({ error: "Oturum gerekli." }, { status: 401 });
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
   const caseId = req.nextUrl.searchParams.get("caseId");
-  if (!caseId) return NextResponse.json({ error: "caseId gerekli." }, { status: 400 });
+  if (!caseId) return localizedError(req, "api.cases.caseIdRequired", 400);
 
   await migrate();
   const db = getDb();
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
     [caseId, org]
   );
   const c = caseRow.rows[0];
-  if (!c) return NextResponse.json({ error: "Vaka bulunamadı." }, { status: 404 });
+  if (!c) return localizedError(req, "api.cases.notFound", 404);
 
   // Vakayı üreten model koşusu: aynı kurumda, vakadan hemen önceki analiz koşusu.
   const run = await db.query<{
