@@ -59,6 +59,21 @@ export interface ActionRow {
     currency: string;
     basis: string | null;
   } | null;
+  /** Karar için en son kaydedilen gerçekleşen sonuç (varsa). */
+  latest_outcome: {
+    result: "improved" | "unchanged" | "worsened";
+    note: string;
+    lesson: string | null;
+    recorded_by: string;
+    recorded_at: string;
+    actual_impact: {
+      value: number;
+      currency: string;
+      measurement_start: string | null;
+      measurement_end: string | null;
+      evidence: string | null;
+    } | null;
+  } | null;
   event_count: number;
   last_event_at: string | null;
   last_event_by: string | null;
@@ -78,11 +93,22 @@ export interface ActionEventRow {
   created_at: string;
 }
 
-interface ActionDbRow extends Omit<ActionRow, "event_count" | "expected_impact"> {
+interface ActionDbRow
+  extends Omit<ActionRow, "event_count" | "expected_impact" | "latest_outcome"> {
   event_count: number | string;
   expected_value: number | string | null;
   value_currency: string | null;
   value_basis: string | null;
+  outcome_result: string | null;
+  outcome_note: string | null;
+  outcome_lesson: string | null;
+  outcome_recorded_by: string | null;
+  outcome_recorded_at: string | Date | null;
+  outcome_actual_value: number | string | null;
+  outcome_actual_currency: string | null;
+  outcome_measurement_start: string | Date | null;
+  outcome_measurement_end: string | Date | null;
+  outcome_evidence: string | null;
 }
 
 type AuditWriter = (
@@ -98,6 +124,12 @@ type AuditWriter = (
 
 function asStatus(value: string): ActionStatus | null {
   return ACTION_STATUSES.includes(value as ActionStatus) ? (value as ActionStatus) : null;
+}
+
+function asIso(value: string | Date | null): string | null {
+  if (value === null) return null;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? date.toISOString() : null;
 }
 
 async function insertActionEvent(
@@ -217,6 +249,11 @@ export async function listActions(
             a.status, a.progress_note, a.related_risk_id, a.created_at, a.updated_at,
             d.state AS decision_state,
             d.expected_value, d.value_currency, d.value_basis,
+            o.result AS outcome_result, o.note AS outcome_note, o.lesson AS outcome_lesson,
+            o.recorded_by AS outcome_recorded_by, o.recorded_at AS outcome_recorded_at,
+            o.actual_value AS outcome_actual_value, o.actual_currency AS outcome_actual_currency,
+            o.measurement_start AS outcome_measurement_start,
+            o.measurement_end AS outcome_measurement_end, o.evidence AS outcome_evidence,
             COALESCE(ec.event_count, 0)::int AS event_count,
             le.created_at AS last_event_at, le.actor_name AS last_event_by
        FROM actions a
@@ -226,6 +263,15 @@ export async function listActions(
            FROM action_events e
           WHERE e.org_id = a.org_id AND e.action_id = a.id
        ) ec ON true
+       LEFT JOIN LATERAL (
+         SELECT result, note, lesson, recorded_by, created_at AS recorded_at,
+                actual_value, value_currency AS actual_currency,
+                measurement_start, measurement_end, evidence
+           FROM outcomes
+          WHERE org_id = a.org_id AND decision_id = a.decision_id
+          ORDER BY created_at DESC, id DESC
+          LIMIT 1
+       ) o ON true
        LEFT JOIN LATERAL (
          SELECT e.created_at, e.actor_name
            FROM action_events e
@@ -238,8 +284,32 @@ export async function listActions(
     params
   );
   return r.rows.map((row) => {
-    const { expected_value: rawExpected, value_currency, value_basis, ...action } = row;
+    const {
+      expected_value: rawExpected,
+      value_currency,
+      value_basis,
+      outcome_result,
+      outcome_note,
+      outcome_lesson,
+      outcome_recorded_by,
+      outcome_recorded_at,
+      outcome_actual_value,
+      outcome_actual_currency,
+      outcome_measurement_start,
+      outcome_measurement_end,
+      outcome_evidence,
+      ...action
+    } = row;
     const expectedValue = rawExpected === null ? null : Number(rawExpected);
+    const outcomeValue =
+      outcome_actual_value === null ? null : Number(outcome_actual_value);
+    const outcomeRecordedAt = asIso(outcome_recorded_at);
+    const result =
+      outcome_result === "improved" ||
+      outcome_result === "unchanged" ||
+      outcome_result === "worsened"
+        ? outcome_result
+        : null;
     return {
       ...action,
       status: asStatus(row.status) ?? "open",
@@ -249,6 +319,28 @@ export async function listActions(
               value: expectedValue,
               currency: value_currency,
               basis: value_basis,
+            }
+          : null,
+      latest_outcome:
+        result && outcome_note !== null && outcome_recorded_by !== null && outcomeRecordedAt !== null
+          ? {
+              result,
+              note: outcome_note,
+              lesson: outcome_lesson,
+              recorded_by: outcome_recorded_by,
+              recorded_at: outcomeRecordedAt,
+              actual_impact:
+                outcomeValue !== null &&
+                Number.isFinite(outcomeValue) &&
+                outcome_actual_currency
+                  ? {
+                      value: outcomeValue,
+                      currency: outcome_actual_currency,
+                      measurement_start: asIso(outcome_measurement_start),
+                      measurement_end: asIso(outcome_measurement_end),
+                      evidence: outcome_evidence,
+                    }
+                  : null,
             }
           : null,
       event_count: Number(row.event_count),

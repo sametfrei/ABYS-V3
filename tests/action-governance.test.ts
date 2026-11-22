@@ -156,6 +156,39 @@ describe("aksiyon yönetişimi ve karar-yürütme bağlantısı", () => {
     });
   });
 
+  it("aksiyon listesi kararın en son sonucunu finansal kanıtıyla döndürür", async () => {
+    const db = getDb();
+    await db.query(
+      `INSERT INTO outcomes
+         (id, org_id, decision_id, result, note, lesson, recorded_by,
+          actual_value, value_currency, measurement_start, measurement_end, evidence, created_at)
+       VALUES
+         ('out-action-old', $1, $2, 'unchanged', 'Eski ölçüm', NULL, 'CEO A',
+          NULL, NULL, NULL, NULL, NULL, '2026-01-01T00:00:00Z'),
+         ('out-action-new', $1, $2, 'improved', 'Gecikme 34 dakikadan 12 dakikaya indi',
+          'Vardiya öncesi önceliklendirme işe yaradı', 'CEO A', 230000, 'TRY',
+          '2026-01-15T00:00:00Z', '2026-02-15T00:00:00Z', 'finans mutabakatı',
+          '2026-02-20T00:00:00Z')`,
+      [ORG_A, decisionA]
+    );
+
+    const actions = await listActions(ORG_A);
+    expect(actions.find((row) => row.id === actionA)?.latest_outcome).toEqual({
+      result: "improved",
+      note: "Gecikme 34 dakikadan 12 dakikaya indi",
+      lesson: "Vardiya öncesi önceliklendirme işe yaradı",
+      recorded_by: "CEO A",
+      recorded_at: "2026-02-20T00:00:00.000Z",
+      actual_impact: {
+        value: 230000,
+        currency: "TRY",
+        measurement_start: "2026-01-15T00:00:00.000Z",
+        measurement_end: "2026-02-15T00:00:00.000Z",
+        evidence: "finans mutabakatı",
+      },
+    });
+  });
+
   it("açık aksiyon doğrudan tamamlandı yapılamaz; denetim izi değişmez", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, sessionA);
     const response = await patchAction(patchRequest({ actionId: actionA, status: "done" }));

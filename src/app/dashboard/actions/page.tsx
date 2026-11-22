@@ -39,6 +39,20 @@ interface ActionRow {
     currency: string;
     basis: string | null;
   } | null;
+  latest_outcome: {
+    result: "improved" | "unchanged" | "worsened";
+    note: string;
+    lesson: string | null;
+    recorded_by: string;
+    recorded_at: string;
+    actual_impact: {
+      value: number;
+      currency: string;
+      measurement_start: string | null;
+      measurement_end: string | null;
+      evidence: string | null;
+    } | null;
+  } | null;
   event_count: number;
   last_event_at: string | null;
   last_event_by: string | null;
@@ -91,6 +105,15 @@ const IMPACT_ERROR_KEY: Record<ActualImpactInputError, ShellKey> = {
   measurement_end_invalid: "actions.actualImpactEndInvalid",
   measurement_range_invalid: "actions.actualImpactRangeInvalid",
   evidence_too_long: "actions.actualImpactEvidenceTooLong",
+};
+
+const OUTCOME_META: Record<
+  "improved" | "unchanged" | "worsened",
+  { labelKey: ShellKey; color: string }
+> = {
+  improved: { labelKey: "actions.outcomeImproved", color: "var(--abys-healthy)" },
+  unchanged: { labelKey: "actions.outcomeUnchanged", color: "var(--abys-warning)" },
+  worsened: { labelKey: "actions.outcomeWorsened", color: "var(--abys-critical)" },
 };
 
 function useLocale(): Locale {
@@ -359,6 +382,7 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
           )}
         </div>
       )}
+      {action.latest_outcome && <LatestOutcome outcome={action.latest_outcome} />}
       {error && <p className="text-xs text-abys-critical mb-3">{error}</p>}
 
       <textarea
@@ -390,7 +414,11 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
         </button>
         {action.status === "done" && (
           <button onClick={() => setShowOutcome((v) => !v)} className="text-xs rounded-full border border-abys-accent/40 text-abys-accent px-3 py-1.5 hover:bg-abys-accent-soft">
-            {showOutcome ? t(locale, "actions.closeOutcome") : t(locale, "actions.saveOutcome")}
+            {showOutcome
+              ? t(locale, "actions.closeOutcome")
+              : action.latest_outcome
+                ? t(locale, "actions.addAnotherOutcome")
+                : t(locale, "actions.saveOutcome")}
           </button>
         )}
         {(action.status === "open" || action.status === "in_progress") && (
@@ -409,6 +437,55 @@ function ActionCard({ action, onChanged }: { action: ActionRow; onChanged: () =>
       )}
       {showExecution && <ExecutionIntentPanel actionId={action.id} />}
     </div>
+  );
+}
+
+function LatestOutcome({ outcome }: { outcome: ActionRow["latest_outcome"] }) {
+  const locale = useLocale();
+  if (!outcome) return null;
+  const meta = OUTCOME_META[outcome.result];
+  return (
+    <section
+      aria-label={t(locale, "actions.latestOutcomeHeading")}
+      className="mb-3 rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-abys-muted">
+          {t(locale, "actions.latestOutcomeHeading")}
+        </p>
+        <span
+          className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+          style={{ color: meta.color, backgroundColor: `color-mix(in srgb, ${meta.color} 12%, transparent)` }}
+        >
+          {t(locale, meta.labelKey)}
+        </span>
+      </div>
+      <p className="mt-1 text-xs text-abys-ink whitespace-pre-wrap">{outcome.note}</p>
+      {outcome.lesson && (
+        <p className="mt-1 text-[11px] text-abys-muted">
+          {t(locale, "actions.lessonHeading")}: {outcome.lesson}
+        </p>
+      )}
+      {outcome.actual_impact && (
+        <p className="mt-1 text-[11px] text-abys-muted">
+          {t(locale, "actions.actualImpactRecorded")}: {outcome.actual_impact.value.toLocaleString(locale)}{" "}
+          {outcome.actual_impact.currency}
+          {outcome.actual_impact.evidence ? ` · ${outcome.actual_impact.evidence}` : ""}
+          {outcome.actual_impact.measurement_start && (
+            <> · {new Date(outcome.actual_impact.measurement_start).toLocaleDateString(locale)}</>
+          )}
+          {outcome.actual_impact.measurement_end && (
+            <> → {new Date(outcome.actual_impact.measurement_end).toLocaleDateString(locale)}</>
+          )}
+        </p>
+      )}
+      <p className="mt-1 text-[11px] text-abys-muted">
+        {formatMessage(locale, "actions.latestOutcomeMeta", {
+          actor: outcome.recorded_by,
+          date: new Date(outcome.recorded_at).toLocaleString(locale),
+        })}
+      </p>
+    </section>
   );
 }
 

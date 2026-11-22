@@ -77,6 +77,10 @@ export type ShellKey =
   | "actions.saveNote"
   | "actions.closeOutcome"
   | "actions.saveOutcome"
+  | "actions.addAnotherOutcome"
+  | "actions.latestOutcomeHeading"
+  | "actions.latestOutcomeMeta"
+  | "actions.lessonHeading"
   | "actions.closePreparation"
   | "actions.executePrep"
   | "actions.summaryHeading"
@@ -128,6 +132,7 @@ export type ShellKey =
   | "actions.expectedImpactBasis"
   | "actions.actualImpactHint"
   | "actions.actualImpactHeading"
+  | "actions.actualImpactRecorded"
   | "actions.actualImpactAmount"
   | "actions.actualImpactCurrency"
   | "actions.actualImpactStart"
@@ -1682,6 +1687,13 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "actions.saveNote": { tr: "Notu kaydet", en: "Save note" },
   "actions.closeOutcome": { tr: "Sonuç formunu kapat", en: "Close outcome form" },
   "actions.saveOutcome": { tr: "Sonuç & ders kaydet", en: "Record outcome & lesson" },
+  "actions.addAnotherOutcome": { tr: "Yeni ölçüm ekle", en: "Add another measurement" },
+  "actions.latestOutcomeHeading": { tr: "Son kaydedilen sonuç", en: "Latest recorded outcome" },
+  "actions.latestOutcomeMeta": {
+    tr: "{actor} tarafından {date} tarihinde kaydedildi",
+    en: "Recorded by {actor} on {date}",
+  },
+  "actions.lessonHeading": { tr: "Kurumsal ders", en: "Institutional lesson" },
   "actions.closePreparation": { tr: "Hazırlığı kapat", en: "Close preparation" },
   "actions.executePrep": { tr: "Yürütme hazırlığı", en: "Execution preparation" },
   "actions.summaryHeading": { tr: "Yönetici özeti", en: "Executive summary" },
@@ -1771,6 +1783,10 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "actions.actualImpactHeading": {
     tr: "Gerçekleşen finansal etki (opsiyonel)",
     en: "Actual financial impact (optional)",
+  },
+  "actions.actualImpactRecorded": {
+    tr: "Gerçekleşen finansal etki",
+    en: "Actual financial impact",
   },
   "actions.actualImpactAmount": { tr: "Gerçekleşen tutar", en: "Actual amount" },
   "actions.actualImpactCurrency": { tr: "Para birimi (ISO)", en: "Currency (ISO)" },
