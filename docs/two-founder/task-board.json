@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T16:57:39Z",
+  "updatedAt": "2026-11-22T17:12:26Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2051,6 +2051,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Outcome history accepts an optional limit between 1 and 100 (default 20), fetches one extra row to detect truncation, and returns outcomes, limit and truncated. The UI states that older measurements exist when truncated. Invalid, zero, negative, non-numeric or over-100 limits return 400.",
       "evidence": "Gates: tsc clean, eslint clean, outcome-history+i18n 28/28 including 21-row truncation and invalid limits, npm run verify clean, live smoke 80/80 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-104",
+      "commit": "7fff62f",
+      "title": "Action center status and overdue filters",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "product-manager",
+        "frontend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/action-filters.ts",
+        "src/app/dashboard/actions/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/action-filters.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The action center offers all/open/in-progress/overdue/done/cancelled filters with live counts. Filtering is client-side over the already loaded org-scoped actions; overdue includes only open or in-progress actions whose due date has passed. Selecting a filter with no matches shows an explicit empty state in TR/EN.",
+      "evidence": "Gates: tsc clean, eslint clean, action-filter/action-deadline/i18n 30/30, npm run verify clean, live smoke 80/80 against 127.0.0.1:3100."
     }
   ]
 }

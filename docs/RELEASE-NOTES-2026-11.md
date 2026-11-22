@@ -35,6 +35,7 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   aralığı/kanıtıyla birlikte taşır. Aksiyon kartı ve karar defteri, kararın tüm
   ölçüm geçmişini kurum kapsamlı API üzerinden istek üzerine yeniden eskiye gösterir;
   limit aşımı sessizce gizlenmez, `truncated` ve arayüz bildirimiyle açıklanır.
+  Aksiyon merkezi durum ve gecikme filtreleriyle canlı sayımlar sunar.
 - **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
   sürümleme, idempotent kanonik kayıt, karantina, zamanlayıcı sağlığı ve
   harici SQL sonuçlarında ortak CSV güvenliği.
