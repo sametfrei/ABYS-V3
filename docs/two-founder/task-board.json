@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T12:24:50Z",
+  "updatedAt": "2026-11-22T12:33:07Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1969,6 +1969,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The live smoke asserts the exact actions CSV header including expected impact and outcome/realized-impact columns, and checks the outcomes API contract: anonymous 401, unknown decision 404, and an org-scoped lessons array for an authorized CEO.",
       "evidence": "Gates: node --check clean, npm run verify clean, live smoke 80/80 against 127.0.0.1:3100 (previous 75 checks plus five new assertions)."
+    },
+    {
+      "id": "TB-100",
+      "commit": "8ab1ecf",
+      "title": "Shared outcome history component in the decision ledger",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-engineer",
+        "product-manager",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/components/OutcomeHistory.tsx",
+        "src/app/dashboard/actions/page.tsx",
+        "src/app/dashboard/decision-ledger/page.tsx"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The outcome-history UI is one shared component used by both action cards and decision-ledger entries. Each instance lazily fetches the org-scoped history for its decision, shows loading, failure and empty states, and never fabricates measurements. The actions page keeps the same latest-outcome card behaviour.",
+      "evidence": "Gates: tsc clean, eslint clean, outcome-history/action-governance/decision-ledger/i18n 44/44, npm run verify clean, production build OK, live smoke 80/80 against 127.0.0.1:3100."
     }
   ]
 }
