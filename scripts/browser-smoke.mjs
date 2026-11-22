@@ -59,7 +59,7 @@ async function visit(route, label) {
   await page.waitForFunction(
     () => (document.body.innerText ?? "").trim().length > 100,
     undefined,
-    { timeout: 15_000 }
+    { timeout: 30_000 }
   );
   await page.waitForTimeout(250);
   const status = response?.status() ?? 0;
@@ -89,10 +89,19 @@ async function visit(route, label) {
 
 try {
   await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+  // Dev modunda hidrasyon tamamlanmadan tıklanırsa form native GET gönderir.
+  await page.waitForFunction(
+    () => {
+      const form = document.querySelector("form");
+      return !!form && Object.keys(form).some((key) => key.startsWith("__reactProps"));
+    },
+    undefined,
+    { timeout: 30_000 }
+  );
   await page.fill("#email", EMAIL);
   await page.fill("#password", PASSWORD);
   await Promise.all([
-    page.waitForURL("**/dashboard", { timeout: 20_000 }),
+    page.waitForURL("**/dashboard", { timeout: 60_000 }),
     page.click('button[type="submit"]'),
   ]);
   ok("tarayıcı girişi", page.url().replace(BASE, ""));
@@ -125,7 +134,13 @@ try {
   }
 
   await page.goto(`${BASE}/dashboard/actions`, { waitUntil: "domcontentloaded", timeout: 30_000 });
-  await page.waitForTimeout(800);
+  await page.waitForFunction(
+    () =>
+      document.body.innerText.includes("Henüz aksiyon yok") ||
+      !!document.querySelector('[role="group"][aria-label="Aksiyon filtresi"]'),
+    undefined,
+    { timeout: 30_000 }
+  );
   const actionsBody = await page.locator("body").innerText();
   const filterGroup = page.getByRole("group", { name: "Aksiyon filtresi" });
   if ((await filterGroup.count()) > 0) {
@@ -145,7 +160,7 @@ try {
 
   await context.addCookies([{ name: "abys_lang", value: "en", url: BASE }]);
   await page.goto(`${BASE}/dashboard/actions`, { waitUntil: "domcontentloaded", timeout: 30_000 });
-  await page.waitForSelector("h1", { timeout: 15_000 });
+  await page.waitForSelector("h1", { timeout: 30_000 });
   const englishHeading = (await page.locator("h1").first().innerText()).trim();
   if (/Execution/i.test(englishHeading)) ok("TR/EN geçişi", englishHeading.slice(0, 50));
   else bad("TR/EN geçişi", englishHeading.slice(0, 60));
@@ -165,7 +180,7 @@ try {
     await page.waitForFunction(
       () => (document.body.innerText ?? "").trim().length > 100,
       undefined,
-      { timeout: 15_000 }
+      { timeout: 30_000 }
     );
     await page.waitForTimeout(350);
     const overflow = await page.evaluate(() => ({
@@ -183,7 +198,7 @@ try {
   const mobileNav = page.locator('header select[aria-label]').first();
   if (await mobileNav.isVisible()) {
     await mobileNav.selectOption("/dashboard/decision-ledger");
-    await page.waitForURL("**/dashboard/decision-ledger", { timeout: 15_000 });
+    await page.waitForURL("**/dashboard/decision-ledger", { timeout: 30_000 });
     ok("mobil gezinme", page.url().replace(BASE, ""));
   } else {
     bad("mobil gezinme", "menü görünür değil");

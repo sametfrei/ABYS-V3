@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:preview": "ABYS_DB_DIR=.data/dev-preview AI_POLICY=DEMO_DETERMINISTIC AUTH_COOKIE_SECURE=false next dev -H 127.0.0.1 -p 3100",
+    "start:preview": "ABYS_DB_DIR=.data/dev-preview AI_POLICY=DEMO_DETERMINISTIC AUTH_COOKIE_SECURE=false next start -H 127.0.0.1 -p 3100",
     "agent:center": "node scripts/agent-command-center.mjs",
     "connectors:scheduler": "node scripts/connector-scheduler.mjs",
     "smoke:e2e": "node scripts/smoke-e2e.mjs",

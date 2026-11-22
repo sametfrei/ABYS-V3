@@ -101,10 +101,14 @@ tablosuyla aynıdır.
 | Ekran | Komut | Adres |
 |---|---|---|
 | Canlı frontend önizleme (HMR) | `npm run dev:preview` | http://127.0.0.1:3100 |
+| Üretim modu demo önizleme | `npm run start:preview` | http://127.0.0.1:3100 |
 | Agent Command Center (salt okunur) | `npm run agent:center` | http://127.0.0.1:3200 |
 
 - Önizleme, üretim verisinden ayrı bir PGlite dizini (`.data/dev-preview`) ve
   deterministik demo AI politikası kullanır; mevcut `.data`/kullanıcı verisine dokunmaz.
+- Üretim modu demo, aynı veriyi derlenmiş uygulamayla sunar (`npm run build`
+  sonrası `npm run start:preview`); ağır rota taramalarında dev sunucusunun
+  bellek nedeniyle yeniden başlamasını önler. Giriş: `ceo@tais.demo` / `abys-demo-2026`.
 - Command Center, Claude Code alt-agent transkriptlerini ve `~/.codex/sessions/**/*.jsonl`
   Codex rollout kayıtlarını salt okunur izler; yalnızca GET kabul eder, localhost dışı
   Host başlığını reddeder, hiçbir dosya yazmaz ve sır göstermez. Codex köprüsünde
