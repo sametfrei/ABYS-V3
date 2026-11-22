@@ -13,7 +13,7 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 | Testler | `npm test` | 98 dosya, 860 geçti / 9 atlandı |
 | Üretim derlemesi | `npm run build` | başarılı |
 | Çalışan örnek smoke | `BASE_URL=... npm run smoke:e2e` | 80 geçti / 0 başarısız |
-| Tarayıcı smoke | `BASE_URL=... npm run smoke:browser` | 28 geçti / 0 başarısız (Chrome, masaüstü + mobil) |
+| Tarayıcı smoke | `BASE_URL=... npm run smoke:browser` | 76 geçti / 0 başarısız (Chrome, 22 rota + mobil) |
 | Sürüm parmak izi | `node scripts/verify-deploy.mjs --base=... --expect=origin` | commit EŞLEŞTİ, exit 0 |
 | Hepsi bir arada | `BASE_URL=... DEPLOY_EXPECT=origin npm run release:check` | tsc + lint + test + build + smoke + commit parmak izi |
 
@@ -51,8 +51,8 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 
 ## Bilinen sınırlar (teslimde açıkça belirtilmeli)
 
-- **Tarayıcı smoke:** Chrome/Playwright ile giriş, 6 kritik ekran, geciken
-  filtresi, TR/EN geçişi, 6 mobil ekranda taşma kontrolü ve mobil menü 28/28
+- **Tarayıcı smoke:** Chrome/Playwright ile giriş, 22 dashboard rotası, geciken
+  filtresi, TR/EN geçişi, 6 mobil ekranda taşma kontrolü ve mobil menü 76/76
   doğrulandı; ekran görüntüleri `.data/browser-smoke` altında. Piksel-diff
   tabanlı görsel regresyon testi yoktur.
 - **Gerçek sunucu doğrulanmadı:** yeni sunucunun URL/SSH erişimi verilmedi.

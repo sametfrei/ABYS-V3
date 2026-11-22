@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T18:01:41Z",
+  "updatedAt": "2026-11-22T18:06:52Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2114,6 +2114,23 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Below lg the fixed 240px sidebar is replaced by a compact sticky header with a navigation select; the desktop sidebar is unchanged. Dashboard screens use 16px/24px/40px responsive gutters, long risk ids wrap, and the six critical screens have no horizontal overflow at 390px. The browser smoke checks all six mobile routes and the select navigation.",
       "evidence": "Gates: tsc clean, eslint clean, npm run verify clean; browser smoke 28/28 on Chrome (desktop 21 + mobile overflow six routes + mobile navigation); prior full suite 98 files / 860 passed."
+    },
+    {
+      "id": "TB-107",
+      "commit": "e882715",
+      "title": "Browser smoke covers every dashboard route",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "qa-engineer",
+        "frontend-engineer"
+      ],
+      "files": [
+        "scripts/browser-smoke.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The optional Chrome smoke visits all 22 dashboard routes, asserting HTTP 200, rendered content, no visible application/runtime error text and no uncaught page errors; it keeps the overdue-filter, TR/EN, six-screen mobile overflow and mobile-navigation checks.",
+      "evidence": "Gates: browser smoke 76/76 against production build on 127.0.0.1:3101 (Chrome)."
     }
   ]
 }
