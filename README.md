@@ -257,8 +257,13 @@ Görev dağıtımı, dosya sahipliği ve teslim yaklaşımı Lead Architect tara
   baştan üretebilir — dış saldırgana değil, kazara satır değişikliğine
   karşı bir kanıt.
 - Ürün yol haritası ve yetenek durum matrisi: `docs/ROADMAP.md`.
-- Otomatik test süiti VAR: 76 dosya geçti, 1 governance dosyası atlandı; 708 test geçti, 9 test atlandı (`npm test`, vitest) + `evals/` süiti
+- Otomatik test süiti VAR: 94 dosya geçti, 1 governance dosyası atlandı; 839 test geçti, 9 test atlandı (`npm test`, vitest) + `evals/` süiti
   (sahiplik ve doğrulama: `docs/agents/README.md`).
+- Teslim kapısı: `BASE_URL=http://127.0.0.1:3100 npm run release:check` →
+  tsc + eslint + tam test + üretim derlemesi + çalışan örneğe karşı smoke.
+- Dağıtım sürüm parmak izi: `node scripts/verify-deploy.mjs --base=<URL> --expect=origin`
+  (0 eşleşti, 1 uyuşmadı, 2 sağlıksız, 3 kullanım hatası). Teslim notları:
+  `docs/RELEASE-NOTES-2026-11.md`.
 - Kullanıcı yönetimi mevcut: `sys_admin` Ayarlar ekranından kullanıcı listeler,
   oluşturur, rol/durum günceller ve geçici parola sıfırlar
   (`/api/users`, `PATCH /api/users/[id]`, `src/components/UserManagement.tsx`).
