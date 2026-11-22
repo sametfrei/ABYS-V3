@@ -49,6 +49,7 @@ export type ShellKey =
   | "login.forgot"
   | "login.sso"
   | "actions.title"
+  | "actions.exportCsv"
   | "actions.titleAccent"
   | "actions.subtitle"
   | "actions.empty"
@@ -1621,6 +1622,7 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   },
   "login.sso": { tr: "Kurumsal hesapla giriş →", en: "Sign in with enterprise account →" },
   "actions.title": { tr: "Kararların", en: "Execution" },
+  "actions.exportCsv": { tr: "CSV indir", en: "Download CSV" },
   "actions.titleAccent": { tr: "yürütülmesi.", en: "of decisions." },
   "actions.subtitle": {
     tr: "Her aksiyon bir karara bağlıdır. İlerlemeyi güncelleyin, tamamlanınca gerçekleşen sonucu ve dersi kaydedin.",

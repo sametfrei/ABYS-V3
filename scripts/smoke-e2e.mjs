@@ -146,6 +146,22 @@ async function main() {
   const dqExport = await req("/api/data-quality/export?status=all", { cookie });
   expectStatus("veri kalitesi CSV ceo -> 403", dqExport.status, 403);
 
+  // 4c) Aksiyon CSV dışa aktarımı
+  const actExportAnon = await req("/api/actions/export");
+  expectStatus("aksiyon CSV anonim erişim -> 401", actExportAnon.status, 401);
+  const actExport = await req("/api/actions/export", { cookie });
+  expectStatus("aksiyon CSV", actExport.status, 200);
+  if (
+    (actExport.headers.get("content-type") ?? "").startsWith("text/csv") &&
+    String(actExport.text ?? "").startsWith("action_id,")
+  ) {
+    ok("aksiyon CSV başlığı");
+  } else {
+    bad("aksiyon CSV başlığı", "başlık veya içerik türü hatalı");
+  }
+  const actBadStatus = await req("/api/actions/export?status=bogus", { cookie });
+  expectStatus("aksiyon CSV geçersiz durum -> 400", actBadStatus.status, 400);
+
   // 5) Yetki sınırı: ceo kullanıcı yönetemez
   const users = await req("/api/users", { cookie });
   expectStatus("ceo /api/users -> 403", users.status, 403);

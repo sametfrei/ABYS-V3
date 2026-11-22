@@ -186,8 +186,23 @@ export async function createAction(params: CreateActionParams): Promise<string> 
   return getDb().transaction((tx) => createActionInTransaction(tx, params));
 }
 
-export async function listActions(orgId: string, status?: string): Promise<ActionRow[]> {
+export async function listActions(
+  orgId: string,
+  status?: string,
+  limit?: number
+): Promise<ActionRow[]> {
   await migrate();
+  const params: unknown[] = [orgId];
+  let where = "WHERE a.org_id = $1";
+  if (status) {
+    params.push(status);
+    where += ` AND a.status = $${params.length}`;
+  }
+  let limitClause = "";
+  if (typeof limit === "number" && Number.isInteger(limit) && limit >= 1) {
+    params.push(Math.min(limit, 2000));
+    limitClause = ` LIMIT $${params.length}`;
+  }
   const r = await getDb().query<ActionDbRow>(
     `SELECT a.id, a.decision_id, a.case_id, a.title, a.owner, a.due_at,
             a.status, a.progress_note, a.related_risk_id, a.created_at, a.updated_at,
@@ -208,9 +223,9 @@ export async function listActions(orgId: string, status?: string): Promise<Actio
           ORDER BY e.created_at DESC, e.id DESC
           LIMIT 1
        ) le ON true
-      WHERE a.org_id = $1 ${status ? "AND a.status = $2" : ""}
-      ORDER BY a.created_at DESC`,
-    status ? [orgId, status] : [orgId]
+      ${where}
+      ORDER BY a.created_at DESC${limitClause}`,
+    params
   );
   return r.rows.map((row) => ({
     ...row,

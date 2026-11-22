@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { ExecutionAttemptStatus } from "@/components/ExecutionAttemptStatus";
 import { PageHeader } from "@/components/PageHeader";
+import { ExportLink } from "@/components/ExportLink";
 import { overdueDays } from "@/lib/action-deadline";
 import {
   DEFAULT_LOCALE,
@@ -157,6 +158,9 @@ export default function ActionsPage() {
             {t(locale, error)}
           </p>
         )}
+        <div className="mb-4 flex justify-end">
+          <ExportLink href="/api/actions/export" label={t(locale, "actions.exportCsv")} />
+        </div>
         {actions === null && (
           <p className="text-sm text-abys-muted">{t(locale, "actions.loading")}</p>
         )}
