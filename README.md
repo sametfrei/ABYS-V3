@@ -260,7 +260,8 @@ Görev dağıtımı, dosya sahipliği ve teslim yaklaşımı Lead Architect tara
 - Otomatik test süiti VAR: 95 dosya geçti, 1 governance dosyası atlandı; 844 test geçti, 9 test atlandı (`npm test`, vitest) + `evals/` süiti
   (sahiplik ve doğrulama: `docs/agents/README.md`).
 - Teslim kapısı: `BASE_URL=http://127.0.0.1:3100 npm run release:check` →
-  tsc + eslint + tam test + üretim derlemesi + çalışan örneğe karşı smoke.
+  tsc + eslint + tam test + üretim derlemesi + çalışan örneğe karşı smoke;
+  sunucu için `DEPLOY_EXPECT=origin` da verilirse commit parmak izi de doğrulanır.
 - Dağıtım sürüm parmak izi: `node scripts/verify-deploy.mjs --base=<URL> --expect=origin`
   (0 eşleşti, 1 uyuşmadı, 2 sağlıksız, 3 kullanım hatası). Teslim notları:
   `docs/RELEASE-NOTES-2026-11.md`.

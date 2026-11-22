@@ -1831,6 +1831,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "A completed action's outcome form exposes the decision's expected impact and optional actual amount, ISO currency, measurement window and evidence. Partial financial input is rejected rather than silently dropped; invalid dates, reversed ranges, non-finite/out-of-range amounts and non-ISO currencies are rejected in TR/EN. listActions returns org-scoped expected impact for context, and the existing outcome API receives a typed actualImpact payload.",
       "evidence": "Gates: tsc clean, eslint clean, outcome-impact tests 5/5, action-governance 7/7 including expected-impact mapping, full suite 95 files / 844 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-093",
+      "commit": "fba4eab",
+      "title": "Release gate validates deployed commit fingerprint",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "devops-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "scripts/release-check.sh",
+        "README.md",
+        "docs/RELEASE-NOTES-2026-11.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "release:check rejects DEPLOY_EXPECT without BASE_URL with exit 3; when both are provided it runs verify, tests, production build, smoke and scripts/verify-deploy.mjs with the exact base URL and expected commit; without DEPLOY_EXPECT the fingerprint step is explicitly skipped.",
+      "evidence": "bash -n clean; missing-BASE_URL guard exited 3; isolated command harness recorded verify → test → build → smoke → node scripts/verify-deploy.mjs --base=http://example.test --expect=origin and exited 0."
     }
   ]
 }
