@@ -1871,6 +1871,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "listActions returns the latest org-scoped outcome for each action's decision with deterministic newest-first ordering, normalized ISO timestamps and optional realized impact evidence. The action card displays the latest result, note, institutional lesson, actual amount/currency, measurement window, evidence and recorder in TR/EN; the button becomes 'Add another measurement' when an outcome exists.",
       "evidence": "Gates: tsc clean, eslint clean, action-governance 8/8 including two-outcome newest-first mapping and cross-org-safe query, full suite 95 files / 845 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-095",
+      "commit": "91a5819",
+      "title": "Deterministic expected-vs-actual variance preview",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "product-manager",
+        "frontend-engineer",
+        "data-analyst"
+      ],
+      "files": [
+        "src/app/dashboard/actions/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "While entering a completed action's actual amount, the outcome form computes and shows the variance against the decision's expected impact before save. The calculation uses computeEconomicVariance, never combines different currencies, handles zero-basis variance without a percentage, and explains a currency mismatch in TR/EN.",
+      "evidence": "Gates: tsc clean, eslint clean, targeted decision-economics/ledger/action-governance/i18n tests 44/44, full suite 95 files / 845 passed (9 skipped), production build OK, live smoke 75/75 against 127.0.0.1:3100."
     }
   ]
 }

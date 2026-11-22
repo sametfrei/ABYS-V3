@@ -28,7 +28,8 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 - **Aksiyonlar:** durum geçişleri, gecikme görünürlüğü, yürütme niyeti ve
   deneme durumu; beklenen etki bağlamı, doğrulanmış gerçekleşen finansal etki
   (tutar/ISO para birimi/ölçüm aralığı/kanıt), son kaydedilen sonucun ders ve
-  kanıtıyla geri görünürlüğü ve sahiplik/tarih/olay kanıtıyla CSV dışa aktarımı.
+  kanıtıyla geri görünürlüğü, kayıttan önce deterministik beklenen–gerçekleşen
+  fark önizlemesi ve sahiplik/tarih/olay kanıtıyla CSV dışa aktarımı.
 - **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
   sürümleme, idempotent kanonik kayıt, karantina ve zamanlayıcı sağlığı.
 - **Kimlik ve güvenlik:** RBAC, tenant izolasyonu, oturum cihazı ve son
