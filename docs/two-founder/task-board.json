@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-22T00:59:17Z",
+  "updatedAt": "2026-11-22T01:05:10Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -1745,6 +1745,26 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Current origin/main build served by next start on 127.0.0.1:3102 passes the full smoke suite and scripts/verify-deploy.mjs reports build.commit equal to origin/main with exit code 0.",
       "evidence": "next build at HEAD; next start 3102: smoke 71 geçti / 0 başarısız; verify-deploy --expect=origin → build.commit dadc52b… EŞLEŞTİ, SAĞLIKLI, exit 0."
+    },
+    {
+      "id": "TB-089",
+      "commit": "7df96ef",
+      "title": "Quarantine list limit validation and truncation notice",
+      "priority": "P2",
+      "primaryFounder": "B",
+      "specialists": [
+        "backend-engineer",
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/app/api/data-quality/route.ts",
+        "src/app/dashboard/data-quality/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/data-quality.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "GET /api/data-quality validates limit (1..500) with 400 on bad input, echoes the effective limit and a truncated flag, and the quarantine screen tells the user when more records exist than shown. No silent truncation.",
+      "evidence": "Gates: tsc clean, eslint clean, data-quality tests 6/6 (bad limits 400, limit=1 truncated true, limit=500 truncated false), full suite 834 passed (9 skipped), build OK, smoke 71/71."
     }
   ]
 }
