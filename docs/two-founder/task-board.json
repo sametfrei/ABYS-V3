@@ -2432,6 +2432,30 @@
       "acceptanceCriteria": "A data_admin can verify a saved connector with a real request before running a sync: credential resolution (env var/OAuth2), SSRF policy, HTTP status, JSON body and recordsPath are checked; observed source fields and missing mapped fields are reported; no canonical records, sync runs or checkpoints are written; an audit event is recorded; only ingest_data may test and only within the org.",
       "evidence": "tests/connectors.test.ts 33/33 (6 new: happy path with schema, missing mapped fields, missing secret env var, SSRF block, non-JSON body, route permissions/org isolation/no run created/audit row). Full suite 883 passed / 9 skipped; tsc/eslint/build clean. Browser: verify:workflows 27/27 on 3103 with real fetch to jsonplaceholder (test result shown in UI, zero sync runs created, connector_connection_tested in org audit). Preview smoke 77/77 on localhost:3100.",
       "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-123",
+      "commit": "4be2f5b",
+      "title": "Executive main card shows execution progress and measured outcome",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer",
+        "data-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/app/api/tais/executive-summary/route.ts",
+        "src/lib/demo/tais/executive-summary.ts",
+        "src/components/TaisExecutiveScreen.tsx",
+        "src/lib/i18n.ts",
+        "tests/tais-executive-summary.test.ts",
+        "scripts/verify-workflows.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "After approval, the main decision card shows the case's real action execution status (done/total, from actions grouped by status) and the latest recorded outcome for that decision (result, date, realized impact when present); fields are hidden when no data exists and nothing is fabricated.",
+      "evidence": "summarizeCaseExecution unit test plus 16/16 in tests/tais-executive-summary.test.ts. Isolated 3103: main.execution {total:7,open:7}; POST /api/outcomes 200; card text 'Yürütme: 0/7 aksiyon tamamlandı' and 'Ölçülen sonuç: iyileşme sağlandı · 23.11.2026 · Gerçekleşen etki: 12.500 AZN'; verify:workflows 30/30. Full suite 884 passed / 9 skipped; tsc/eslint/build clean; preview smoke 77/77.",
+      "recordedAt": "2026-11-23"
     }
   ]
 }
