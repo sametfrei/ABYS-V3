@@ -323,6 +323,31 @@ export function pickMainDecision(
   };
 }
 
+export interface CaseExecutionSummary {
+  total: number;
+  open: number;
+  inProgress: number;
+  done: number;
+}
+
+/**
+ * Bir vakanın aksiyonlarını duruma göre özetler. Hiç aksiyon yoksa null
+ * döner; kart "yürütme yok" durumunu uydurmadan gösterir.
+ */
+export function summarizeCaseExecution(
+  rows: { status: string; count: number }[]
+): CaseExecutionSummary | null {
+  const byStatus = new Map(rows.map((row) => [row.status, Number(row.count)]));
+  const total = [...byStatus.values()].reduce((sum, count) => sum + count, 0);
+  if (total <= 0) return null;
+  return {
+    total,
+    open: byStatus.get("open") ?? 0,
+    inProgress: byStatus.get("in_progress") ?? 0,
+    done: byStatus.get("done") ?? 0,
+  };
+}
+
 export interface TaisActionRow {
   id: string;
   decisionId: string;

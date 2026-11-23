@@ -19,6 +19,7 @@ const {
   pickMainDecision,
   selectTaisDecisionMeta,
   selectTopActions,
+  summarizeCaseExecution,
   buildExecutiveBrief,
   healthLevel,
   RANGE_WINDOW_DAYS,
@@ -238,5 +239,17 @@ describe("TAIS yönetici ekranı — karar/aksiyon seçimi (sentetik girdi, DB g
   it("selectTaisDecisionMeta kayıt yoksa null döner", () => {
     const casePayload = { title: "Vaka", options: [] } as unknown as Parameters<typeof selectTaisDecisionMeta>[1];
     expect(selectTaisDecisionMeta("case-x", casePayload, [])).toBeNull();
+  });
+
+  it("summarizeCaseExecution durum sayımlarını toplar, aksiyon yoksa null döner", () => {
+    expect(
+      summarizeCaseExecution([
+        { status: "open", count: 2 },
+        { status: "in_progress", count: 1 },
+        { status: "done", count: 3 },
+        { status: "blocked", count: 1 },
+      ])
+    ).toEqual({ total: 7, open: 2, inProgress: 1, done: 3 });
+    expect(summarizeCaseExecution([])).toBeNull();
   });
 });

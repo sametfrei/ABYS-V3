@@ -1738,6 +1738,9 @@ export type ShellKey =
   | "tais.infeasible"
   | "tais.decisionMeta"
   | "tais.decidedBy"
+  | "tais.executionStatus"
+  | "tais.measuredOutcome"
+  | "tais.measuredImpact"
   | "tais.approve"
   | "tais.review"
   | "tais.postpone"
@@ -4505,6 +4508,18 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "tais.infeasible": { tr: "uygulanamaz", en: "not feasible" },
   "tais.decisionMeta": { tr: "Güven %{confidence} · durum: {state} · {count} bağlı risk", en: "Confidence {confidence}% · state: {state} · {count} linked risks" },
   "tais.decidedBy": { tr: "Karar kaydı: {name}", en: "Decision recorded by: {name}" },
+  "tais.executionStatus": {
+    tr: "Yürütme: {done}/{total} aksiyon tamamlandı",
+    en: "Execution: {done}/{total} actions completed",
+  },
+  "tais.measuredOutcome": {
+    tr: "Ölçülen sonuç: {result} · {date}",
+    en: "Measured outcome: {result} · {date}",
+  },
+  "tais.measuredImpact": {
+    tr: "Gerçekleşen etki: {value} {currency}",
+    en: "Realized impact: {value} {currency}",
+  },
   "tais.approve": { tr: "Onayla", en: "Approve" },
   "tais.review": { tr: "İncele", en: "Review" },
   "tais.postpone": { tr: "Ertele", en: "Postpone" },

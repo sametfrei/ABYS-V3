@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
+import { listOutcomesForDecision } from "@/lib/db/repos/actions";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { SESSION_COOKIE } from "../../auth/login/route";
 import { loadTaisKpiInputs, computeTaisKpis } from "@/lib/demo/tais/kpi";
@@ -17,6 +18,7 @@ import {
   selectTopRisks,
   pickMainDecision,
   selectTopActions,
+  summarizeCaseExecution,
   buildExecutiveBrief,
   healthLevel,
   type TaisExecRange,
@@ -139,6 +141,36 @@ export async function GET(req: NextRequest) {
   }));
   const topActions = selectTopActions(actionRowsMapped, filteredRiskIds, main?.decisionId ?? null, 3);
 
+  // Ana kararın yürütme durumu ve ölçülen sonucu — kartta onay sonrası
+  // gerçek ilerlemeyi gösterir; hiç aksiyon yoksa null (uydurma değer yok).
+  let execution: { total: number; open: number; inProgress: number; done: number } | null = null;
+  let latestOutcome: {
+    result: string;
+    recordedAt: string;
+    note: string;
+    actualImpact: { value: number; currency: string } | null;
+  } | null = null;
+  if (main) {
+    const execRows = await db.query<{ status: string; count: number }>(
+      `SELECT status, COUNT(*)::int AS count FROM actions
+        WHERE org_id = $1 AND case_id = $2 GROUP BY status`,
+      [orgId, main.caseId]
+    );
+    execution = summarizeCaseExecution(execRows.rows);
+    const outcomes = await listOutcomesForDecision(orgId, main.decisionId, 1);
+    const latest = outcomes.items[0];
+    if (latest) {
+      latestOutcome = {
+        result: latest.result,
+        recordedAt: latest.recorded_at,
+        note: latest.note,
+        actualImpact: latest.actual_impact
+          ? { value: latest.actual_impact.value, currency: latest.actual_impact.currency }
+          : null,
+      };
+    }
+  }
+
   const brief = buildExecutiveBrief({
     range,
     kpis,
@@ -167,7 +199,7 @@ export async function GET(req: NextRequest) {
     totalRiskCount: risks.length,
     criticalRiskCount: risks.filter((risk) => risk.severity === "critical").length,
     serviceAreas,
-    main,
+    main: main ? { ...main, execution, latestOutcome } : null,
     topActions,
     brief,
     dimensions: {

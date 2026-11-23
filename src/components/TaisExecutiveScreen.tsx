@@ -76,6 +76,13 @@ interface TaisMainDecisionView {
   counterfactual: { narrative: string; projectedImpact: string; timeHorizon: string };
   evidenceCount: number;
   matchedRiskCount: number;
+  execution?: { total: number; open: number; inProgress: number; done: number } | null;
+  latestOutcome?: {
+    result: string;
+    recordedAt: string;
+    note: string;
+    actualImpact: { value: number; currency: string } | null;
+  } | null;
 }
 
 interface TaisActionView {
@@ -616,6 +623,35 @@ function MainDecisionCard({
           </>
         ) : null}
       </p>
+      {decision.execution && decision.execution.total > 0 ? (
+        <p className="text-xs text-abys-muted mb-1.5">
+          {formatMessage(locale, "tais.executionStatus", {
+            done: decision.execution.done,
+            total: decision.execution.total,
+          })}
+        </p>
+      ) : null}
+      {decision.latestOutcome ? (
+        <p className="text-xs text-abys-muted mb-1.5">
+          {formatMessage(locale, "tais.measuredOutcome", {
+            result: t(
+              locale,
+              decision.latestOutcome.result === "improved"
+                ? "memory.outcome.improved"
+                : decision.latestOutcome.result === "worsened"
+                  ? "memory.outcome.worsened"
+                  : "memory.outcome.unchanged"
+            ),
+            date: new Date(decision.latestOutcome.recordedAt).toLocaleDateString(locale),
+          })}
+          {decision.latestOutcome.actualImpact
+            ? ` · ${formatMessage(locale, "tais.measuredImpact", {
+                value: decision.latestOutcome.actualImpact.value.toLocaleString(locale),
+                currency: decision.latestOutcome.actualImpact.currency,
+              })}`
+            : null}
+        </p>
+      ) : null}
       {error ? (
         <p role="alert" className="mb-2 text-xs text-abys-critical">
           {error}

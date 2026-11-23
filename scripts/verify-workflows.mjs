@@ -151,6 +151,46 @@ try {
     }
   }
 
+  // ---- Ana karar kartı: yürütme durumu ve ölçülen sonuç ----
+  {
+    const summaryBefore = await apiJson(page, "GET", "/api/tais/executive-summary");
+    const main = summaryBefore.body?.main ?? null;
+    if (!main) {
+      bad("ana karar kartı", "ana karar bulunamadı");
+    } else {
+      if (main.execution && main.execution.total > 0) {
+        ok("ana kart yürütme durumu", `${main.execution.done}/${main.execution.total} tamamlandı`);
+      } else {
+        bad("ana kart yürütme durumu", JSON.stringify(main.execution));
+      }
+      let latest = main.latestOutcome ?? null;
+      if (!latest) {
+        const recorded = await apiJson(page, "POST", "/api/outcomes", {
+          decisionId: main.decisionId,
+          result: "improved",
+          note: "E2E: karar sonrası SLA riskleri azaldı.",
+          lesson: "Ekip yeniden dağıtımı SLA risklerini azaltıyor.",
+          actualImpact: { value: 12500, currency: "AZN" },
+        });
+        if (recorded.status !== 200) bad("sonuç kaydı", `HTTP ${recorded.status}`);
+        const summaryAfter = await apiJson(page, "GET", "/api/tais/executive-summary");
+        latest = summaryAfter.body?.main?.latestOutcome ?? null;
+      }
+      if (latest?.result && latest.recordedAt) {
+        ok("ana kart ölçülen sonucu gösteriyor", latest.result);
+      } else {
+        bad("ana kart ölçülen sonuç", JSON.stringify(latest));
+      }
+      await page.goto(`${BASE}/dashboard`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      await page.waitForTimeout(2_500);
+      const bodyText = await page.locator("body").innerText();
+      const hasExecLine = /Yürütme: \d+\/\d+ aksiyon tamamland/.test(bodyText);
+      const hasOutcomeLine = /Ölçülen sonuç:/.test(bodyText);
+      if (hasExecLine && hasOutcomeLine) ok("kart metni kullanıcıya yansıdı");
+      else bad("kart metni", `yürütme=${hasExecLine} sonuç=${hasOutcomeLine}`);
+    }
+  }
+
   // ---- Konnektör yaşam döngüsü: oluştur → senkronize et → geçmiş → eşleme onayı ----
   const ADMIN_EMAIL = process.env.SMOKE_DATA_EMAIL ?? "veri.yoneticisi@tais.demo";
   const ADMIN_PASSWORD = process.env.SMOKE_DATA_PASSWORD ?? PASSWORD;
