@@ -34,9 +34,9 @@ const page = await context.newPage();
 const pageErrors = [];
 page.on("pageerror", (error) => pageErrors.push(error.message));
 
-async function login(email = EMAIL, password = PASSWORD) {
-  await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 60_000 });
-  await page.waitForFunction(
+async function loginOn(target, email = EMAIL, password = PASSWORD) {
+  await target.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await target.waitForFunction(
     () => {
       const form = document.querySelector("form");
       return !!form && Object.keys(form).some((key) => key.startsWith("__reactProps"));
@@ -44,16 +44,20 @@ async function login(email = EMAIL, password = PASSWORD) {
     undefined,
     { timeout: 60_000 }
   );
-  await page.fill("#email", email);
-  await page.fill("#password", password);
+  await target.fill("#email", email);
+  await target.fill("#password", password);
   await Promise.all([
-    page.waitForURL("**/dashboard", { timeout: 90_000 }),
-    page.click('button[type="submit"]'),
+    target.waitForURL("**/dashboard", { timeout: 90_000 }),
+    target.click('button[type="submit"]'),
   ]);
 }
 
-async function apiJson(method, url, data) {
-  const response = await page.request.fetch(`${BASE}${url}`, {
+async function login(email = EMAIL, password = PASSWORD) {
+  await loginOn(page, email, password);
+}
+
+async function apiJson(requestPage, method, url, data) {
+  const response = await requestPage.request.fetch(`${BASE}${url}`, {
     method,
     data,
     headers: data ? { "content-type": "application/json" } : undefined,
@@ -72,7 +76,7 @@ try {
   ok("giriş", page.url().replace(BASE, ""));
 
   // ---- Aksiyon durum geçişleri (açık → in_progress → done) ----
-  const list = await apiJson("GET", "/api/actions");
+  const list = await apiJson(page, "GET", "/api/actions");
   const openBefore = (list.body?.actions ?? []).filter((a) => a.status === "open");
   if (openBefore.length === 0) {
     bad("aksiyon geçişi", "açık aksiyon bulunamadı");
@@ -85,7 +89,7 @@ try {
     await page.getByRole("button", { name: "Tamamlandı işaretle" }).first().waitFor({ timeout: 30_000 });
     ok("aksiyon başlatma kullanıcıya yansıdı");
 
-    const afterStart = await apiJson("GET", "/api/actions");
+    const afterStart = await apiJson(page, "GET", "/api/actions");
     const started = (afterStart.body?.actions ?? []).filter(
       (a) => beforeIds.get(a.id) === "open" && a.status === "in_progress"
     );
@@ -100,14 +104,14 @@ try {
     } else {
       await page.getByRole("button", { name: "Tamamlandı işaretle" }).first().click();
       await page.waitForTimeout(2_500);
-      const afterDone = await apiJson("GET", "/api/actions");
+      const afterDone = await apiJson(page, "GET", "/api/actions");
       const done = (afterDone.body?.actions ?? []).find((a) => a.id === target.id);
       if (done?.status === "done") ok("aksiyon durumu kalıcı: done");
       else bad("aksiyon durumu kalıcı", `beklenen done, gelen ${done?.status}`);
       if (done?.decision_state === "outcome_review") ok("karar durumu outcome_review'a geçti");
       else bad("karar durumu", `beklenen outcome_review, gelen ${done?.decision_state}`);
 
-      const events = await apiJson("GET", `/api/actions?eventsFor=${encodeURIComponent(target.id)}`);
+      const events = await apiJson(page, "GET", `/api/actions?eventsFor=${encodeURIComponent(target.id)}`);
       const transitions = (events.body?.events ?? []).map(
         (e) => `${e.from_status ?? e.fromStatus}->${e.to_status ?? e.toStatus}`
       );
@@ -117,14 +121,14 @@ try {
         bad("aksiyon olay izi", JSON.stringify(transitions));
       }
 
-      const audit = await apiJson("GET", "/api/audit?limit=40");
+      const audit = await apiJson(page, "GET", "/api/audit?limit=40");
       const entries = audit.body?.events ?? audit.body?.entries ?? audit.body?.rows ?? [];
       const hit = entries.find(
         (e) => e.type === "action_transition" && String(e.detail ?? "").includes(target.id)
       );
       if (hit) ok("denetim kanıtı: action_transition");
       else bad("denetim kanıtı", "action_transition kaydı bulunamadı");
-      const verify = await apiJson("GET", "/api/audit?verify=1");
+      const verify = await apiJson(page, "GET", "/api/audit?verify=1");
       if (verify.body?.verify?.valid === true)
         ok("denetim zinciri geçerli", `${verify.body.verify.checked} kayıt`);
       else bad("denetim zinciri", JSON.stringify(verify.body));
@@ -132,18 +136,154 @@ try {
   }
 
   // ---- Negatif: açık aksiyon doğrudan tamamlanamaz ----
-  const relist = await apiJson("GET", "/api/actions");
+  const relist = await apiJson(page, "GET", "/api/actions");
   const stillOpen = (relist.body?.actions ?? []).find((a) => a.status === "open");
   if (!stillOpen) {
     ok("negatif geçiş", "açık aksiyon kalmadı (atlandı)");
   } else {
-    const forced = await apiJson("PATCH", "/api/actions", { actionId: stillOpen.id, status: "done" });
-    const after = await apiJson("GET", "/api/actions");
+    const forced = await apiJson(page, "PATCH", "/api/actions", { actionId: stillOpen.id, status: "done" });
+    const after = await apiJson(page, "GET", "/api/actions");
     const current = (after.body?.actions ?? []).find((a) => a.id === stillOpen.id);
     if (forced.status === 409 && current?.status === "open") {
       ok("açık aksiyon doğrudan tamamlanamadı", `HTTP ${forced.status}`);
     } else {
       bad("negatif geçiş", `HTTP ${forced.status}, durum ${current?.status}`);
+    }
+  }
+
+  // ---- Konnektör yaşam döngüsü: oluştur → senkronize et → geçmiş → eşleme onayı ----
+  const ADMIN_EMAIL = process.env.SMOKE_DATA_EMAIL ?? "veri.yoneticisi@tais.demo";
+  const ADMIN_PASSWORD = process.env.SMOKE_DATA_PASSWORD ?? PASSWORD;
+  const adminContext = await browser.newContext({
+    viewport: { width: 1440, height: 1100 },
+    locale: "tr-TR",
+  });
+  const adminPage = await adminContext.newPage();
+  adminPage.on("pageerror", (error) => pageErrors.push(`admin: ${error.message}`));
+
+  let adminReady = false;
+  try {
+    await loginOn(adminPage, ADMIN_EMAIL, ADMIN_PASSWORD);
+    adminReady = true;
+    ok("veri yöneticisi girişi", adminPage.url().replace(BASE, ""));
+  } catch (error) {
+    bad("konnektör akışı", `veri yöneticisi girişi başarısız: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  let connectorConfig = null;
+  let firstRun = null;
+  if (adminReady) {
+    const connectorName = `E2E REST ${Date.now()}`;
+    try {
+      await adminPage.goto(`${BASE}/dashboard/connectors`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+      await adminPage.getByRole("button", { name: "Genel REST / OData" }).click({ timeout: 30_000 });
+      await adminPage.getByPlaceholder("Bağlantı adı").fill(connectorName);
+      await adminPage.getByPlaceholder("https://api.sirket.com").fill("https://jsonplaceholder.typicode.com");
+      await adminPage.getByPlaceholder("/v1/customers").fill("/users");
+      await adminPage.getByPlaceholder("Kayıt yolu (data)").fill("");
+      await adminPage.locator("select").filter({ has: adminPage.getByRole("option", { name: "Tek sayfa" }) }).selectOption("none");
+      await adminPage.getByRole("button", { name: "Bağlantıyı kaydet" }).click({ timeout: 30_000 });
+      await adminPage.getByText("Konnektör tanımlandı.").first().waitFor({ timeout: 60_000 });
+      ok("konnektör oluşturma kullanıcıya yansıdı");
+
+      const created = await apiJson(adminPage, "GET", "/api/connectors");
+      connectorConfig = (created.body?.configs ?? []).find((c) => c.name === connectorName) ?? null;
+      if (connectorConfig) {
+        const cfg = connectorConfig.config ?? {};
+        if (cfg.baseUrl === "https://jsonplaceholder.typicode.com" && cfg.path === "/users" && cfg.pagination?.type === "none") {
+          ok("konnektör yapılandırması kalıcı", `${cfg.entity} ${cfg.baseUrl}${cfg.path}`);
+        } else {
+          bad("konnektör yapılandırması", JSON.stringify({ baseUrl: cfg.baseUrl, path: cfg.path, pagination: cfg.pagination }));
+        }
+      } else {
+        bad("konnektör kalıcılığı", "oluşturulan konnektör API'de bulunamadı");
+      }
+
+      if (connectorConfig) {
+        const row = adminPage.locator("li").filter({ hasText: connectorName }).first();
+        await row.getByRole("button", { name: "Senkronize et" }).click({ timeout: 30_000 });
+        await adminPage.getByText(/Senkron tamam/).first().waitFor({ timeout: 120_000 });
+        ok("senkron tetiklendi ve özet gösterildi");
+
+        const runs = await apiJson(adminPage, "GET", `/api/connectors/${connectorConfig.id}/runs`);
+        const latestRun = (runs.body?.runs ?? [])[0] ?? null;
+        if (latestRun?.status === "success" && latestRun.readCount > 0 && latestRun.writtenCount > 0) {
+          ok("senkron kaydı kalıcı", `okunan=${latestRun.readCount} yazılan=${latestRun.writtenCount}`);
+        } else {
+          bad("senkron kaydı", JSON.stringify({ status: latestRun?.status, readCount: latestRun?.readCount, writtenCount: latestRun?.writtenCount, error: latestRun?.error }));
+        }
+        const recordCounts = runs.body?.records ?? [];
+        const totalRecords = recordCounts.reduce((sum, item) => sum + item.count, 0);
+        if (totalRecords > 0) ok("kanonik kayıt kalıcı", `${totalRecords} kayıt (${recordCounts.map((r) => `${r.entity}=${r.count}`).join(", ")})`);
+        else bad("kanonik kayıt", "senkron sonrası kayıt sayısı 0");
+        firstRun = latestRun;
+
+        await row.getByRole("button", { name: "Geçmiş" }).click({ timeout: 30_000 });
+        await adminPage.getByText(/başarılı|Başarılı/).first().waitFor({ timeout: 60_000 }).catch(() => {});
+        ok("geçmiş paneli açıldı");
+
+        await row.getByRole("button", { name: "Eşleme onayı" }).click({ timeout: 30_000 });
+        const mappingTextarea = adminPage.locator(`#connector-mapping-${connectorConfig.id}`);
+        await mappingTextarea.waitFor({ timeout: 60_000 });
+        const before = await apiJson(adminPage, "GET", `/api/connectors/${connectorConfig.id}/mapping`);
+        const beforeVersion = before.body?.currentVersion ?? null;
+        const editedMap = { ...(before.body?.currentFieldMap ?? {}), username: "username" };
+        await mappingTextarea.fill(JSON.stringify(editedMap, null, 2));
+        await row.getByRole("button", { name: "Yeni sürümü onayla" }).click({ timeout: 30_000 });
+        await adminPage.getByText(/Eşleme v\d+ olarak onaylandı/).first().waitFor({ timeout: 60_000 });
+        const after = await apiJson(adminPage, "GET", `/api/connectors/${connectorConfig.id}/mapping`);
+        if (beforeVersion !== null && after.body?.currentVersion === beforeVersion + 1) {
+          ok("eşleme onayı yeni sürüm oluşturdu", `v${beforeVersion} → v${after.body.currentVersion}`);
+        } else {
+          bad("eşleme sürümü", JSON.stringify({ beforeVersion, after: after.body?.currentVersion }));
+        }
+        if (after.body?.currentFieldMap?.username === "username") ok("düzenlenen alan eşlemesi kalıcı");
+        else bad("alan eşlemesi kalıcılığı", JSON.stringify(after.body?.currentFieldMap ?? null));
+
+        const versions = after.body?.versions ?? [];
+        if (versions.length >= 2) ok("eşleme sürüm geçmişi", `${versions.length} sürüm`);
+        else bad("eşleme sürüm geçmişi", `${versions.length} sürüm`);
+      }
+    } catch (error) {
+      bad("konnektör akışı", error instanceof Error ? error.message : String(error));
+      await adminPage
+        .screenshot({ path: path.join(process.cwd(), ".data", "browser-smoke", "connector-failure.png"), fullPage: true })
+        .catch(() => {});
+    }
+  }
+  await adminContext.close();
+
+  // ---- Denetim kanıtı (CEO görünümü: veri yöneticisinin işlemleri org denetiminde) ----
+  if (connectorConfig) {
+    try {
+      const audit = await apiJson(page, "GET", "/api/audit?limit=80");
+      const entries = audit.body?.events ?? audit.body?.entries ?? audit.body?.rows ?? [];
+      const configEvent = entries.find((e) => e.type === "connector_config_created" && String(e.detail ?? "") === connectorConfig.id);
+      if (configEvent) ok("denetim kanıtı: connector_config_created");
+      else bad("denetim kanıtı", "connector_config_created bulunamadı");
+
+      const syncEvent = entries.find(
+        (e) => (e.type === "connector_sync_completed" || e.type === "connector_sync_failed") && e.detail === firstRun?.id
+      );
+      if (syncEvent?.type === "connector_sync_completed") ok("denetim kanıtı: connector_sync_completed");
+      else bad("denetim kanıtı", `sync olayı: ${syncEvent?.type ?? "yok"}`);
+
+      const mappingEvent = entries.find((e) => {
+        if (e.type !== "connector_mapping_approved") return false;
+        try {
+          return JSON.parse(String(e.detail ?? "{}")).configId === connectorConfig.id;
+        } catch {
+          return false;
+        }
+      });
+      if (mappingEvent) ok("denetim kanıtı: connector_mapping_approved");
+      else bad("denetim kanıtı", "connector_mapping_approved bulunamadı");
+
+      const verify = await apiJson(page, "GET", "/api/audit?verify=1");
+      if (verify.body?.verify?.valid === true) ok("denetim zinciri geçerli (konnektör sonrası)", `${verify.body.verify.checked} kayıt`);
+      else bad("denetim zinciri (konnektör sonrası)", JSON.stringify(verify.body));
+    } catch (error) {
+      bad("denetim kanıtı", error instanceof Error ? error.message : String(error));
     }
   }
 
