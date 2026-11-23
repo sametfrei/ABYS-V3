@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-23T10:20:00Z",
+  "updatedAt": "2026-11-23",
   "states": [
     "BACKLOG",
     "READY",
@@ -2351,6 +2351,62 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Approving the main decision on the executive dashboard records the human decision, creates the governed action and an audit entry; a second approval returns a localized 409 instead of duplicating actions; the demo system-seed record does not block the first human approval; failed calls are visible in the UI.",
       "evidence": "Isolated instance (copy of demo DB, port 3103): first approve POST 200 with 2 decision records for the case (system baseline + human 'TAIS Genel Müdür'), second approve POST 409 with the localized message shown as an alert; audit verify valid (285 entries). Unit tests 5/5 in tests/decision-lifecycle.test.ts; full suite 874 passed / 9 skipped; eslint, tsc and build clean; main preview browser smoke 77/77 and HTTP smoke 80/80."
+    },
+    {
+      "id": "TB-119",
+      "commit": "fc5dc71",
+      "title": "Executive main card shows the latest human decision record",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer",
+        "data-engineer"
+      ],
+      "files": [
+        "src/lib/demo/tais/executive-summary.ts",
+        "src/app/api/tais/executive-summary/route.ts",
+        "tests/tais-executive-summary.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The main decision card on the executive dashboard renders the newest decision record for the case (by created_at desc) instead of the oldest, keeps the seed risk context, and shows the decision author.",
+      "evidence": "selectTaisDecisionMeta orders decision records by created_at DESC LIMIT 10 and returns the newest; card renders 'Karar kaydi: TAIS Genel Mudur'. tests/tais-executive-summary.test.ts 15/15; full suite 874 passed / 9 skipped; tsc/eslint/build clean; browser smoke 77/77 on preview.",
+      "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-120",
+      "commit": "1a32b6d",
+      "title": "Connector create, real sync, mapping approval and audit evidence verified in a browser",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-engineer",
+        "security-reviewer",
+        "test-engineer"
+      ],
+      "files": [
+        "scripts/verify-workflows.mjs",
+        "scripts/ensure-demo-role.ts",
+        "package.json"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "A data_admin creates a generic REST connector through the UI, runs a real sync against a public API, sees sync history, approves a new mapping version, and the persisted canonical records plus connector_config_created / connector_sync_completed / connector_mapping_approved audit events are verifiable.",
+      "evidence": "scripts/verify-workflows.mjs 24/24 on isolated instance 3103: connector row persisted with baseUrl/apiPath/pagination none; sync run success read=10 written=10; 10 canonical customer records; mapping v1 -> v2 with edited field persisted; version history 2; all three audit events present; audit chain valid (310). Real external fetch to jsonplaceholder.typicode.com/users; no fake connector.",
+      "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-121",
+      "commit": null,
+      "title": "Preview server on 3100 served a stale build (chunk HTTP 500, no hydration)",
+      "priority": "P0",
+      "primaryFounder": "A",
+      "specialists": [
+        "platform-engineer"
+      ],
+      "files": [],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Determine why localhost:3100 appeared broken and restore a working app instance without touching other running processes.",
+      "evidence": "Root cause: the running next start process predated the latest build, so /_next/static/chunks/1jsl169a2e5vh.js returned HTTP 500 and the login form fell back to a native GET submit (no hydration) on both localhost and 127.0.0.1. Fixed by rebuilding and restarting only our own preview processes (3100 kept, 3101 untouched). After restart hydration=true and browser smoke 77/77 on http://localhost:3100. Operational note; no code change.",
+      "recordedAt": "2026-11-23"
     }
   ]
 }
