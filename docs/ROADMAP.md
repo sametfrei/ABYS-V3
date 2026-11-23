@@ -91,9 +91,9 @@ Durum ölçeği:
 | Denetim hash zinciri | E2E (test) | Mevcut çözüm korunuyor; seq yaması uygulanmadı |
 | Kontrollü migration yürütme | E2E (test) | Onay gerektiren migration 18 uygulanmadan bekletilir; sonraki migration'lar bağımsız uygulanır; `GET /api/health` bekleyen onayı raporlar |
 | Çoklu şirket/şube hiyerarşisi + konsolidasyon | E2E (test) | `/api/organizations*` |
-| TR/EN i18n | Kısmi | Dashboard ekranları, TAIS yönetici ekranı ve Yönetim Komuta Merkezi TR/EN; sunucu çerezden dili okur (`curl -H 'Cookie: abys_lang=en' /login` → EN); seçim çerez + localStorage ile kalıcı (`abys_lang`); `src/lib/i18n.ts`, `src/lib/navigation.ts`, `tests/i18n.test.ts`. Sunucu tarafı içerik/API yanıt metinleri ve Ask ABYS eşleştiricisi Türkçe kalır — kalan çeviri ayrı iş |
+| TR/EN i18n | Kısmi | Dashboard ekranları, TAIS yönetici ekranı ve Yönetim Komuta Merkezi TR/EN; sunucu çerezden dili okur (`curl -H 'Cookie: abys_lang=en' /login` → EN); seçim çerez + localStorage ile kalıcı (`abys_lang`); `src/lib/i18n.ts`, `src/lib/navigation.ts`, `tests/i18n.test.ts`. API hata yanıtları da `abys_lang` çerezine göre TR/EN döner (TB-111…TB-113; `src/app/api` altında literal Türkçe hata: 0). Ask ABYS İngilizce anahtar sözcükleri eşler ve yanıt şablonlarını arayüz dilinde üretir (TB-117); kayıt başlıkları kaynak dilinde alıntılanır, denetim özetleri Türkçe kalır |
 | Production build | E2E (test) | `npm run build` başarılı; üretim modu `next start` üzerinde smoke 71/71 ve `scripts/verify-deploy.mjs --expect=origin` commit eşleşmesiyle exit 0 |
-| Tarayıcı E2E | Tarayıcı bekliyor | Otomatik browser doğrulaması bu oturumda yapılmadı |
+| Tarayıcı E2E | E2E (test) | Chrome/Playwright 77/77: giriş, 22 dashboard rotası, veri kalitesi yetki ayrımı, TR/EN geçişi, 6 mobil ekran ve mobil menü; üretim önizlemesinde (`next start`) çalıştırılır çünkü `next dev` 94 rotada heap sınırında yeniden başlıyor/OOM oluyor (TB-116). Yazma akışlarının (konnektör oluştur/senkron, eşleme kaydet) tarayıcı doğrulaması hâlâ eksik |
 
 ## Dış engeller
 
