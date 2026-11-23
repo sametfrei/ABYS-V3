@@ -1280,6 +1280,12 @@ export type ShellKey =
   | "discovery.colStatus"
   | "discovery.colFormula"
   | "discovery.colMissing"
+  | "discovery.conceptsHeading"
+  | "discovery.conceptsHint"
+  | "discovery.conceptsCoverage"
+  | "discovery.modelsHeading"
+  | "discovery.modelsEmpty"
+  | "discovery.modelNote"
   | "discovery.availability.available"
   | "discovery.availability.partial"
   | "discovery.availability.unavailable"
@@ -4044,6 +4050,24 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "discovery.colStatus": { tr: "Durum", en: "Status" },
   "discovery.colFormula": { tr: "Formül", en: "Formula" },
   "discovery.colMissing": { tr: "Eksik alanlar", en: "Missing fields" },
+  "discovery.conceptsHeading": { tr: "ORTAK İŞ KAVRAMLARI", en: "COMMON BUSINESS CONCEPTS" },
+  "discovery.conceptsHint": {
+    tr: "Sektör paketinden bağımsız; yalnızca gözlenen alan ve varlık adlarından çıkarıldı.",
+    en: "Independent of industry packs; derived only from observed entity and field names.",
+  },
+  "discovery.conceptsCoverage": {
+    tr: "{count} kavram · {evidence} kanıt satırı",
+    en: "{count} concepts · {evidence} evidence rows",
+  },
+  "discovery.modelsHeading": { tr: "OLASI İŞ MODELLERİ", en: "POSSIBLE BUSINESS MODELS" },
+  "discovery.modelsEmpty": {
+    tr: "Kavram kanıtı iş modeli önerisi için yeterli değil.",
+    en: "Concept evidence is not enough for a business model suggestion.",
+  },
+  "discovery.modelNote": {
+    tr: "Kavram kombinasyonuna dayalı öneridir; doğrulanmış sektör değildir.",
+    en: "Suggestions based on concept combinations; not a verified sector.",
+  },
   "discovery.availability.available": { tr: "Kullanılabilir", en: "Available" },
   "discovery.availability.partial": { tr: "Kısmi", en: "Partial" },
   "discovery.availability.unavailable": { tr: "Veri yok", en: "No data" },

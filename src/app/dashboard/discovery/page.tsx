@@ -52,6 +52,26 @@ interface KpiAvailability {
   scope: "entity" | "organization";
 }
 
+interface DetectedConcept {
+  id: string;
+  label: string;
+  kind: string;
+  confidence: number;
+  entityCount: number;
+  recordCount: number;
+  matchedFields: { entity: string; field: string; source: "field" | "entity" }[];
+}
+
+interface BusinessModelHint {
+  id: string;
+  label: string;
+  confidence: number;
+  requiredConceptIds: string[];
+  supportingConceptIds: string[];
+  evidence: string[];
+  note: string;
+}
+
 interface ConfirmedProfile {
   id: string;
   version: number;
@@ -124,6 +144,8 @@ interface Discovery {
   requiresConfirmation: boolean;
   diversified: boolean;
   kpis: KpiAvailability[];
+  concepts: DetectedConcept[];
+  businessModelHints: BusinessModelHint[];
   missingInformation: string[];
   note: string;
   inputs: { entities: Record<string, number>; fieldCount: number; kpiLabelCount: number; sectorId: string | null };
@@ -632,6 +654,57 @@ export default function DiscoveryPage() {
                 </table>
               )}
             </div>
+
+            {data.concepts.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
+                  <p className="text-xs tracking-widest text-abys-muted font-semibold mb-1">
+                    {t(locale, "discovery.conceptsHeading")}
+                  </p>
+                  <p className="text-[10px] text-abys-muted mb-3">{t(locale, "discovery.conceptsHint")}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {data.concepts.slice(0, 8).map((concept) => (
+                      <span
+                        key={concept.id}
+                        className="rounded-full border border-abys-cream-border bg-white/60 px-2.5 py-1 text-xs text-abys-ink"
+                        title={`${concept.entityCount} · ${concept.recordCount}`}
+                      >
+                        {concept.label}
+                        <span className="ml-1.5 text-[10px] text-abys-muted">%{concept.confidence}</span>
+                      </span>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[10px] text-abys-muted">
+                    {formatMessage(locale, "discovery.conceptsCoverage", {
+                      count: data.concepts.length,
+                      evidence: data.concepts.reduce((sum, concept) => sum + concept.matchedFields.length, 0),
+                    })}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
+                  <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
+                    {t(locale, "discovery.modelsHeading")}
+                  </p>
+                  {data.businessModelHints.length === 0 ? (
+                    <p className="text-sm text-abys-muted">{t(locale, "discovery.modelsEmpty")}</p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {data.businessModelHints.slice(0, 3).map((hint) => (
+                        <li key={hint.id} className="text-sm text-abys-ink">
+                          <div className="flex items-center justify-between gap-2">
+                            <span>{hint.label}</span>
+                            <span className="font-mono text-[10px] text-abys-muted">%{hint.confidence}</span>
+                          </div>
+                          <p className="text-[10px] text-abys-muted">{hint.evidence.join(" · ")}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-2 text-[10px] text-abys-muted">{t(locale, "discovery.modelNote")}</p>
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
