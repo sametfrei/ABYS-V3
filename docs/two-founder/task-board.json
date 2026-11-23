@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-23T01:25:00Z",
+  "updatedAt": "2026-11-23T09:40:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2261,6 +2261,56 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "Every user-visible `error` string in src/app/api is locale-aware via the abys_lang cookie; Turkish stays the default. Handlers without a request parameter use a cookie-based helper, and the locale reader tolerates partial request mocks used by tests.",
       "evidence": "rg 'error: \"' src/app/api returns 0 literal Turkish errors (was 227 at TB-111 start); localizedErrorFromCookies added for parameterless handlers; decision-cases and analyze validate unknown payloads post-parse; full suite 870 passed / 9 skipped; lint clean; build clean; live preview returns EN 'Sign-in required.' vs TR 'Oturum gerekli.'; e2e smoke 80/80 and browser smoke 76/76 on 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-114",
+      "commit": "589feea",
+      "title": "Data-quality view: score for viewers, quarantine for data admins",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer",
+        "security-reviewer"
+      ],
+      "files": [
+        "src/app/dashboard/data-quality/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "A role without ingest_data (CEO) sees the quality score and an explicit restricted notice for the quarantine queue instead of a blanket 403; no forbidden GET /api/data-quality is issued from the page; data_admin keeps the queue, filters, CSV export and resolve actions.",
+      "evidence": "Browser probe as ceo@tais.demo: restricted title shown, no permission error text, score card renders, no 403 fetch after fix; browser smoke 77/77 and HTTP smoke 80/80 on production preview 127.0.0.1:3100; vitest 870 passed / 9 skipped; tsc and eslint clean; build clean."
+    },
+    {
+      "id": "TB-115",
+      "commit": "4ae5fb7",
+      "title": "Browser smoke resilience and data-quality gate assertion",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer"
+      ],
+      "files": [
+        "scripts/browser-smoke.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Browser smoke does not fail on a single aborted navigation, reports console and failed requests plus a screenshot on failure, and asserts the CEO data-quality permission split.",
+      "evidence": "77 passed / 0 failed on 127.0.0.1:3100 (production preview); failure diagnostics exercised during investigation; eslint clean."
+    },
+    {
+      "id": "TB-116",
+      "commit": "4ae5fb7",
+      "title": "Stable local preview runtime (dev OOM diagnosis)",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "developer-experience-engineer"
+      ],
+      "files": [
+        "scripts/browser-smoke.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The reason port 3100 appeared down or patchy is documented with evidence, and a stable local runtime is used for end-to-end verification without changing product behaviour.",
+      "evidence": "next dev (Turbopack, 94 routes) self-restarts at 80% of a 4192 MB heap and hit a hard OOM at 6.1 GB when the limit was raised; production preview (next start with the same ABYS_DB_DIR) stays up and serves browser smoke 77/77 plus HTTP smoke 80/80. The NODE_OPTIONS bump was reverted; dev:preview script unchanged."
     }
   ]
 }
