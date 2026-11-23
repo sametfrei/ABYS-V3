@@ -2456,6 +2456,30 @@
       "acceptanceCriteria": "After approval, the main decision card shows the case's real action execution status (done/total, from actions grouped by status) and the latest recorded outcome for that decision (result, date, realized impact when present); fields are hidden when no data exists and nothing is fabricated.",
       "evidence": "summarizeCaseExecution unit test plus 16/16 in tests/tais-executive-summary.test.ts. Isolated 3103: main.execution {total:7,open:7}; POST /api/outcomes 200; card text 'Yürütme: 0/7 aksiyon tamamlandı' and 'Ölçülen sonuç: iyileşme sağlandı · 23.11.2026 · Gerçekleşen etki: 12.500 AZN'; verify:workflows 30/30. Full suite 884 passed / 9 skipped; tsc/eslint/build clean; preview smoke 77/77.",
       "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-124",
+      "commit": "2386ffc",
+      "title": "Expected economic impact captured at approval so the Decision Value Ledger reconciles",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer",
+        "data-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/expected-impact.ts",
+        "src/components/TaisExecutiveScreen.tsx",
+        "src/app/dashboard/decisions/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/expected-impact.test.ts",
+        "scripts/verify-workflows.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The approver can optionally enter expected value, currency and low/high bounds on the main decision card; invalid input is rejected inline; the value is stored on the human decision record so the ledger can compute expected vs actual variance and range accuracy; empty input keeps the field absent (no fabricated economics).",
+      "evidence": "parseExpectedImpact 6/6 unit tests; browser on isolated 3103: approve with 30000 AZN (15000-45000) → POST /api/decisions 200, ledger expectedValueCount 1 / expectedTotal 30000; post-decision outcome 12500 AZN → reconciledCount 1, variance -17500, rangeAccuracy evaluable miss. verify:workflows 33/33; full suite 890 passed / 9 skipped; tsc/eslint/build clean; preview smoke 77/77.",
+      "recordedAt": "2026-11-23"
     }
   ]
 }
