@@ -3,7 +3,7 @@
 Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
 başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
 modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
-(TB-001…TB-116), ürün durumu `docs/ROADMAP.md` içindedir.
+(TB-001…TB-117), ürün durumu `docs/ROADMAP.md` içindedir.
 
 ## Doğrulama kapıları
 
@@ -59,6 +59,8 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   görülme (migration 36), parola değiştirme, oturum iptali, denetim hash zinciri
   ve tüm CSV dışa aktarımlarında formül enjeksiyonu koruması.
 - **i18n:** dashboard ekranları ve komuta merkezi TR/EN; dil çerez + localStorage.
+  Ask ABYS, soru anahtar sözcüklerini TR/EN eşler ve yanıt şablonlarını arayüz
+  dilinde üretir; kayıt başlıkları kaynaktaki diliyle alıntılanır (TB-117).
 - **Mobil:** lg altında sabit kenar çubuğu yerine kompakt gezinme menüsü;
   altı kritik ekran 390px genişlikte yatay taşma olmadan açılır.
 - **Dağıtım:** `/api/health` build parmak izi, `verify-deploy` kapısı,
@@ -67,7 +69,7 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 ## Bilinen sınırlar (teslimde açıkça belirtilmeli)
 
 - **Tarayıcı smoke:** Chrome/Playwright ile giriş, 22 dashboard rotası, geciken
-  filtresi, TR/EN geçişi, 6 mobil ekranda taşma kontrolü ve mobil menü 76/76
+  filtresi, veri kalitesi yetki ayrımı, TR/EN geçişi, 6 mobil ekranda taşma kontrolü ve mobil menü 77/77
   doğrulandı; ekran görüntüleri `.data/browser-smoke` altında. Piksel-diff
   tabanlı görsel regresyon testi yoktur.
 - **Gerçek sunucu doğrulanmadı:** yeni sunucunun URL/SSH erişimi verilmedi.
@@ -77,8 +79,9 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   noktası olmadan canlı doğrulanmadı.
 - **Migration 18** (organizasyon hiyerarşisi + ülke/para birimi) açık insan
   onayı bekliyor; bu nedenle `schemaReady` üretimde onay sonrası kontrol edilmeli.
-- **Sunucu tarafı serbest metinler Türkçe:** API hata/özet metinleri ve Ask ABYS
-  eşleştiricisi Türkçe çalışır; arayüz kabuğu TR/EN'dir.
+- **Sunucu tarafı serbest metinler:** API hata metinleri ve Ask ABYS yanıtları
+  `abys_lang` çerezine göre TR/EN döner; denetim özetleri ve kayıt başlıkları
+  kaynak dilinde (Türkçe) kalır.
 - **SOAP/JDBC** adaptörleri planlı; kapsam dışı.
 
 ## Dağıtım adımları (özet)

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-23T09:40:00Z",
+  "updatedAt": "2026-11-23T09:50:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2311,6 +2311,25 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The reason port 3100 appeared down or patchy is documented with evidence, and a stable local runtime is used for end-to-end verification without changing product behaviour.",
       "evidence": "next dev (Turbopack, 94 routes) self-restarts at 80% of a 4192 MB heap and hit a hard OOM at 6.1 GB when the limit was raised; production preview (next start with the same ABYS_DB_DIR) stays up and serves browser smoke 77/77 plus HTTP smoke 80/80. The NODE_OPTIONS bump was reverted; dev:preview script unchanged."
+    },
+    {
+      "id": "TB-117",
+      "commit": "d46d60f",
+      "title": "Ask ABYS answers in the interface language",
+      "priority": "P1",
+      "primaryFounder": "A",
+      "specialists": [
+        "intelligence-engineer",
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/lib/demo/tais/ask.ts",
+        "src/app/api/ask/route.ts",
+        "tests/tais-ask.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The TAIS ask layer honours the request locale: English questions match English keywords and statement templates are rendered in EN; Turkish remains the default and stored record titles are quoted verbatim rather than translated.",
+      "evidence": "Live POST /api/ask with Cookie abys_lang=en returns the English template while abys_lang=tr returns Turkish for the same question; 3 new unit tests; full suite 873 passed / 9 skipped; eslint and tsc clean; build clean; HTTP smoke 80/80 on 127.0.0.1:3100."
     }
   ]
 }
