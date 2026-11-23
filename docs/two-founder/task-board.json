@@ -2407,6 +2407,31 @@
       "acceptanceCriteria": "Determine why localhost:3100 appeared broken and restore a working app instance without touching other running processes.",
       "evidence": "Root cause: the running next start process predated the latest build, so /_next/static/chunks/1jsl169a2e5vh.js returned HTTP 500 and the login form fell back to a native GET submit (no hydration) on both localhost and 127.0.0.1. Fixed by rebuilding and restarting only our own preview processes (3100 kept, 3101 untouched). After restart hydration=true and browser smoke 77/77 on http://localhost:3100. Operational note; no code change.",
       "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-122",
+      "commit": "e6dfb08",
+      "title": "Side-effect-free connector connection testing (credentials, SSRF, schema, recordsPath)",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-engineer",
+        "security-reviewer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/connectors/context.ts",
+        "src/lib/connectors/rest-adapter.ts",
+        "src/app/api/connectors/[id]/test/route.ts",
+        "src/app/dashboard/connectors/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/connectors.test.ts",
+        "scripts/verify-workflows.mjs"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "A data_admin can verify a saved connector with a real request before running a sync: credential resolution (env var/OAuth2), SSRF policy, HTTP status, JSON body and recordsPath are checked; observed source fields and missing mapped fields are reported; no canonical records, sync runs or checkpoints are written; an audit event is recorded; only ingest_data may test and only within the org.",
+      "evidence": "tests/connectors.test.ts 33/33 (6 new: happy path with schema, missing mapped fields, missing secret env var, SSRF block, non-JSON body, route permissions/org isolation/no run created/audit row). Full suite 883 passed / 9 skipped; tsc/eslint/build clean. Browser: verify:workflows 27/27 on 3103 with real fetch to jsonplaceholder (test result shown in UI, zero sync runs created, connector_connection_tested in org audit). Preview smoke 77/77 on localhost:3100.",
+      "recordedAt": "2026-11-23"
     }
   ]
 }
