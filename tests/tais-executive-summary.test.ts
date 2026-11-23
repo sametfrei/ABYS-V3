@@ -17,6 +17,7 @@ const {
   computeServiceAreaStatuses,
   selectTopRisks,
   pickMainDecision,
+  selectTaisDecisionMeta,
   selectTopActions,
   buildExecutiveBrief,
   healthLevel,
@@ -217,5 +218,25 @@ describe("TAIS yönetici ekranı — karar/aksiyon seçimi (sentetik girdi, DB g
     expect(brief).toContain("öne çıkan bir risk kaydı bulunmuyor");
     expect(brief).toContain("öncelikli bir yönetici kararı bulunmuyor");
     expect(brief).toContain("açık önerilen aksiyon yok");
+  });
+
+  it("selectTaisDecisionMeta en güncel kaydı gösterir, risk bağlantısını tohum kaydından korur", () => {
+    const casePayload = { title: "Vaka", options: [] } as unknown as Parameters<typeof selectTaisDecisionMeta>[1];
+    const meta = selectTaisDecisionMeta("case-1", casePayload, [
+      { id: "rec-human", state: "approved", payload: { riskIds: [] }, decidedBy: "TAIS Genel Müdür" },
+      { id: "rec-seed", state: "approved", payload: { riskIds: ["risk-a", "risk-b"] }, decidedBy: "sistem" },
+    ]);
+    expect(meta).toMatchObject({
+      caseId: "case-1",
+      decisionId: "rec-human",
+      state: "approved",
+      riskIds: ["risk-a", "risk-b"],
+      decidedBy: "TAIS Genel Müdür",
+    });
+  });
+
+  it("selectTaisDecisionMeta kayıt yoksa null döner", () => {
+    const casePayload = { title: "Vaka", options: [] } as unknown as Parameters<typeof selectTaisDecisionMeta>[1];
+    expect(selectTaisDecisionMeta("case-x", casePayload, [])).toBeNull();
   });
 });

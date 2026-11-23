@@ -65,6 +65,7 @@ interface TaisMainDecisionView {
   caseId: string;
   decisionId: string;
   state: string;
+  decidedBy: string | null;
   title: string;
   businessImpact: string;
   confidence: number;
@@ -608,6 +609,12 @@ function MainDecisionCard({
           state: decision.state,
           count: decision.matchedRiskCount,
         })}
+        {decision.decidedBy && decision.decidedBy !== "sistem" ? (
+          <>
+            {" · "}
+            {formatMessage(locale, "tais.decidedBy", { name: decision.decidedBy })}
+          </>
+        ) : null}
       </p>
       {error ? (
         <p role="alert" className="mb-2 text-xs text-abys-critical">

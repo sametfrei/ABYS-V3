@@ -23,6 +23,7 @@ import {
   type TaisExecFilters,
   type TaisDecisionMeta,
   type TaisActionRow,
+  selectTaisDecisionMeta,
 } from "@/lib/demo/tais/executive-summary";
 import { localizedError } from "@/lib/api-i18n";
 
@@ -87,20 +88,27 @@ export async function GET(req: NextRequest) {
   );
   const decisionMeta: TaisDecisionMeta[] = [];
   for (const c of caseRows.rows) {
-    const rec = await db.query<{ id: string; state: string; payload: { riskIds?: string[] } }>(
-      `SELECT id, state, payload FROM decision_records
-       WHERE org_id = $1 AND case_id = $2 ORDER BY created_at ASC LIMIT 1`,
+    const rec = await db.query<{
+      id: string;
+      state: string | null;
+      payload: { riskIds?: string[] } | null;
+      decided_by: string | null;
+    }>(
+      `SELECT id, state, payload, decided_by FROM decision_records
+       WHERE org_id = $1 AND case_id = $2 ORDER BY created_at DESC LIMIT 10`,
       [orgId, c.id]
     );
-    const r = rec.rows[0];
-    if (!r) continue;
-    decisionMeta.push({
-      caseId: c.id,
-      decisionId: r.id,
-      state: r.state ?? "approved",
-      riskIds: r.payload?.riskIds ?? [],
-      case: c.payload,
-    });
+    const meta = selectTaisDecisionMeta(
+      c.id,
+      c.payload,
+      rec.rows.map((r) => ({
+        id: r.id,
+        state: r.state,
+        payload: r.payload,
+        decidedBy: r.decided_by,
+      }))
+    );
+    if (meta) decisionMeta.push(meta);
   }
   const main = pickMainDecision(decisionMeta, filteredRiskIds);
 

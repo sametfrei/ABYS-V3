@@ -233,12 +233,45 @@ export interface TaisDecisionMeta {
   state: string;
   riskIds: string[];
   case: AiDecisionCase;
+  /** En güncel kaydı yapan aktör ("sistem" ise yalnızca öneri tabanıdır). */
+  decidedBy?: string | null;
+}
+
+export interface TaisDecisionRecordRow {
+  id: string;
+  state: string | null;
+  payload: { riskIds?: string[] } | null;
+  decidedBy?: string | null;
+}
+
+/**
+ * Bir vakanın kayıtlarını (en yeniden eskiye sıralı) tek bir görünüme indirger.
+ * Durum ve kimlik en güncel kayıttan gelir; risk bağlantısı tohum kaydında
+ * taşındığı için ilk dolu `riskIds` kümesi korunur.
+ */
+export function selectTaisDecisionMeta(
+  caseId: string,
+  casePayload: AiDecisionCase,
+  records: TaisDecisionRecordRow[]
+): TaisDecisionMeta | null {
+  const latest = records[0];
+  if (!latest) return null;
+  const riskIds = records.find((r) => (r.payload?.riskIds?.length ?? 0) > 0)?.payload?.riskIds ?? [];
+  return {
+    caseId,
+    decisionId: latest.id,
+    state: latest.state ?? "approved",
+    riskIds,
+    case: casePayload,
+    decidedBy: latest.decidedBy ?? null,
+  };
 }
 
 export interface TaisMainDecisionView {
   caseId: string;
   decisionId: string;
   state: string;
+  decidedBy: string | null;
   title: string;
   businessImpact: string;
   confidence: number;
@@ -276,6 +309,7 @@ export function pickMainDecision(
     caseId: d.caseId,
     decisionId: d.decisionId,
     state: d.state,
+    decidedBy: d.decidedBy ?? null,
     title: d.case.title,
     businessImpact: d.case.businessImpact,
     confidence: d.case.confidence,
