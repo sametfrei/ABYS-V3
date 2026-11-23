@@ -160,9 +160,27 @@ export interface SyncOutcome {
   rejected: ConnectorRecordRejection[];
 }
 
+/** Veri yazmadan yapılan gerçek bağlantı testinin sonucu. */
+export interface ConnectorProbeResult {
+  /** Kimlik doğrulama, ağ, JSON ve kayıt yolu kontrolleri geçti mi? */
+  ok: boolean;
+  latencyMs: number;
+  httpStatus: number | null;
+  /** İlk sayfada görülen kayıt sayısı (hiçbir kayıt kalıcılaştırılmaz). */
+  recordsSeen: number;
+  /** Kaynağın gözlenen alan şeması; değer içermez. */
+  observedFields: ObservedSourceField[];
+  /** Eşlenmiş ama kaynakta bulunamayan kanonik alanlar. */
+  missingMappedFields: string[];
+  warnings: string[];
+  error: string | null;
+}
+
 export interface ConnectorAdapter {
   id: string;
   status: ConnectorStatus;
   validate(config: unknown): string[];
   sync(config: ConnectorConfig, ctx: SyncContext): Promise<SyncOutcome>;
+  /** Opsiyonel: veri yazmadan bağlantıyı ve kimliği doğrular. */
+  probe?(config: ConnectorConfig, ctx: SyncContext): Promise<ConnectorProbeResult>;
 }

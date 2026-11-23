@@ -91,6 +91,7 @@ export type ShellKey =
   | "api.connectors.notFound"
   | "api.connectors.disabled"
   | "api.connectors.adapterNotFound"
+  | "api.connectors.testUnsupported"
   | "api.connectors.unknown"
   | "api.connectors.unsupportedMethod"
   | "api.connectors.invalidUrl"
@@ -446,6 +447,13 @@ export type ShellKey =
   | "connectors.approving"
   | "connectors.approveNewVersion"
   | "connectors.mappingVersionHistory"
+  | "connectors.testConnection"
+  | "connectors.testingConnection"
+  | "connectors.testSucceeded"
+  | "connectors.testFailed"
+  | "connectors.testFailedHttp"
+  | "connectors.testConnectionFailedFallback"
+  | "connectors.testMissingFields"
   | "connectors.footnote"
   | "forecast.title"
   | "forecast.titleAccent"
@@ -1926,6 +1934,10 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "api.connectors.notFound": { tr: "Konnektör bulunamadı.", en: "Connector not found." },
   "api.connectors.disabled": { tr: "Konnektör devre dışı.", en: "Connector is disabled." },
   "api.connectors.adapterNotFound": { tr: "Adaptör bulunamadı.", en: "Adapter not found." },
+  "api.connectors.testUnsupported": {
+    tr: "Bu adaptör bağlantı testini desteklemiyor.",
+    en: "This adapter does not support connection testing.",
+  },
   "api.connectors.unknown": { tr: "Bilinmeyen konnektör.", en: "Unknown connector." },
   "api.connectors.unsupportedMethod": {
     tr: "Desteklenmeyen metod. İzin verilenler: {methods}",
@@ -2730,6 +2742,28 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "connectors.mappingVersionHistory": {
     tr: "Eşleme sürüm geçmişi ({count})",
     en: "Mapping version history ({count})",
+  },
+  "connectors.testConnection": { tr: "Bağlantıyı test et", en: "Test connection" },
+  "connectors.testingConnection": { tr: "Bağlantı test ediliyor…", en: "Testing connection…" },
+  "connectors.testSucceeded": {
+    tr: "Bağlantı başarılı · {records} kayıt · {fields} alan · {latency} ms",
+    en: "Connection OK · {records} records · {fields} fields · {latency} ms",
+  },
+  "connectors.testFailed": {
+    tr: "Bağlantı başarısız: {error}",
+    en: "Connection failed: {error}",
+  },
+  "connectors.testFailedHttp": {
+    tr: "Bağlantı testi başarısız (HTTP {status}).",
+    en: "Connection test failed (HTTP {status}).",
+  },
+  "connectors.testConnectionFailedFallback": {
+    tr: "Bağlantı testi başarısız oldu.",
+    en: "Connection test failed.",
+  },
+  "connectors.testMissingFields": {
+    tr: "Eşlenen alanlar kaynakta yok: {fields}",
+    en: "Mapped fields missing at source: {fields}",
   },
   "connectors.footnote": {
     tr: "Not: Katalogda “Kimlik bilgisi gerekir” işaretli sistemler aynı REST adaptörünü kullanır; canlı bağlantı müşteri uç noktası ve anahtarı sağlanana kadar doğrulanmış sayılmaz.",

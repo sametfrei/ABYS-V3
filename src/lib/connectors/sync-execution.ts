@@ -1,13 +1,12 @@
-import { lookup } from "dns/promises";
-import { fetchPinned, fetchPinnedTokenRequest } from "@/lib/net/pinned-fetch";
 import { SsrfError } from "@/lib/net/ssrf";
+import { createConnectorSyncContext } from "./context";
 import {
   partitionCanonicalRecords,
   suggestCanonicalMappings,
   type MappingSuggestion,
 } from "@/lib/connectors/contracts";
 import { getAdapter } from "@/lib/connectors/registry";
-import type { ObservedSourceField, SyncContext } from "@/lib/connectors/types";
+import type { ObservedSourceField } from "@/lib/connectors/types";
 import {
   finishSyncRun,
   getLastCheckpoint,
@@ -77,21 +76,7 @@ export async function executeConnectorSync(params: {
     const adapter = getAdapter(configRow.connectorId);
     if (!adapter) throw new Error("Adaptör bulunamadı.");
 
-    const resolveHost = async (hostname: string) =>
-      (await lookup(hostname, { all: true })).map((result) => result.address);
-    const ctx: SyncContext = {
-      orgId: configRow.orgId,
-      configId: configRow.id,
-      checkpoint,
-      fetchImpl: (input, init) =>
-        fetchPinned(input instanceof Request ? input.url : input, init),
-      fetchTokenImpl: (input, init) =>
-        fetchPinnedTokenRequest(input instanceof Request ? input.url : input, init, resolveHost),
-      resolveHost,
-      resolveSecret: (envVarName: string) => process.env[envVarName],
-      now: () => new Date(),
-      sleep: (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
-    };
+    const ctx = createConnectorSyncContext(configRow, checkpoint);
 
     const outcome = await adapter.sync(configRow.config, ctx);
     const partition = partitionCanonicalRecords(outcome.records);

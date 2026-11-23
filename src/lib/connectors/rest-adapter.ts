@@ -3,6 +3,7 @@ import {
   type CanonicalRecord,
   type ConnectorAdapter,
   type ConnectorConfig,
+  type ConnectorProbeResult,
   type RestConnectorConfig,
   type SyncOutcome,
   type SyncContext,
@@ -347,6 +348,81 @@ export const restAdapter: ConnectorAdapter = {
 
   validate(config: unknown): string[] {
     return validateRestConfig(config);
+  },
+
+  async probe(rawConfig: ConnectorConfig, ctx: SyncContext): Promise<ConnectorProbeResult> {
+    const started = Date.now();
+    const warnings: string[] = [];
+    try {
+      const errors = validateRestConfig(rawConfig);
+      if (errors.length > 0) throw new Error(errors.join("; "));
+      if (rawConfig.kind !== "rest") throw new Error("Desteklenmeyen konfigürasyon türü.");
+
+      const base = new URL(rawConfig.baseUrl);
+      const target = new URL(
+        rawConfig.path.replace(/^\//, ""),
+        base.href.endsWith("/") ? base.href : `${base.href}/`
+      );
+      const { url: validated } = await validateOutboundUrl(target.href, ctx.resolveHost);
+      // buildHeaders, sır ortam değişkeni yoksa veya OAuth2 token alınamazsa hata verir.
+      const headers = await buildHeaders(rawConfig, ctx);
+
+      const pageUrl = new URL(validated.href);
+      const pagination = rawConfig.pagination ?? { type: "none" };
+      if (pagination.type === "page") {
+        pageUrl.searchParams.set(pagination.pageParam, String(pagination.startPage ?? 1));
+        if (pagination.limitParam && pagination.pageSize) {
+          pageUrl.searchParams.set(pagination.limitParam, String(Math.min(pagination.pageSize, 50)));
+        }
+      }
+
+      const res = await fetchWithRetry(
+        pageUrl,
+        { method: rawConfig.method ?? "GET", headers },
+        ctx,
+        warnings
+      );
+      const text = await readCapped(res);
+      let json: unknown;
+      try {
+        json = JSON.parse(text);
+      } catch {
+        throw new Error("Yanıt geçerli JSON değil.");
+      }
+      const items = getPath(json, rawConfig.recordsPath);
+      if (!Array.isArray(items)) {
+        throw new Error(
+          `recordsPath "${rawConfig.recordsPath ?? "(kök)"}" bir dizi döndürmedi.`
+        );
+      }
+      const observedFields = observeSourceSchema(items.slice(0, 50));
+      const paths = new Set(observedFields.map((field) => field.path.replace(/\[\]$/, "")));
+      const missingMappedFields = Object.entries(rawConfig.fieldMap)
+        .filter(([, sourcePath]) => !paths.has(sourcePath))
+        .map(([canonical]) => canonical);
+
+      return {
+        ok: true,
+        latencyMs: Date.now() - started,
+        httpStatus: res.status,
+        recordsSeen: items.length,
+        observedFields,
+        missingMappedFields,
+        warnings,
+        error: null,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        latencyMs: Date.now() - started,
+        httpStatus: null,
+        recordsSeen: 0,
+        observedFields: [],
+        missingMappedFields: [],
+        warnings,
+        error: err instanceof Error ? err.message : "Bağlantı testi başarısız oldu.",
+      };
+    }
   },
 
   async sync(rawConfig: ConnectorConfig, ctx: SyncContext): Promise<SyncOutcome> {

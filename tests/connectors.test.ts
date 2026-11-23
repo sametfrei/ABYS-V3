@@ -59,6 +59,7 @@ const connectorMappingRoute = await import("../src/app/api/connectors/[id]/mappi
 const syncRoute = await import("../src/app/api/connectors/[id]/sync/route");
 const runsRoute = await import("../src/app/api/connectors/[id]/runs/route");
 const schedulerRoute = await import("../src/app/api/connectors/scheduler/run/route");
+const testRoute = await import("../src/app/api/connectors/[id]/test/route");
 const { runDueConnectorSyncs } = await import("../src/lib/connectors/scheduler");
 const forecastRoute = await import("../src/app/api/forecast/route");
 const anomalyRoute = await import("../src/app/api/anomalies/route");
@@ -289,6 +290,65 @@ describe("REST konnektör adaptörü", () => {
       restAdapter.sync(BASE_CONFIG, ctx({ resolveHost: async () => ["127.0.0.1"] }))
     ).rejects.toBeInstanceOf(SsrfError);
   });
+
+describe("Bağlantı testi (probe)", () => {
+  it("veri yazmadan kayıtları ve şemayı raporlar", async () => {
+    let calls = 0;
+    const fetchImpl = (async () => {
+      calls++;
+      return new Response(
+        JSON.stringify({
+          data: [
+            { id: 1, name: "Acme", contact: { email: "a@acme.test" } },
+            { id: 2, name: "Beta" },
+          ],
+        }),
+        { status: 200 }
+      );
+    }) as typeof fetch;
+
+    const result = await restAdapter.probe!(BASE_CONFIG, ctx({ fetchImpl }));
+    expect(calls).toBe(1);
+    expect(result.ok).toBe(true);
+    expect(result.httpStatus).toBe(200);
+    expect(result.recordsSeen).toBe(2);
+    expect(result.missingMappedFields).toEqual([]);
+    expect(result.observedFields.some((field) => field.path === "contact.email")).toBe(true);
+  });
+
+  it("eşlenen alan kaynakta yoksa raporlar", async () => {
+    const fetchImpl = (async () =>
+      new Response(JSON.stringify({ data: [{ id: 1, ad: "Acme" }] }), { status: 200 })) as typeof fetch;
+    const result = await restAdapter.probe!(BASE_CONFIG, ctx({ fetchImpl }));
+    expect(result.ok).toBe(true);
+    expect([...result.missingMappedFields].sort()).toEqual(["email", "name"]);
+  });
+
+  it("kimlik bilgisi ortam değişkeni yoksa başarısız döner", async () => {
+    const result = await restAdapter.probe!(
+      { ...BASE_CONFIG, authType: "bearer_token" as const, secretEnvVar: "MISSING_ENV_VAR" },
+      ctx({ resolveSecret: () => undefined })
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("Kimlik bilgisi");
+  });
+
+  it("iç ağ adresini reddeder (SSRF)", async () => {
+    const result = await restAdapter.probe!(
+      BASE_CONFIG,
+      ctx({ resolveHost: async () => ["127.0.0.1"] })
+    );
+    expect(result.ok).toBe(false);
+    expect(result.error).toBeTruthy();
+  });
+
+  it("JSON olmayan yanıtı hata olarak raporlar", async () => {
+    const fetchImpl = (async () => new Response("<html>", { status: 200 })) as typeof fetch;
+    const result = await restAdapter.probe!(BASE_CONFIG, ctx({ fetchImpl }));
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("JSON");
+  });
+});
 
   it("kayıt defteri durumları dürüsttür", () => {
     const defs = listDefinitions();
@@ -1306,4 +1366,48 @@ describe("Konnektör API'si", () => {
       ).status
     ).toBe(400);
   });
+
+  it("bağlantı testi veri yazmadan çalışır, izin ve org sınırını uygular", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
+    const forbidden = await testRoute.POST(new Request("http://localhost", { method: "POST" }), {
+      params: Promise.resolve({ id: configId }),
+    });
+    expect(forbidden.status).toBe(403);
+
+    nextHeaders.__setTestCookie(SESSION_COOKIE, adminB);
+    const notFound = await testRoute.POST(new Request("http://localhost", { method: "POST" }), {
+      params: Promise.resolve({ id: configId }),
+    });
+    expect(notFound.status).toBe(404);
+
+    nextHeaders.__setTestCookie(SESSION_COOKIE, adminA);
+    const fakeFetch = (async () =>
+      new Response(
+        JSON.stringify({ data: [{ id: "c1", name: "Acme", updated_at: "2026-01-05T00:00:00Z" }] }),
+        { status: 200 }
+      )) as typeof fetch;
+    vi.stubGlobal("fetch", fakeFetch);
+    pinnedFetch.mockImplementation(fakeFetch);
+
+    const runsBefore = await listSyncRuns(ORG_A, configId);
+    const res = await testRoute.POST(new Request("http://localhost", { method: "POST" }), {
+      params: Promise.resolve({ id: configId }),
+    });
+    const body = (await res.json()) as { ok: boolean; recordsSeen: number; httpStatus: number };
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.recordsSeen).toBe(1);
+    expect(body.httpStatus).toBe(200);
+
+    // Test hiçbir senkron çalıştırması/kanonik kaydı oluşturmaz.
+    const runsAfter = await listSyncRuns(ORG_A, configId);
+    expect(runsAfter.length).toBe(runsBefore.length);
+
+    const auditRows = await getDb().query<{ type: string; detail: string }>(
+      "SELECT type, detail FROM audit_events WHERE org_id = $1 AND type = 'connector_connection_tested'",
+      [ORG_A]
+    );
+    expect(auditRows.rows.some((row) => row.detail === configId)).toBe(true);
+  });
+
 });

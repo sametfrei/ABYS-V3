@@ -243,6 +243,16 @@ try {
         const versions = after.body?.versions ?? [];
         if (versions.length >= 2) ok("eşleme sürüm geçmişi", `${versions.length} sürüm`);
         else bad("eşleme sürüm geçmişi", `${versions.length} sürüm`);
+
+        const runsBeforeTest =
+          (await apiJson(adminPage, "GET", `/api/connectors/${connectorConfig.id}/runs`)).body?.runs?.length ?? 0;
+        await row.getByRole("button", { name: "Bağlantıyı test et" }).click({ timeout: 30_000 });
+        await adminPage.getByText(/Bağlantı başarılı ·/).first().waitFor({ timeout: 120_000 });
+        ok("bağlantı testi kullanıcıya yansıdı");
+        const runsAfterTest =
+          (await apiJson(adminPage, "GET", `/api/connectors/${connectorConfig.id}/runs`)).body?.runs?.length ?? 0;
+        if (runsAfterTest === runsBeforeTest) ok("bağlantı testi yan etkisiz (senkron kaydı oluşmadı)");
+        else bad("bağlantı testi yan etkisi", `${runsBeforeTest} → ${runsAfterTest}`);
       }
     } catch (error) {
       bad("konnektör akışı", error instanceof Error ? error.message : String(error));
@@ -278,6 +288,12 @@ try {
       });
       if (mappingEvent) ok("denetim kanıtı: connector_mapping_approved");
       else bad("denetim kanıtı", "connector_mapping_approved bulunamadı");
+
+      const testEvent = entries.find(
+        (e) => e.type === "connector_connection_tested" && String(e.detail ?? "") === connectorConfig.id
+      );
+      if (testEvent) ok("denetim kanıtı: connector_connection_tested");
+      else bad("denetim kanıtı", "connector_connection_tested bulunamadı");
 
       const verify = await apiJson(page, "GET", "/api/audit?verify=1");
       if (verify.body?.verify?.valid === true) ok("denetim zinciri geçerli (konnektör sonrası)", `${verify.body.verify.checked} kayıt`);

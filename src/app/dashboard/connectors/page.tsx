@@ -99,6 +99,17 @@ interface SchedulerHealth {
   }>;
 }
 
+interface ProbeResult {
+  ok: boolean;
+  latencyMs: number;
+  httpStatus: number | null;
+  recordsSeen: number;
+  observedFields: { path: string }[];
+  missingMappedFields: string[];
+  warnings: string[];
+  error: string | null;
+}
+
 interface MappingReview {
   configId: string;
   name: string;
@@ -250,6 +261,8 @@ export default function ConnectorsPage() {
   const [mappingByConfig, setMappingByConfig] = useState<Record<string, MappingReview>>({});
   const [mappingDrafts, setMappingDrafts] = useState<Record<string, string>>({});
   const [mappingBusyId, setMappingBusyId] = useState<string | null>(null);
+  const [probesByConfig, setProbesByConfig] = useState<Record<string, ProbeResult>>({});
+  const [testBusyId, setTestBusyId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [runsByConfig, setRunsByConfig] = useState<Record<string, { runs: SyncRun[]; records: { entity: string; count: number }[]; promotion: PromotionCounts }>>({});
@@ -444,6 +457,35 @@ export default function ConnectorsPage() {
       ...prev,
       [id]: JSON.stringify(body.currentFieldMap, null, 2),
     }));
+  }
+
+  async function testConnection(id: string) {
+    setTestBusyId(id);
+    setError("");
+    try {
+      const res = await fetch(`/api/connectors/${id}/test`, { method: "POST" });
+      const body = (await res.json()) as ProbeResult & { error?: string };
+      if (!res.ok) {
+        throw new Error(body.error ?? formatMessage(locale, "connectors.testFailedHttp", { status: res.status }));
+      }
+      setProbesByConfig((prev) => ({ ...prev, [id]: body }));
+    } catch (err) {
+      setProbesByConfig((prev) => ({
+        ...prev,
+        [id]: {
+          ok: false,
+          latencyMs: 0,
+          httpStatus: null,
+          recordsSeen: 0,
+          observedFields: [],
+          missingMappedFields: [],
+          warnings: [],
+          error: err instanceof Error ? err.message : t(locale, "connectors.testConnectionFailedFallback"),
+        },
+      }));
+    } finally {
+      setTestBusyId(null);
+    }
   }
 
   async function openMapping(id: string) {
@@ -864,7 +906,16 @@ export default function ConnectorsPage() {
                           {c.config.path}
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => void testConnection(c.id)}
+                          disabled={testBusyId !== null}
+                          className="text-xs rounded-full border border-abys-cream-border px-3 py-1 text-abys-muted hover:text-abys-ink disabled:opacity-40"
+                        >
+                          {testBusyId === c.id
+                            ? t(locale, "connectors.testingConnection")
+                            : t(locale, "connectors.testConnection")}
+                        </button>
                         <button onClick={() => void loadRuns(c.id)} className="text-xs rounded-full border border-abys-cream-border px-3 py-1 text-abys-muted hover:text-abys-ink">
                           {t(locale, "connectors.history")}
                         </button>
@@ -876,6 +927,40 @@ export default function ConnectorsPage() {
                         </button>
                       </div>
                     </div>
+                    {probesByConfig[c.id] && (
+                      <div
+                        className={`mt-3 rounded-lg border px-3 py-2 text-[11px] ${
+                          probesByConfig[c.id].ok
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                            : "border-red-200 bg-red-50 text-red-700"
+                        }`}
+                      >
+                        {probesByConfig[c.id].ok ? (
+                          <>
+                            <p>
+                              {formatMessage(locale, "connectors.testSucceeded", {
+                                records: probesByConfig[c.id].recordsSeen,
+                                fields: probesByConfig[c.id].observedFields.length,
+                                latency: probesByConfig[c.id].latencyMs,
+                              })}
+                            </p>
+                            {probesByConfig[c.id].missingMappedFields.length > 0 && (
+                              <p className="mt-0.5">
+                                {formatMessage(locale, "connectors.testMissingFields", {
+                                  fields: probesByConfig[c.id].missingMappedFields.join(", "),
+                                })}
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <p>
+                            {formatMessage(locale, "connectors.testFailed", {
+                              error: probesByConfig[c.id].error ?? "",
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="mt-3 rounded-lg border border-abys-cream-border bg-abys-cream/60 px-3 py-2">
                       <div className="flex flex-wrap items-start justify-between gap-2">
                         <div className="text-[11px] text-abys-muted space-y-0.5">
