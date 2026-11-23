@@ -890,6 +890,17 @@ const server = createServer((req, res) => {
   res.end("Bulunamadı");
 });
 
+server.on("error", (error) => {
+  if (error.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} zaten kullanımda. AGENT_CENTER_PORT ile başka bir port seçin.`);
+  } else if (error.code === "EPERM") {
+    console.error(`Port ${PORT} bağlanamadı (EPERM). Sandbox/izin kısıtı olmadan çalıştırın.`);
+  } else {
+    console.error(`Sunucu başlatılamadı: ${error.message}`);
+  }
+  process.exitCode = 1;
+});
+
 server.listen(PORT, HOST, () => {
   console.log(`ABYS Agent Command Center: http://${HOST}:${PORT}`);
   console.log(`Proje: ${REPO_DIR}`);
