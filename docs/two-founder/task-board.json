@@ -2504,6 +2504,30 @@
       "acceptanceCriteria": "Discovery must not report a KPI as calculable merely because its required fields exist somewhere in the org. A KPI is 'available' only when every required field exists in the same entity; the providing entity is shown. Fields split across entities are 'partial' with organization scope and an explicit note.",
       "evidence": "Classifier now evaluates availability per entity from the observed schema (buildDiscovery passes entityFields). Unit tests: co-located fields -> available with entity 'product'; split fields (order/product) -> partial, entity null, scope organization, partialEntities [order, product], and a 'farklı varlıklara dağılmış' missing-information note. API test ORG_C proves the same over real connector_records. tests/industry-discovery.test.ts 18 passed; full suite 893 passed / 9 skipped; tsc and eslint clean.",
       "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-126",
+      "commit": "4f26dca",
+      "title": "KPI availability also requires usable observed value types",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-engineer",
+        "intelligence-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/industry/classifier.ts",
+        "src/lib/industry/types.ts",
+        "src/lib/db/repos/business-context.ts",
+        "src/app/dashboard/discovery/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/industry-discovery.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "A required field whose observed non-null values are not all numeric must not make a KPI available. The offending fields are reported and the KPI stays partial, even when all required fields are co-located in one entity.",
+      "evidence": "buildDiscovery passes per-entity field type distributions; availability treats a field as usable only when all non-null observations are JSON numbers. Unit tests: string total_units -> partial, entity product, nonNumericFields [total_units], missingInformation note; numeric fields -> available. API test ORG_D stores total_units as text in a real connector_record and returns partial/entity product/nonNumericFields [total_units]. tests/industry-discovery.test.ts 16 passed; full suite 896 passed / 9 skipped; tsc and eslint clean.",
+      "recordedAt": "2026-11-23"
     }
   ]
 }
