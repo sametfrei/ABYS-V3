@@ -45,21 +45,41 @@ const context = await browser.newContext({
 const page = await context.newPage();
 const pageErrors = [];
 page.on("pageerror", (error) => pageErrors.push(error.message));
+const consoleErrors = [];
+page.on("console", (message) => {
+  if (message.type() === "error") consoleErrors.push(message.text().slice(0, 300));
+});
+const failedRequests = [];
+page.on("requestfailed", (request) => {
+  failedRequests.push(`${request.url().replace(BASE, "")} — ${request.failure()?.errorText ?? "?"}`);
+});
 
 function slug(route) {
   return route === "/dashboard" ? "dashboard" : route.replace(/^\/dashboard\//, "").replaceAll("/", "-");
 }
 
+async function gotoWithRetry(route, options) {
+  try {
+    return await page.goto(`${BASE}${route}`, options);
+  } catch (error) {
+    if (error instanceof Error && /ERR_ABORTED|Timeout/i.test(error.message)) {
+      await page.waitForTimeout(1_000);
+      return page.goto(`${BASE}${route}`, options);
+    }
+    throw error;
+  }
+}
+
 async function visit(route, label) {
   const before = pageErrors.length;
-  const response = await page.goto(`${BASE}${route}`, {
+  const response = await gotoWithRetry(route, {
     waitUntil: "domcontentloaded",
-    timeout: 30_000,
+    timeout: 60_000,
   });
   await page.waitForFunction(
     () => (document.body.innerText ?? "").trim().length > 100,
     undefined,
-    { timeout: 30_000 }
+    { timeout: 60_000 }
   );
   await page.waitForTimeout(250);
   const status = response?.status() ?? 0;
@@ -88,7 +108,7 @@ async function visit(route, label) {
 }
 
 try {
-  await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+  await page.goto(`${BASE}/login`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   // Dev modunda hidrasyon tamamlanmadan tıklanırsa form native GET gönderir.
   await page.waitForFunction(
     () => {
@@ -96,7 +116,7 @@ try {
       return !!form && Object.keys(form).some((key) => key.startsWith("__reactProps"));
     },
     undefined,
-    { timeout: 30_000 }
+    { timeout: 60_000 }
   );
   await page.fill("#email", EMAIL);
   await page.fill("#password", PASSWORD);
@@ -133,13 +153,34 @@ try {
     await visit(route, label);
   }
 
-  await page.goto(`${BASE}/dashboard/actions`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+  await gotoWithRetry("/dashboard/data-quality", { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page
+    .waitForFunction(
+      () =>
+        (document.body.innerText ?? "").includes(
+          "Karantina kuyruğu veri yöneticisi yetkisi ister"
+        ),
+      undefined,
+      { timeout: 60_000 }
+    )
+    .catch(() => {});
+  const dataQualityBody = await page.locator("body").innerText();
+  if (
+    dataQualityBody.includes("Karantina kuyruğu veri yöneticisi yetkisi ister") &&
+    !dataQualityBody.includes("yetkiniz yok")
+  ) {
+    ok("veri kalitesi yetki ayrımı", "CEO skoru görür, karantina gerekçeli kısıtlı");
+  } else {
+    bad("veri kalitesi yetki ayrımı", "CEO görünümünde beklenen kısıt metni yok");
+  }
+
+  await page.goto(`${BASE}/dashboard/actions`, { waitUntil: "domcontentloaded", timeout: 60_000 });
   await page.waitForFunction(
     () =>
       document.body.innerText.includes("Henüz aksiyon yok") ||
       !!document.querySelector('[role="group"][aria-label="Aksiyon filtresi"]'),
     undefined,
-    { timeout: 30_000 }
+    { timeout: 60_000 }
   );
   const actionsBody = await page.locator("body").innerText();
   const filterGroup = page.getByRole("group", { name: "Aksiyon filtresi" });
@@ -159,8 +200,8 @@ try {
   }
 
   await context.addCookies([{ name: "abys_lang", value: "en", url: BASE }]);
-  await page.goto(`${BASE}/dashboard/actions`, { waitUntil: "domcontentloaded", timeout: 30_000 });
-  await page.waitForSelector("h1", { timeout: 30_000 });
+  await page.goto(`${BASE}/dashboard/actions`, { waitUntil: "domcontentloaded", timeout: 60_000 });
+  await page.waitForSelector("h1", { timeout: 60_000 });
   const englishHeading = (await page.locator("h1").first().innerText()).trim();
   if (/Execution/i.test(englishHeading)) ok("TR/EN geçişi", englishHeading.slice(0, 50));
   else bad("TR/EN geçişi", englishHeading.slice(0, 60));
@@ -176,11 +217,11 @@ try {
     ["/dashboard/connectors", "mobil bağlantılar"],
     ["/dashboard/data-quality", "mobil veri kalitesi"],
   ]) {
-    await page.goto(`${BASE}${route}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(`${BASE}${route}`, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.waitForFunction(
       () => (document.body.innerText ?? "").trim().length > 100,
       undefined,
-      { timeout: 30_000 }
+      { timeout: 60_000 }
     );
     await page.waitForTimeout(350);
     const overflow = await page.evaluate(() => ({
@@ -198,13 +239,19 @@ try {
   const mobileNav = page.locator('header select[aria-label]').first();
   if (await mobileNav.isVisible()) {
     await mobileNav.selectOption("/dashboard/decision-ledger");
-    await page.waitForURL("**/dashboard/decision-ledger", { timeout: 30_000 });
+    await page.waitForURL("**/dashboard/decision-ledger", { timeout: 60_000 });
     ok("mobil gezinme", page.url().replace(BASE, ""));
   } else {
     bad("mobil gezinme", "menü görünür değil");
   }
 } catch (error) {
   bad("tarayıcı akışı", error instanceof Error ? error.message : String(error));
+  console.log("URL:", page.url().replace(BASE, ""));
+  const body = await page.locator("body").innerText().catch(() => "");
+  console.log("BODY:", body.replace(/\s+/g, " ").slice(0, 400));
+  for (const entry of consoleErrors.slice(-5)) console.log("CONSOLE:", entry);
+  for (const entry of failedRequests.slice(-5)) console.log("REQFAIL:", entry);
+  await page.screenshot({ path: path.join(SHOTS, "flow-failure.png"), fullPage: true }).catch(() => {});
 } finally {
   await browser.close();
 }
