@@ -3,7 +3,7 @@
 Bu belge yalnızca **doğrulanmış** kapsamı listeler. Kod yazılmış olması tek
 başına "tamam" sayılmaz; her satırın kanıtı test, build, smoke veya üretim
 modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task-board.json`
-(TB-001…TB-117), ürün durumu `docs/ROADMAP.md` içindedir.
+(TB-001…TB-118), ürün durumu `docs/ROADMAP.md` içindedir.
 
 ## Doğrulama kapıları
 
@@ -52,6 +52,9 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
   ölçüm geçmişini kurum kapsamlı API üzerinden istek üzerine yeniden eskiye gösterir;
   limit aşımı sessizce gizlenmez, `truncated` ve arayüz bildirimiyle açıklanır.
   Aksiyon merkezi durum ve gecikme filtreleriyle canlı sayımlar sunar.
+  Komuta merkezindeki "Onayla" insan kararını kaydeder, hesap verebilir aksiyonu
+  ve denetim kaydını üretir; ikinci onay 409 ile reddedilir ve hata arayüzde
+  görünür kalır (TB-118).
 - **Konnektörler:** REST/OData adaptörü, OAuth2 client-credentials, eşleme
   sürümleme, idempotent kanonik kayıt, karantina, zamanlayıcı sağlığı ve
   harici SQL sonuçlarında ortak CSV güvenliği.

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-23T09:50:00Z",
+  "updatedAt": "2026-11-23T10:20:00Z",
   "states": [
     "BACKLOG",
     "READY",
@@ -2330,6 +2330,27 @@
       "status": "VERIFIED",
       "acceptanceCriteria": "The TAIS ask layer honours the request locale: English questions match English keywords and statement templates are rendered in EN; Turkish remains the default and stored record titles are quoted verbatim rather than translated.",
       "evidence": "Live POST /api/ask with Cookie abys_lang=en returns the English template while abys_lang=tr returns Turkish for the same question; 3 new unit tests; full suite 873 passed / 9 skipped; eslint and tsc clean; build clean; HTTP smoke 80/80 on 127.0.0.1:3100."
+    },
+    {
+      "id": "TB-118",
+      "commit": "1ad68f9",
+      "title": "Executive approval records a human decision; duplicate approvals rejected",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-reviewer",
+        "frontend-engineer"
+      ],
+      "files": [
+        "src/components/TaisExecutiveScreen.tsx",
+        "src/lib/db/repos/decision-lifecycle.ts",
+        "src/app/api/decisions/route.ts",
+        "src/lib/i18n.ts",
+        "tests/decision-lifecycle.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Approving the main decision on the executive dashboard records the human decision, creates the governed action and an audit entry; a second approval returns a localized 409 instead of duplicating actions; the demo system-seed record does not block the first human approval; failed calls are visible in the UI.",
+      "evidence": "Isolated instance (copy of demo DB, port 3103): first approve POST 200 with 2 decision records for the case (system baseline + human 'TAIS Genel Müdür'), second approve POST 409 with the localized message shown as an alert; audit verify valid (285 entries). Unit tests 5/5 in tests/decision-lifecycle.test.ts; full suite 874 passed / 9 skipped; eslint, tsc and build clean; main preview browser smoke 77/77 and HTTP smoke 80/80."
     }
   ]
 }
