@@ -799,6 +799,8 @@ export type ShellKey =
   | "dataQuality.filterPending"
   | "dataQuality.filterAll"
   | "dataQuality.exportCsv"
+  | "dataQuality.restrictedTitle"
+  | "dataQuality.restrictedBody"
   | "dataQuality.truncated"
   | "dataQuality.loading"
   | "dataQuality.emptyPending"
@@ -3350,6 +3352,14 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "dataQuality.filterPending": { tr: "Bekleyen", en: "Pending" },
   "dataQuality.filterAll": { tr: "Tümü", en: "All" },
   "dataQuality.exportCsv": { tr: "CSV indir", en: "Download CSV" },
+  "dataQuality.restrictedTitle": {
+    tr: "Karantina kuyruğu veri yöneticisi yetkisi ister",
+    en: "The quarantine queue requires data administrator access",
+  },
+  "dataQuality.restrictedBody": {
+    tr: "Kalite skoru tüm yöneticilere açıktır; karantina kayıtlarını incelemek ve çözmek için veri yöneticisi rolü gerekir. Satırlar sessizce atılmaz, yetkili ekip tarafından ele alınır.",
+    en: "The quality score is visible to every executive; reviewing and resolving quarantined rows requires the data administrator role. Rows are never silently dropped; the authorized team handles them.",
+  },
   "dataQuality.truncated": { tr: "İlk {count} kayıt gösteriliyor; tamamı için CSV indirin.", en: "Showing the first {count} records; download the CSV for all of them." },
   "dataQuality.loading": { tr: "Yükleniyor…", en: "Loading…" },
   "dataQuality.emptyPending": {

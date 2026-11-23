@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { hasPermission } from "@/lib/auth/permissions";
+import { useSession } from "@/lib/use-session";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -90,6 +92,8 @@ async function readError(res: Response, locale: Locale): Promise<string> {
  */
 export default function DataQualityPage() {
   const locale = useLocale();
+  const session = useSession();
+  const canIngest = session ? hasPermission(session.role, "ingest_data") : false;
   const [issues, setIssues] = useState<QualityIssue[]>([]);
   const [scope, setScope] = useState<"pending" | "all">("pending");
   const [loading, setLoading] = useState(true);
@@ -153,6 +157,7 @@ export default function DataQualityPage() {
   }, [scoreLabel]);
 
   useEffect(() => {
+    if (!canIngest) return;
     let cancelled = false;
     (async () => {
       try {
@@ -178,7 +183,7 @@ export default function DataQualityPage() {
     return () => {
       cancelled = true;
     };
-  }, [scope, reloadKey, locale]);
+  }, [scope, reloadKey, locale, canIngest]);
 
   async function resolve(
     id: string,
@@ -313,6 +318,21 @@ export default function DataQualityPage() {
           )}
         </div>
 
+        {session === undefined ? (
+          <p className="text-sm text-abys-muted" role="status">
+            {t(locale, "dataQuality.loading")}
+          </p>
+        ) : !canIngest ? (
+          <div className="rounded-xl border border-abys-cream-border bg-white/50 px-4 py-4">
+            <p className="text-sm font-medium text-abys-ink">
+              {t(locale, "dataQuality.restrictedTitle")}
+            </p>
+            <p className="mt-1 text-xs text-abys-muted">
+              {t(locale, "dataQuality.restrictedBody")}
+            </p>
+          </div>
+        ) : (
+          <>
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <a
             href={`/api/data-quality/export?status=${scope}`}
@@ -432,6 +452,8 @@ export default function DataQualityPage() {
               </li>
             ))}
           </ul>
+        )}
+          </>
         )}
       </div>
     </div>
