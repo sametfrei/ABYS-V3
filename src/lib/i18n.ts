@@ -1285,6 +1285,7 @@ export type ShellKey =
   | "discovery.availability.unavailable"
   | "discovery.kpiEntityScope"
   | "discovery.kpiSplitScope"
+  | "discovery.kpiNonNumeric"
   | "discovery.schemaHeading"
   | "discovery.schemaEmpty"
   | "discovery.recordCount"
@@ -4048,6 +4049,7 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "discovery.availability.unavailable": { tr: "Veri yok", en: "No data" },
   "discovery.kpiEntityScope": { tr: "Varlık: {entity}", en: "Entity: {entity}" },
   "discovery.kpiSplitScope": { tr: "Dağınık alanlar: {entities}", en: "Split fields: {entities}" },
+  "discovery.kpiNonNumeric": { tr: "Sayısal değil: {fields}", en: "Not numeric: {fields}" },
   "discovery.schemaHeading": { tr: "GÖZLENEN KANONİK ŞEMA", en: "OBSERVED CANONICAL SCHEMA" },
   "discovery.schemaEmpty": { tr: "Bağlı kaynaklardan eşlenmiş alan yok.", en: "No mapped fields from connected sources." },
   "discovery.recordCount": { tr: "({count} kayıt)", en: "({count} records)" },

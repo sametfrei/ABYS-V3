@@ -99,7 +99,8 @@ function scorePack(pack: IndustryPack, input: DiscoveryInput): {
 function availabilityFor(
   pack: IndustryPack,
   fields: Set<string>,
-  entityFields?: Record<string, string[]>
+  entityFields?: Record<string, string[]>,
+  entityFieldTypes?: Record<string, Record<string, Record<string, number>>>
 ): KpiAvailability[] {
   const entities = entityFields
     ? Object.entries(entityFields)
@@ -107,30 +108,70 @@ function availabilityFor(
         .sort((a, b) => a.entity.localeCompare(b.entity))
     : [];
 
+  // Tip bilgisi yoksa alanın varlığına güven. Varsa, boş olmayan gözlemlerin
+  // tamamı `number` değilse alan hesaplamaya uygun sayılmaz.
+  function isNumericReady(entity: string, field: string): boolean {
+    const types = entityFieldTypes?.[entity]?.[field];
+    if (!types) return true;
+    const total = Object.values(types).reduce((sum, count) => sum + count, 0);
+    const nulls = types.null ?? 0;
+    const nonNull = total - nulls;
+    if (nonNull <= 0) return false;
+    return (types.number ?? 0) === nonNull;
+  }
+
   return pack.kpis
     .map((kpi) => {
       if (entities.length > 0) {
-        let complete: { entity: string; matched: string[]; missing: string[] } | null = null;
+        let completeAll: { entity: string; matched: string[] } | null = null;
+        let bestCoLocated: { entity: string; numericFields: string[]; nonNumeric: string[] } | null = null;
         const partialEntities: string[] = [];
+
         for (const candidate of entities) {
-          const matched = kpi.requiredFields.filter((f) => candidate.fields.has(f));
-          if (matched.length === 0) continue;
+          const present = kpi.requiredFields.filter((f) => candidate.fields.has(f));
+          if (present.length === 0) continue;
           partialEntities.push(candidate.entity);
-          if (matched.length === kpi.requiredFields.length && !complete) {
-            complete = { entity: candidate.entity, matched, missing: [] };
+          if (present.length < kpi.requiredFields.length) continue;
+
+          const nonNumeric = present.filter((f) => !isNumericReady(candidate.entity, f));
+          if (nonNumeric.length === 0) {
+            if (!completeAll) completeAll = { entity: candidate.entity, matched: present };
+          } else if (!bestCoLocated || nonNumeric.length < bestCoLocated.nonNumeric.length) {
+            bestCoLocated = {
+              entity: candidate.entity,
+              numericFields: present.filter((f) => !nonNumeric.includes(f)),
+              nonNumeric,
+            };
           }
         }
-        if (complete) {
+
+        if (completeAll) {
           return {
             kpi,
             availability: "available" as const,
-            matchedFields: complete.matched,
+            matchedFields: completeAll.matched,
             missingFields: [],
-            entity: complete.entity,
+            entity: completeAll.entity,
             partialEntities,
+            nonNumericFields: [] as string[],
             scope: "entity" as const,
           };
         }
+        if (bestCoLocated) {
+          // Tüm alanlar tek varlıkta var ama en az biri sayısal değil:
+          // hesaplanabilir sayılmaz, tip sorunu dürüstçe raporlanır.
+          return {
+            kpi,
+            availability: "partial" as const,
+            matchedFields: bestCoLocated.numericFields,
+            missingFields: [],
+            entity: bestCoLocated.entity,
+            partialEntities,
+            nonNumericFields: bestCoLocated.nonNumeric,
+            scope: "entity" as const,
+          };
+        }
+
         const matched = kpi.requiredFields.filter((f) => fields.has(f));
         const missing = kpi.requiredFields.filter((f) => !fields.has(f));
         return {
@@ -140,6 +181,7 @@ function availabilityFor(
           missingFields: missing,
           entity: null,
           partialEntities,
+          nonNumericFields: [] as string[],
           scope: "organization" as const,
         };
       }
@@ -155,6 +197,7 @@ function availabilityFor(
         missingFields: missing,
         entity: null,
         partialEntities: [] as string[],
+        nonNumericFields: [] as string[],
         scope: "organization" as const,
       };
     })
@@ -190,7 +233,9 @@ export function discoverBusiness(input: DiscoveryInput): DiscoveryResult {
   const diversified = Boolean(primary && runnerUp && primary.score >= 40 && margin < 15);
 
   const primaryPack = primary ? INDUSTRY_PACKS.find((p) => p.id === primary.packId) : undefined;
-  const kpis = primaryPack ? availabilityFor(primaryPack, fieldSet, input.entityFields) : [];
+  const kpis = primaryPack
+    ? availabilityFor(primaryPack, fieldSet, input.entityFields, input.entityFieldTypes)
+    : [];
 
   const missingInformation: string[] = [];
   if (kpis.length > 0) {
@@ -205,6 +250,11 @@ export function discoverBusiness(input: DiscoveryInput): DiscoveryResult {
       if (k.availability === "partial" && k.missingFields.length === 0 && k.partialEntities.length > 1) {
         missingInformation.push(
           `Alanlar farklı varlıklara dağılmış: ${k.kpi.name} (${k.partialEntities.join(", ")})`
+        );
+      }
+      if (k.nonNumericFields.length > 0) {
+        missingInformation.push(
+          `Sayısal olmayan alan: ${k.kpi.name} (${k.entity ?? "?"}: ${k.nonNumericFields.join(", ")})`
         );
       }
     }

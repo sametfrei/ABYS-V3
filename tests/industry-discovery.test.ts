@@ -135,6 +135,45 @@ describe("Sektör keşif sınıflandırıcısı", () => {
     expect(r.missingInformation.join(" ")).toContain("farklı varlıklara dağılmış");
   });
 
+  it("alan var ama tipi sayısal değilse KPI hesaplanabilir sayılmaz", () => {
+    const r = discoverBusiness({
+      ...BASE,
+      fieldNames: ["good_units", "total_units"],
+      entityCounts: { product: 10 },
+      entityFields: { product: ["good_units", "total_units"] },
+      entityFieldTypes: {
+        product: {
+          good_units: { number: 10 },
+          total_units: { string: 10 },
+        },
+      },
+    });
+    const fpy = r.kpis.find((k) => k.kpi.id === "first_pass_yield");
+    expect(fpy?.availability).toBe("partial");
+    expect(fpy?.entity).toBe("product");
+    expect(fpy?.scope).toBe("entity");
+    expect(fpy?.missingFields).toHaveLength(0);
+    expect(fpy?.matchedFields).toEqual(["good_units"]);
+    expect(fpy?.nonNumericFields).toEqual(["total_units"]);
+    expect(r.missingInformation.join(" ")).toContain("Sayısal olmayan alan");
+  });
+
+  it("tüm alanlar tek varlıkta ve sayısalsa KPI kullanılabilir olur", () => {
+    const r = discoverBusiness({
+      ...BASE,
+      fieldNames: ["good_units", "total_units"],
+      entityCounts: { product: 10 },
+      entityFields: { product: ["good_units", "total_units"] },
+      entityFieldTypes: {
+        product: { good_units: { number: 10 }, total_units: { number: 10 } },
+      },
+    });
+    const fpy = r.kpis.find((k) => k.kpi.id === "first_pass_yield");
+    expect(fpy?.availability).toBe("available");
+    expect(fpy?.entity).toBe("product");
+    expect(fpy?.nonNumericFields).toEqual([]);
+  });
+
   it("paketler sürümlü ve formüllüdür", () => {
     expect(INDUSTRY_PACKS.length).toBeGreaterThanOrEqual(4);
     for (const pack of INDUSTRY_PACKS) {
@@ -150,11 +189,13 @@ describe("Sektör keşif sınıflandırıcısı", () => {
 const ORG_A = "org-disc-a";
 const ORG_B = "org-disc-b";
 const ORG_C = "org-disc-c";
+const ORG_D = "org-disc-d";
 
 describe("GET /api/discovery", () => {
   let ceoA: string;
   let guestA: string;
   let ceoC: string;
+  let ceoD: string;
 
   beforeAll(async () => {
     await migrate();
@@ -163,6 +204,7 @@ describe("GET /api/discovery", () => {
       [ORG_A, "A"],
       [ORG_B, "B"],
       [ORG_C, "C"],
+      [ORG_D, "D"],
     ]) {
       await db.query("INSERT INTO organizations (id, name, sector_id) VALUES ($1, $2, 'other')", [id, name]);
     }
@@ -171,6 +213,7 @@ describe("GET /api/discovery", () => {
       ["disc-ceo-a", ORG_A, "ceo"],
       ["disc-guest-a", ORG_A, "guest"],
       ["disc-ceo-c", ORG_C, "ceo"],
+      ["disc-ceo-d", ORG_D, "ceo"],
     ] as const) {
       await db.query(
         "INSERT INTO users (id, org_id, email, display_name, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -222,9 +265,23 @@ describe("GET /api/discovery", () => {
       [ORG_C, JSON.stringify({ fields: { total_units: 100 } })]
     );
 
+    // ORG_D: alanlar aynı varlıkta ama biri metin tipinde — tip bilgisi
+    // KPI'yı "kullanılabilir" saymamalı.
+    await db.query(
+      `INSERT INTO connector_configs (id, org_id, connector_id, name, config, created_by)
+       VALUES ('cfg-disc-d', $1, 'rest-generic', 'ERP-D', '{}'::jsonb, 'tester')`,
+      [ORG_D]
+    );
+    await db.query(
+      `INSERT INTO connector_records (id, org_id, config_id, entity, external_id, data)
+       VALUES ('rec-disc-d-1', $1, 'cfg-disc-d', 'product', 'p-1', $2::jsonb)`,
+      [ORG_D, JSON.stringify({ fields: { good_units: 90, total_units: "100" } })]
+    );
+
     ceoA = await createSession("disc-ceo-a", ORG_A);
     guestA = await createSession("disc-guest-a", ORG_A);
     ceoC = await createSession("disc-ceo-c", ORG_C);
+    ceoD = await createSession("disc-ceo-d", ORG_D);
   });
 
   afterAll(async () => {
@@ -273,6 +330,28 @@ describe("GET /api/discovery", () => {
     expect(fpy?.entity).toBeNull();
     expect(fpy?.scope).toBe("organization");
     expect(fpy?.partialEntities).toEqual(["order", "product"]);
+  });
+
+  it("metin tipindeki alanı hesaplamaya uygun saymaz", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoD);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      kpis: {
+        kpi: { id: string };
+        availability: string;
+        entity: string | null;
+        missingFields: string[];
+        nonNumericFields: string[];
+        scope: string;
+      }[];
+    };
+    const fpy = body.kpis.find((k) => k.kpi.id === "first_pass_yield");
+    expect(fpy?.availability).toBe("partial");
+    expect(fpy?.entity).toBe("product");
+    expect(fpy?.scope).toBe("entity");
+    expect(fpy?.missingFields).toHaveLength(0);
+    expect(fpy?.nonNumericFields).toEqual(["total_units"]);
   });
 
   it("başka org'un verisi keşfe karışmaz", async () => {

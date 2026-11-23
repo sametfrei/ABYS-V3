@@ -68,6 +68,12 @@ export interface DiscoveryInput {
    * (geriye dönük uyumluluk; birleşim "hesaplanabilir" anlamına gelmez).
    */
   entityFields?: Record<string, string[]>;
+  /**
+   * Varlık → alan → gözlenen JSON tipi dağılımı. Verildiğinde bir alan, yalnızca
+   * gözlenen boş olmayan değerlerinin tamamı sayısal (`number`) ise KPI için
+   * kullanılabilir sayılır. Tip bilgisi yoksa alan varlığına güvenilir.
+   */
+  entityFieldTypes?: Record<string, Record<string, Record<string, number>>>;
 }
 
 export interface DiscoveryEvidence {
@@ -96,6 +102,8 @@ export interface KpiAvailability {
   entity: string | null;
   /** Gerekli alanların en az birini taşıyan varlıklar (kanıt izi). */
   partialEntities: string[];
+  /** Alan mevcut ama gözlenen tipi sayısal olmadığı için hesaplamaya girmeyen alanlar. */
+  nonNumericFields: string[];
   /** Değerlendirme kapsamı: tek varlıkta tam eşleşme mi, yoksa org birleşimi mi. */
   scope: "entity" | "organization";
 }

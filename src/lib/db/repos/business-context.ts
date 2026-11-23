@@ -203,13 +203,20 @@ export async function buildDiscovery(orgId: string): Promise<DiscoveryBuild> {
   // KPI kullanılabilirliği varlık bazında değerlendirilir: alanların farklı
   // varlıklara dağılmış olması "hesaplanabilir" sayılmaz.
   const entityFields: Record<string, string[]> = {};
-  for (const entity of schema) entityFields[entity.entity] = entity.fields.map((f) => f.field);
+  const entityFieldTypes: Record<string, Record<string, Record<string, number>>> = {};
+  for (const entity of schema) {
+    entityFields[entity.entity] = entity.fields.map((f) => f.field);
+    const fields: Record<string, Record<string, number>> = {};
+    for (const field of entity.fields) fields[field.field] = field.types;
+    entityFieldTypes[entity.entity] = fields;
+  }
   const discoveryInput: DiscoveryInput = {
     sectorId,
     entityCounts,
     fieldNames,
     kpiLabels,
     entityFields,
+    entityFieldTypes,
   };
   const inputs = { sectorId, entityCounts, fieldNames, kpiLabels };
 

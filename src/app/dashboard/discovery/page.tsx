@@ -48,6 +48,7 @@ interface KpiAvailability {
   missingFields: string[];
   entity: string | null;
   partialEntities: string[];
+  nonNumericFields: string[];
   scope: "entity" | "organization";
 }
 
@@ -610,6 +611,13 @@ export default function DiscoveryPage() {
                             <span className="block text-[10px] text-abys-muted mt-0.5">
                               {formatMessage(locale, "discovery.kpiSplitScope", {
                                 entities: k.partialEntities.join(", "),
+                              })}
+                            </span>
+                          ) : null}
+                          {k.nonNumericFields.length > 0 ? (
+                            <span className="block text-[10px] text-abys-warning mt-0.5">
+                              {formatMessage(locale, "discovery.kpiNonNumeric", {
+                                fields: k.nonNumericFields.join(", "),
                               })}
                             </span>
                           ) : null}
