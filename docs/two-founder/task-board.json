@@ -2528,6 +2528,29 @@
       "acceptanceCriteria": "A required field whose observed non-null values are not all numeric must not make a KPI available. The offending fields are reported and the KPI stays partial, even when all required fields are co-located in one entity.",
       "evidence": "buildDiscovery passes per-entity field type distributions; availability treats a field as usable only when all non-null observations are JSON numbers. Unit tests: string total_units -> partial, entity product, nonNumericFields [total_units], missingInformation note; numeric fields -> available. API test ORG_D stores total_units as text in a real connector_record and returns partial/entity product/nonNumericFields [total_units]. tests/industry-discovery.test.ts 16 passed; full suite 896 passed / 9 skipped; tsc and eslint clean.",
       "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-127",
+      "commit": "0c46290",
+      "title": "Sector-independent business concept and business model inference for unseen businesses",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-engineer",
+        "intelligence-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/industry/concepts.ts",
+        "src/lib/industry/classifier.ts",
+        "src/lib/industry/types.ts",
+        "tests/business-concepts.test.ts",
+        "tests/industry-discovery.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "When no industry pack matches, discovery must keep understanding the business from observed entity/field names: report common concepts with evidence and confidence, infer possible business models only from required concept evidence, never present an inferred model as verified, and return empty results with an explicit missing-information note when nothing is recognised.",
+      "evidence": "New pure module detects 24 concept families from field and entity tokens (camelCase/snake_case aware) with matched field/entity evidence, entity and record coverage, and deterministic confidence. Business model rules fire only when all required concepts exist; supporting concepts add +6 each, capped at 92, and every hint carries 'doğrulanmış sektör değildir'. Synthetic livestock, manufacturing, retail, logistics, service, SaaS and unknown datasets covered. Integration: dairy data yields livestock concept + livestock_dairy hint; ORG_A connector data yields machine concept but no manufacturing hint without production evidence. Full suite 906 passed / 9 skipped; tsc and eslint clean.",
+      "recordedAt": "2026-11-23"
     }
   ]
 }
