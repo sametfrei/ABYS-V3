@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { SEVERITY_META } from "@/lib/signals";
+import { useSession } from "@/lib/use-session";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -174,12 +175,14 @@ function severityLabel(locale: Locale, severity: string): string {
 
 export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: boolean) => void }) {
   const locale = useLocale();
+  const session = useSession();
   const [range, setRange] = useState<Range>("today");
   const [category, setCategory] = useState<string>("");
   const [customerId, setCustomerId] = useState<string>("");
   const [locationId, setLocationId] = useState<string>("");
   const [data, setData] = useState<TaisExecSummary | null | "none">(null);
   const [actionPending, setActionPending] = useState(false);
+  const [actionError, setActionError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -221,13 +224,58 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
   async function patchDecisionState(state: string) {
     if (data === null || data === "none" || !data.main) return;
     setActionPending(true);
+    setActionError("");
     try {
-      await fetch("/api/decisions", {
+      const res = await fetch("/api/decisions", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ decisionId: data.main.decisionId, state }),
       });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        setActionError(body?.error ?? t(locale, "decisions.options.saveFailed"));
+        return;
+      }
       setReloadKey((k) => k + 1);
+    } catch {
+      setActionError(t(locale, "decisions.options.saveFailed"));
+    } finally {
+      setActionPending(false);
+    }
+  }
+
+  // Onay yalnızca durum etiketi değiştirmez: insan kararını kaydeder ve hesap
+  // verebilir aksiyonu oluşturur (POST /api/decisions). Sunucu reddederse hata
+  // görünür kalır; sessiz yenileme yapılmaz.
+  async function approveMainDecision() {
+    if (data === null || data === "none" || !data.main) return;
+    if (!session) {
+      setActionError(t(locale, "api.auth.sessionRequired"));
+      return;
+    }
+    const main = data.main;
+    const recommended = main.options.find((o) => o.rank === main.recommendedOptionRank);
+    setActionPending(true);
+    setActionError("");
+    try {
+      const res = await fetch("/api/decisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: main.caseId,
+          sectorId: session.sectorId,
+          choice: "accepted",
+          chosenAction: recommended?.title ?? main.title,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        setActionError(body?.error ?? t(locale, "decisions.options.saveFailed"));
+        return;
+      }
+      setReloadKey((k) => k + 1);
+    } catch {
+      setActionError(t(locale, "decisions.options.saveFailed"));
     } finally {
       setActionPending(false);
     }
@@ -415,7 +463,8 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
                 locale={locale}
                 decision={data.main}
                 pending={actionPending}
-                onApprove={() => patchDecisionState("in_execution")}
+                error={actionError}
+                onApprove={approveMainDecision}
                 onPostpone={() => patchDecisionState("under_review")}
               />
             ) : (
@@ -518,14 +567,16 @@ function MainDecisionCard({
   locale,
   decision,
   pending,
+  error,
   onApprove,
   onPostpone,
 }: {
   locale: Locale;
   decision: TaisMainDecisionView;
   pending: boolean;
-  onApprove: () => void;
-  onPostpone: () => void;
+  error?: string;
+  onApprove: () => void | Promise<void>;
+  onPostpone: () => void | Promise<void>;
 }) {
   const recommended = decision.options.find((o) => o.rank === decision.recommendedOptionRank);
   return (
@@ -558,6 +609,11 @@ function MainDecisionCard({
           count: decision.matchedRiskCount,
         })}
       </p>
+      {error ? (
+        <p role="alert" className="mb-2 text-xs text-abys-critical">
+          {error}
+        </p>
+      ) : null}
       <div className="flex items-center gap-2 mb-2">
         <button
           onClick={onApprove}
