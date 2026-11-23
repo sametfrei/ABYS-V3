@@ -2551,6 +2551,26 @@
       "acceptanceCriteria": "When no industry pack matches, discovery must keep understanding the business from observed entity/field names: report common concepts with evidence and confidence, infer possible business models only from required concept evidence, never present an inferred model as verified, and return empty results with an explicit missing-information note when nothing is recognised.",
       "evidence": "New pure module detects 24 concept families from field and entity tokens (camelCase/snake_case aware) with matched field/entity evidence, entity and record coverage, and deterministic confidence. Business model rules fire only when all required concepts exist; supporting concepts add +6 each, capped at 92, and every hint carries 'doğrulanmış sektör değildir'. Synthetic livestock, manufacturing, retail, logistics, service, SaaS and unknown datasets covered. Integration: dairy data yields livestock concept + livestock_dairy hint; ORG_A connector data yields machine concept but no manufacturing hint without production evidence. Full suite 906 passed / 9 skipped; tsc and eslint clean.",
       "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-128",
+      "commit": "6598549",
+      "title": "Discovery screen surfaces common concepts and possible business models",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "frontend-engineer",
+        "intelligence-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/app/dashboard/discovery/page.tsx",
+        "src/lib/i18n.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The discovery page shows sector-independent concepts with confidence and evidence counts, plus up to three possible business models with evidence and an unverified-suggestion caption in Turkish and English. Hidden when no concepts exist; explicit insufficient-evidence message when concepts exist but no model rule fires.",
+      "evidence": "Concepts render as compact chips (label + %confidence) with a coverage line; models render with confidence and evidence, capped at three, using the existing cream card language and no new design system. i18n keys added for both locales; i18n test suite passed. Full suite 906 passed / 9 skipped; tsc, eslint and next build clean (discovery route built).",
+      "recordedAt": "2026-11-23"
     }
   ]
 }
