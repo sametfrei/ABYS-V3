@@ -13,7 +13,7 @@ import { TAIS_REFERENCE_NOW } from "@/lib/demo/tais/seed";
 import { answerTaisQuestion } from "@/lib/demo/tais/ask";
 import type { TaisDecisionMeta } from "@/lib/demo/tais/executive-summary";
 import type { AiDecisionCase } from "@/lib/ai/provider";
-import { localizedError } from "@/lib/api-i18n";
+import { localizedError, requestLocale } from "@/lib/api-i18n";
 
 /**
  * Ask ABYS (master plan md.15): yetki-farkındalıklı yönetici asistanı.
@@ -100,7 +100,14 @@ export async function POST(req: NextRequest) {
         case: c.payload,
       });
     }
-    const taisResult = answerTaisQuestion({ question, kpiInputs, riskInputs, decisions, referenceNow: TAIS_REFERENCE_NOW });
+    const taisResult = answerTaisQuestion({
+      question,
+      kpiInputs,
+      riskInputs,
+      decisions,
+      referenceNow: TAIS_REFERENCE_NOW,
+      locale: requestLocale(req),
+    });
     if (taisResult) {
       answer = taisResult.answer;
       statements.push(...taisResult.statements);

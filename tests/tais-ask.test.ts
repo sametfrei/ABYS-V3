@@ -258,3 +258,36 @@ describe("TAIS Ask ABYS — deterministik soru eşleme (12 senaryo)", () => {
     expect(r!.sources).toEqual([]);
   });
 });
+
+describe("TAIS Ask ABYS — İngilizce yanıt", () => {
+  function askEn(question: string) {
+    return answerTaisQuestion({
+      question,
+      kpiInputs: FULL_KPI_INPUTS,
+      riskInputs: FULL_RISK_INPUTS,
+      decisions: [],
+      referenceNow: TAIS_REFERENCE_NOW,
+      locale: "en",
+    });
+  }
+
+  it("İngilizce soru İngilizce yanıt üretir", () => {
+    const r = askEn("What is today's most critical operational risk?");
+    expect(r).not.toBeNull();
+    expect(r!.answer).toMatch(/most critical operational risk/);
+    expect(r!.statements[0].text).toMatch(/root cause/);
+  });
+
+  it("gecikmiş görev sorusu İngilizce eşleşir", () => {
+    const r = askEn("Which service tasks are overdue?");
+    expect(r).not.toBeNull();
+    expect(r!.answer).toMatch(/service tasks are overdue/);
+    const refs = r!.sources.map((s) => s.ref).sort();
+    expect(refs).toEqual(["t1", "t2", "t3", "t4"]);
+  });
+
+  it("Türkçe varsayılan değişmez", () => {
+    const r = ask("Bugün en kritik operasyonel risk nedir?");
+    expect(r!.answer).toMatch(/kritik operasyonel riski/);
+  });
+});
