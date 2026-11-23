@@ -2480,6 +2480,30 @@
       "acceptanceCriteria": "The approver can optionally enter expected value, currency and low/high bounds on the main decision card; invalid input is rejected inline; the value is stored on the human decision record so the ledger can compute expected vs actual variance and range accuracy; empty input keeps the field absent (no fabricated economics).",
       "evidence": "parseExpectedImpact 6/6 unit tests; browser on isolated 3103: approve with 30000 AZN (15000-45000) → POST /api/decisions 200, ledger expectedValueCount 1 / expectedTotal 30000; post-decision outcome 12500 AZN → reconciledCount 1, variance -17500, rangeAccuracy evaluable miss. verify:workflows 33/33; full suite 890 passed / 9 skipped; tsc/eslint/build clean; preview smoke 77/77.",
       "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-125",
+      "commit": "53eded3",
+      "title": "KPI availability requires co-located fields, not an org-wide field union",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "data-engineer",
+        "intelligence-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/industry/classifier.ts",
+        "src/lib/industry/types.ts",
+        "src/lib/db/repos/business-context.ts",
+        "src/app/dashboard/discovery/page.tsx",
+        "src/lib/i18n.ts",
+        "tests/industry-discovery.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Discovery must not report a KPI as calculable merely because its required fields exist somewhere in the org. A KPI is 'available' only when every required field exists in the same entity; the providing entity is shown. Fields split across entities are 'partial' with organization scope and an explicit note.",
+      "evidence": "Classifier now evaluates availability per entity from the observed schema (buildDiscovery passes entityFields). Unit tests: co-located fields -> available with entity 'product'; split fields (order/product) -> partial, entity null, scope organization, partialEntities [order, product], and a 'farklı varlıklara dağılmış' missing-information note. API test ORG_C proves the same over real connector_records. tests/industry-discovery.test.ts 18 passed; full suite 893 passed / 9 skipped; tsc and eslint clean.",
+      "recordedAt": "2026-11-23"
     }
   ]
 }
