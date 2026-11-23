@@ -304,6 +304,8 @@ describe("GET /api/discovery", () => {
       primary: { packId: string } | null;
       inputs: { fieldCount: number; entities: Record<string, number> };
       kpis: { kpi: { id: string }; availability: string; missingFields: string[] }[];
+      concepts: { id: string }[];
+      businessModelHints: { id: string }[];
       catalog: unknown[];
     };
     expect(body.inputs.entities.product).toBe(3);
@@ -314,6 +316,11 @@ describe("GET /api/discovery", () => {
     expect(fpy?.availability).toBe("available");
     const oee = body.kpis.find((k) => k.kpi.id === "oee");
     expect(oee?.missingFields).toContain("planned_production_time");
+    // Paketten bağımsız kavramlar gerçek konnektör kayıtlarından gelir.
+    expect(body.concepts.map((concept) => concept.id)).toContain("machine");
+    // 'Üretim' kavramı kanıtlanmadığı için üretim iş modeli ipucu üretilmez;
+    // tek bir makine alanı iş modeli iddiası için yeterli sayılmaz.
+    expect(body.businessModelHints.map((hint) => hint.id)).not.toContain("manufacturing");
   });
 
   it("varlıklara dağılmış alanları 'hesaplanabilir' saymaz", async () => {

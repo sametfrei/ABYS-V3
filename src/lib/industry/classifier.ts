@@ -1,4 +1,5 @@
 import { INDUSTRY_PACKS } from "./packs";
+import { detectBusinessConcepts, inferBusinessModelHints } from "./concepts";
 import type {
   DiscoveryEvidence,
   DiscoveryInput,
@@ -259,8 +260,27 @@ export function discoverBusiness(input: DiscoveryInput): DiscoveryResult {
       }
     }
   }
+  // Sektör paketinden bağımsız ortak kavramlar: katalogda karşılığı olmayan
+  // işletmelerde de veri anlamlandırılmaya devam eder. Kanıt yoksa boş kalır.
+  const concepts = detectBusinessConcepts({
+    fieldNames: input.fieldNames,
+    entityCounts: input.entityCounts,
+    entityFields: input.entityFields,
+  });
+  const businessModelHints = inferBusinessModelHints(concepts);
+
   if (input.fieldNames.length === 0) missingInformation.push("Bağlı sistemden eşlenmiş alan yok.");
   if (input.kpiLabels.length === 0) missingInformation.push("Mevcut KPI serisi yok.");
+  if (input.fieldNames.length > 0 && concepts.length === 0) {
+    missingInformation.push(
+      "Ortak iş kavramı tespit edilemedi; iş modeli çıkarımı için alan adları yetersiz."
+    );
+  }
+  if (!primary && concepts.length > 0) {
+    missingInformation.push(
+      "Sektör paketi eşleşmedi; ortak iş kavramları ve olası iş modelleri yalnızca öneri olarak sunulur."
+    );
+  }
 
   return {
     primary,
@@ -269,9 +289,12 @@ export function discoverBusiness(input: DiscoveryInput): DiscoveryResult {
     requiresConfirmation,
     diversified,
     kpis,
+    concepts,
+    businessModelHints,
     missingInformation: missingInformation.slice(0, 20),
     note:
       "Sınıflandırma bağlı verinin yapısal sinyallerinden türetilir; şirket adı veya tek bir sektör etiketi " +
-      "kullanılmaz. Düşük güvende yönetici onayı gerekir. KPI'lar yalnızca gerekli alanlar mevcutsa 'kullanılabilir' sayılır.",
+      "kullanılmaz. Düşük güvende yönetici onayı gerekir. KPI'lar yalnızca gerekli alanlar mevcutsa 'kullanılabilir' sayılır. " +
+      "Ortak iş kavramları ve iş modeli ipuçları sektör paketinden bağımsızdır ve doğrulanmış sektör iddiası değildir.",
   };
 }

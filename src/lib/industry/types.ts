@@ -6,6 +6,8 @@
  * açıkça tanımlıdır; hiçbir metrik "adı var, hesabı yok" biçiminde sunulmaz.
  */
 
+import type { BusinessModelHint, DetectedConcept } from "./concepts";
+
 export type KpiCategory =
   | "financial"
   | "operational"
@@ -115,6 +117,10 @@ export interface DiscoveryResult {
   requiresConfirmation: boolean;
   diversified: boolean;
   kpis: KpiAvailability[];
+  /** Paketten bağımsız, veriden çıkarılan ortak iş kavramları. */
+  concepts: DetectedConcept[];
+  /** Kavram kombinasyonlarına dayalı olası iş modeli önerileri. */
+  businessModelHints: BusinessModelHint[];
   missingInformation: string[];
   note: string;
 }
