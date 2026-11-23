@@ -105,6 +105,36 @@ describe("Sektör keşif sınıflandırıcısı", () => {
     expect(oee?.missingFields).toContain("downtime_minutes");
   });
 
+  it("alanlar tek varlıkta birleşiyorsa KPI hesaplanabilir ve varlık bildirilir", () => {
+    const r = discoverBusiness({
+      ...BASE,
+      fieldNames: ["good_units", "total_units"],
+      entityCounts: { product: 10 },
+      entityFields: { product: ["good_units", "total_units"] },
+    });
+    const fpy = r.kpis.find((k) => k.kpi.id === "first_pass_yield");
+    expect(fpy?.availability).toBe("available");
+    expect(fpy?.entity).toBe("product");
+    expect(fpy?.scope).toBe("entity");
+    expect(fpy?.missingFields).toHaveLength(0);
+  });
+
+  it("alanlar farklı varlıklara dağılmışsa KPI hesaplanabilir sayılmaz", () => {
+    const r = discoverBusiness({
+      ...BASE,
+      fieldNames: ["good_units", "total_units"],
+      entityCounts: { order: 10, product: 5 },
+      entityFields: { order: ["good_units"], product: ["total_units"] },
+    });
+    const fpy = r.kpis.find((k) => k.kpi.id === "first_pass_yield");
+    expect(fpy?.availability).toBe("partial");
+    expect(fpy?.entity).toBeNull();
+    expect(fpy?.scope).toBe("organization");
+    expect(fpy?.missingFields).toHaveLength(0);
+    expect(fpy?.partialEntities).toEqual(["order", "product"]);
+    expect(r.missingInformation.join(" ")).toContain("farklı varlıklara dağılmış");
+  });
+
   it("paketler sürümlü ve formüllüdür", () => {
     expect(INDUSTRY_PACKS.length).toBeGreaterThanOrEqual(4);
     for (const pack of INDUSTRY_PACKS) {
@@ -119,10 +149,12 @@ describe("Sektör keşif sınıflandırıcısı", () => {
 
 const ORG_A = "org-disc-a";
 const ORG_B = "org-disc-b";
+const ORG_C = "org-disc-c";
 
 describe("GET /api/discovery", () => {
   let ceoA: string;
   let guestA: string;
+  let ceoC: string;
 
   beforeAll(async () => {
     await migrate();
@@ -130,6 +162,7 @@ describe("GET /api/discovery", () => {
     for (const [id, name] of [
       [ORG_A, "A"],
       [ORG_B, "B"],
+      [ORG_C, "C"],
     ]) {
       await db.query("INSERT INTO organizations (id, name, sector_id) VALUES ($1, $2, 'other')", [id, name]);
     }
@@ -137,6 +170,7 @@ describe("GET /api/discovery", () => {
     for (const [id, org, role] of [
       ["disc-ceo-a", ORG_A, "ceo"],
       ["disc-guest-a", ORG_A, "guest"],
+      ["disc-ceo-c", ORG_C, "ceo"],
     ] as const) {
       await db.query(
         "INSERT INTO users (id, org_id, email, display_name, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -170,8 +204,27 @@ describe("GET /api/discovery", () => {
       );
     }
 
+    // ORG_C: gerekli alanlar farklı varlıklara dağılmış — aynı org içinde
+    // hepsi görünse de tek varlıkta birleşmediği için KPI hesaplanabilir değil.
+    await db.query(
+      `INSERT INTO connector_configs (id, org_id, connector_id, name, config, created_by)
+       VALUES ('cfg-disc-c', $1, 'rest-generic', 'ERP-C', '{}'::jsonb, 'tester')`,
+      [ORG_C]
+    );
+    await db.query(
+      `INSERT INTO connector_records (id, org_id, config_id, entity, external_id, data)
+       VALUES ('rec-disc-c-order', $1, 'cfg-disc-c', 'order', 'o-1', $2::jsonb)`,
+      [ORG_C, JSON.stringify({ fields: { good_units: 90 } })]
+    );
+    await db.query(
+      `INSERT INTO connector_records (id, org_id, config_id, entity, external_id, data)
+       VALUES ('rec-disc-c-product', $1, 'cfg-disc-c', 'product', 'p-1', $2::jsonb)`,
+      [ORG_C, JSON.stringify({ fields: { total_units: 100 } })]
+    );
+
     ceoA = await createSession("disc-ceo-a", ORG_A);
     guestA = await createSession("disc-guest-a", ORG_A);
+    ceoC = await createSession("disc-ceo-c", ORG_C);
   });
 
   afterAll(async () => {
@@ -204,6 +257,22 @@ describe("GET /api/discovery", () => {
     expect(fpy?.availability).toBe("available");
     const oee = body.kpis.find((k) => k.kpi.id === "oee");
     expect(oee?.missingFields).toContain("planned_production_time");
+  });
+
+  it("varlıklara dağılmış alanları 'hesaplanabilir' saymaz", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, ceoC);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      primary: { packId: string } | null;
+      kpis: { kpi: { id: string }; availability: string; entity: string | null; scope: string; partialEntities: string[] }[];
+    };
+    expect(body.primary?.packId).toBe("manufacturing");
+    const fpy = body.kpis.find((k) => k.kpi.id === "first_pass_yield");
+    expect(fpy?.availability).toBe("partial");
+    expect(fpy?.entity).toBeNull();
+    expect(fpy?.scope).toBe("organization");
+    expect(fpy?.partialEntities).toEqual(["order", "product"]);
   });
 
   it("başka org'un verisi keşfe karışmaz", async () => {

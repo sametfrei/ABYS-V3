@@ -46,6 +46,9 @@ interface KpiAvailability {
   availability: "available" | "partial" | "unavailable";
   matchedFields: string[];
   missingFields: string[];
+  entity: string | null;
+  partialEntities: string[];
+  scope: "entity" | "organization";
 }
 
 interface ConfirmedProfile {
@@ -599,6 +602,17 @@ export default function DiscoveryPage() {
                           <span className={`text-[10px] rounded-full px-2 py-0.5 ${AVAILABILITY_STYLE[k.availability]}`}>
                             {availabilityLabel(locale, k.availability)}
                           </span>
+                          {k.entity ? (
+                            <span className="block text-[10px] text-abys-muted mt-0.5">
+                              {formatMessage(locale, "discovery.kpiEntityScope", { entity: k.entity })}
+                            </span>
+                          ) : k.availability === "partial" && k.partialEntities.length > 0 ? (
+                            <span className="block text-[10px] text-abys-muted mt-0.5">
+                              {formatMessage(locale, "discovery.kpiSplitScope", {
+                                entities: k.partialEntities.join(", "),
+                              })}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="py-1 text-xs text-abys-muted max-w-[220px]">{k.kpi.formula}</td>
                         <td className="py-1 text-xs text-abys-muted">

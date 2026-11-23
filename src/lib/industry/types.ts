@@ -61,6 +61,13 @@ export interface DiscoveryInput {
   entityCounts: Record<string, number>;
   fieldNames: string[];
   kpiLabels: string[];
+  /**
+   * Varlık bazında gözlenen kanonik alanlar. Verildiğinde KPI kullanılabilirliği
+   * yalnızca tüm gerekli alanların AYNI varlıkta birlikte bulunduğu durumda
+   * "available" sayılır. Verilmezse org geneli alan birleşimine düşülür
+   * (geriye dönük uyumluluk; birleşim "hesaplanabilir" anlamına gelmez).
+   */
+  entityFields?: Record<string, string[]>;
 }
 
 export interface DiscoveryEvidence {
@@ -81,6 +88,16 @@ export interface KpiAvailability {
   availability: "available" | "partial" | "unavailable";
   matchedFields: string[];
   missingFields: string[];
+  /**
+   * KPI'yı tek bir varlıktan hesaplamayı mümkün kılan varlık. Yalnızca
+   * `availability === "available"` iken doludur; alanlar farklı varlıklara
+   * dağılmışsa `null` olur ve KPI "hesaplanabilir" sayılmaz.
+   */
+  entity: string | null;
+  /** Gerekli alanların en az birini taşıyan varlıklar (kanıt izi). */
+  partialEntities: string[];
+  /** Değerlendirme kapsamı: tek varlıkta tam eşleşme mi, yoksa org birleşimi mi. */
+  scope: "entity" | "organization";
 }
 
 export interface DiscoveryResult {

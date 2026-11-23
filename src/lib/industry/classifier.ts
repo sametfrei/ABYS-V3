@@ -87,14 +87,76 @@ function scorePack(pack: IndustryPack, input: DiscoveryInput): {
   return { score, evidence, subsector: bestSub };
 }
 
-function availabilityFor(pack: IndustryPack, fields: Set<string>): KpiAvailability[] {
+/**
+ * KPI kullanılabilirliğini değerlendirir.
+ *
+ * Kritik ayrım: bir alanın org içinde bir yerde bulunması, KPI'nın
+ * hesaplanabildiği anlamına gelmez. `entityFields` verildiğinde "available"
+ * yalnızca tüm gerekli alanların tek bir varlıkta birlikte bulunduğu durumdur.
+ * Alanlar farklı varlıklara dağılmışsa KPI "partial" ve kapsam
+ * "organization" olarak dürüstçe raporlanır.
+ */
+function availabilityFor(
+  pack: IndustryPack,
+  fields: Set<string>,
+  entityFields?: Record<string, string[]>
+): KpiAvailability[] {
+  const entities = entityFields
+    ? Object.entries(entityFields)
+        .map(([entity, names]) => ({ entity, fields: new Set(names.map((n) => n.toLowerCase())) }))
+        .sort((a, b) => a.entity.localeCompare(b.entity))
+    : [];
+
   return pack.kpis
     .map((kpi) => {
+      if (entities.length > 0) {
+        let complete: { entity: string; matched: string[]; missing: string[] } | null = null;
+        const partialEntities: string[] = [];
+        for (const candidate of entities) {
+          const matched = kpi.requiredFields.filter((f) => candidate.fields.has(f));
+          if (matched.length === 0) continue;
+          partialEntities.push(candidate.entity);
+          if (matched.length === kpi.requiredFields.length && !complete) {
+            complete = { entity: candidate.entity, matched, missing: [] };
+          }
+        }
+        if (complete) {
+          return {
+            kpi,
+            availability: "available" as const,
+            matchedFields: complete.matched,
+            missingFields: [],
+            entity: complete.entity,
+            partialEntities,
+            scope: "entity" as const,
+          };
+        }
+        const matched = kpi.requiredFields.filter((f) => fields.has(f));
+        const missing = kpi.requiredFields.filter((f) => !fields.has(f));
+        return {
+          kpi,
+          availability: (matched.length > 0 ? "partial" : "unavailable") as KpiAvailability["availability"],
+          matchedFields: matched,
+          missingFields: missing,
+          entity: null,
+          partialEntities,
+          scope: "organization" as const,
+        };
+      }
+
       const matched = kpi.requiredFields.filter((f) => fields.has(f));
       const missing = kpi.requiredFields.filter((f) => !fields.has(f));
       const availability: KpiAvailability["availability"] =
         missing.length === 0 ? "available" : matched.length > 0 ? "partial" : "unavailable";
-      return { kpi, availability, matchedFields: matched, missingFields: missing };
+      return {
+        kpi,
+        availability,
+        matchedFields: matched,
+        missingFields: missing,
+        entity: null,
+        partialEntities: [] as string[],
+        scope: "organization" as const,
+      };
     })
     .sort((a, b) => {
       const rank = { available: 0, partial: 1, unavailable: 2 } as const;
@@ -128,7 +190,7 @@ export function discoverBusiness(input: DiscoveryInput): DiscoveryResult {
   const diversified = Boolean(primary && runnerUp && primary.score >= 40 && margin < 15);
 
   const primaryPack = primary ? INDUSTRY_PACKS.find((p) => p.id === primary.packId) : undefined;
-  const kpis = primaryPack ? availabilityFor(primaryPack, fieldSet) : [];
+  const kpis = primaryPack ? availabilityFor(primaryPack, fieldSet, input.entityFields) : [];
 
   const missingInformation: string[] = [];
   if (kpis.length > 0) {
@@ -137,6 +199,15 @@ export function discoverBusiness(input: DiscoveryInput): DiscoveryResult {
       for (const f of k.missingFields) missingFields.add(f);
     }
     for (const f of missingFields) missingInformation.push(`Eksik kanonik alan: ${f}`);
+    // Alanlar org genelinde var ama tek bir varlıkta birleşmiyor: KPI
+    // hesaplanabilir değildir. Bunu eksik alanla karıştırmadan ayrı raporla.
+    for (const k of kpis) {
+      if (k.availability === "partial" && k.missingFields.length === 0 && k.partialEntities.length > 1) {
+        missingInformation.push(
+          `Alanlar farklı varlıklara dağılmış: ${k.kpi.name} (${k.partialEntities.join(", ")})`
+        );
+      }
+    }
   }
   if (input.fieldNames.length === 0) missingInformation.push("Bağlı sistemden eşlenmiş alan yok.");
   if (input.kpiLabels.length === 0) missingInformation.push("Mevcut KPI serisi yok.");

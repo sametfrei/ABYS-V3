@@ -200,7 +200,17 @@ export async function buildDiscovery(orgId: string): Promise<DiscoveryBuild> {
     ...new Set([...labelResult.rows.map((row) => row.label), ...definitionResult.rows.map((row) => row.name)]),
   ].sort();
   const sectorId = orgResult.rows[0]?.sector_id ?? null;
-  const discoveryInput: DiscoveryInput = { sectorId, entityCounts, fieldNames, kpiLabels };
+  // KPI kullanılabilirliği varlık bazında değerlendirilir: alanların farklı
+  // varlıklara dağılmış olması "hesaplanabilir" sayılmaz.
+  const entityFields: Record<string, string[]> = {};
+  for (const entity of schema) entityFields[entity.entity] = entity.fields.map((f) => f.field);
+  const discoveryInput: DiscoveryInput = {
+    sectorId,
+    entityCounts,
+    fieldNames,
+    kpiLabels,
+    entityFields,
+  };
   const inputs = { sectorId, entityCounts, fieldNames, kpiLabels };
 
   return {
