@@ -124,4 +124,58 @@ describe("karar → aksiyon atomik yaşam döngüsü", () => {
       })
     ).rejects.toBeInstanceOf(DecisionLifecycleError);
   });
+
+  it("aynı vaka için ikinci kabul reddedilir ve mükerrer aksiyon oluşmaz", async () => {
+    await insertCase("case-lifecycle-duplicate", ORG_A);
+    const first = await recordHumanDecision({
+      orgId: ORG_A,
+      caseId: "case-lifecycle-duplicate",
+      choice: "accepted",
+      chosenAction: "Tek aksiyon",
+      actorId: "user-a",
+      actorName: "CEO A",
+    });
+    await expect(
+      recordHumanDecision({
+        orgId: ORG_A,
+        caseId: "case-lifecycle-duplicate",
+        choice: "accepted",
+        chosenAction: "İkinci aksiyon",
+        actorId: "user-a",
+        actorName: "CEO A",
+      })
+    ).rejects.toMatchObject({ reason: "already_decided" });
+    const actions = await getDb().query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM actions WHERE org_id = $1 AND decision_id = $2",
+      [ORG_A, first.recordId]
+    );
+    expect(actions.rows[0]?.n).toBe(1);
+  });
+
+  it("sistem önerisi insan onayını engellemez, insan kaydı tekrarını engeller", async () => {
+    await insertCase("case-lifecycle-system-seed", ORG_A);
+    await getDb().query(
+      `INSERT INTO decision_records (id, org_id, case_id, sector_id, choice, decided_by, payload)
+       VALUES ('dr-system-seed', $1, 'case-lifecycle-system-seed', 'aviation', 'accepted', 'sistem', '{}')`,
+      [ORG_A]
+    );
+    const human = await recordHumanDecision({
+      orgId: ORG_A,
+      caseId: "case-lifecycle-system-seed",
+      choice: "accepted",
+      chosenAction: "İnsan onayı aksiyonu",
+      actorId: "user-a",
+      actorName: "CEO A",
+    });
+    expect(human.actionId).toBeTruthy();
+    await expect(
+      recordHumanDecision({
+        orgId: ORG_A,
+        caseId: "case-lifecycle-system-seed",
+        choice: "accepted",
+        actorId: "user-a",
+        actorName: "CEO A",
+      })
+    ).rejects.toMatchObject({ reason: "already_decided" });
+  });
 });

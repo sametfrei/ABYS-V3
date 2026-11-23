@@ -74,6 +74,7 @@ export type ShellKey =
   | "api.outcomes.invalidLimit"
   | "api.outcomes.limitRange"
   | "api.outcomes.decisionNotFound"
+  | "api.decisions.alreadyDecided"
   | "api.users.emailExists"
   | "api.users.lastAdminProtected"
   | "api.scenarios.invalidSector"
@@ -1873,6 +1874,10 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "api.outcomes.decisionNotFound": {
     tr: "Karar kaydı bulunamadı.",
     en: "Decision record not found.",
+  },
+  "api.decisions.alreadyDecided": {
+    tr: "Bu vaka için karar zaten kaydedilmiş; ikinci onay yeni aksiyon üretmez.",
+    en: "A decision is already recorded for this case; a second approval does not create another action.",
   },
   "api.users.emailExists": {
     tr: "Bu e-posta ile bir kullanıcı zaten var.",

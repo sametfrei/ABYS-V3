@@ -86,6 +86,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof DecisionLifecycleError) {
+      if (err.reason === "already_decided") {
+        return localizedError(req, "api.decisions.alreadyDecided", 409);
+      }
       return NextResponse.json({ error: err.message }, { status: 404 });
     }
     throw err;

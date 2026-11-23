@@ -16,7 +16,7 @@ export class DecisionLifecycleError extends Error {
 
   constructor(
     message: string,
-    public readonly reason: "not_found"
+    public readonly reason: "not_found" | "already_decided"
   ) {
     super(message);
     this.name = "DecisionLifecycleError";
@@ -55,6 +55,21 @@ export async function recordHumanDecision(params: {
     const caseRow = ownedCase.rows[0];
     if (!caseRow) {
       throw new DecisionLifecycleError("Vaka bulunamadı.", "not_found");
+    }
+
+    // Aynı vaka için ikinci bir İNSAN kabul/değişiklik kaydı yeni bir aksiyon
+    // ve denetim kaydı üretirdi; mükerrer onay 409 ile reddedilir. Demo
+    // tohumunun "sistem" aktörlü kaydı öneri tabanıdır, insan onayını engellemez
+    // (bkz. src/lib/demo/tais/decisions.ts).
+    const existing = await tx.query<{ id: string }>(
+      "SELECT id FROM decision_records WHERE org_id = $1 AND case_id = $2 AND choice IN ('accepted', 'modified') AND decided_by <> 'sistem' LIMIT 1",
+      [params.orgId, params.caseId]
+    );
+    if (existing.rows[0]) {
+      throw new DecisionLifecycleError(
+        "Bu vaka için karar zaten kaydedilmiş.",
+        "already_decided"
+      );
     }
 
     const recordId = await recordDecisionInTransaction(tx, {
