@@ -1173,6 +1173,15 @@ export type ShellKey =
   | "decisions.level.low"
   | "decisions.options.noAction"
   | "decisions.options.saveFailed"
+  | "decisions.impact.toggle"
+  | "decisions.impact.value"
+  | "decisions.impact.currency"
+  | "decisions.impact.low"
+  | "decisions.impact.high"
+  | "decisions.impact.hint"
+  | "decisions.impact.valueInvalid"
+  | "decisions.impact.currencyInvalid"
+  | "decisions.impact.rangeInvalid"
   | "decisions.choice.accepted"
   | "decisions.choice.rejected"
   | "decisions.choice.modified"
@@ -3895,6 +3904,27 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "decisions.level.low": { tr: "Düşük", en: "Low" },
   "decisions.options.noAction": { tr: "Aksiyon alınmadı", en: "No action taken" },
   "decisions.options.saveFailed": { tr: "Karar kaydedilemedi.", en: "Decision could not be saved." },
+  "decisions.impact.toggle": {
+    tr: "Beklenen ekonomik etki (opsiyonel)",
+    en: "Expected economic impact (optional)",
+  },
+  "decisions.impact.value": { tr: "Beklenen değer", en: "Expected value" },
+  "decisions.impact.currency": { tr: "Para birimi (AZN)", en: "Currency (AZN)" },
+  "decisions.impact.low": { tr: "Alt sınır", en: "Low bound" },
+  "decisions.impact.high": { tr: "Üst sınır", en: "High bound" },
+  "decisions.impact.hint": {
+    tr: "Karar anında girilen değer, sonuç ölçümüyle Karar Değeri Defteri'nde karşılaştırılır.",
+    en: "The value entered at decision time is reconciled with the measured outcome in the Decision Value Ledger.",
+  },
+  "decisions.impact.valueInvalid": { tr: "Beklenen değer sayı olmalı.", en: "Expected value must be a number." },
+  "decisions.impact.currencyInvalid": {
+    tr: "Para birimi üç harfli ISO kodu olmalı (örn. AZN).",
+    en: "Currency must be a three-letter ISO code (e.g. AZN).",
+  },
+  "decisions.impact.rangeInvalid": {
+    tr: "Alt sınır ≤ beklenen değer ≤ üst sınır olmalı.",
+    en: "Low bound ≤ expected value ≤ high bound.",
+  },
   "decisions.choice.accepted": { tr: "Öneri kabul edildi", en: "Recommendation accepted" },
   "decisions.choice.rejected": { tr: "Öneri reddedildi", en: "Recommendation rejected" },
   "decisions.choice.modified": { tr: "Değiştirilerek uygulandı", en: "Applied with changes" },

@@ -5,6 +5,11 @@ import Link from "next/link";
 import { SEVERITY_META } from "@/lib/signals";
 import { useSession } from "@/lib/use-session";
 import {
+  EMPTY_EXPECTED_IMPACT,
+  parseExpectedImpact,
+  type ExpectedImpactDraft,
+} from "@/lib/expected-impact";
+import {
   DEFAULT_LOCALE,
   readLocale,
   subscribeLocale,
@@ -190,6 +195,7 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
   const [locationId, setLocationId] = useState<string>("");
   const [data, setData] = useState<TaisExecSummary | null | "none">(null);
   const [actionPending, setActionPending] = useState(false);
+  const [impactDraft, setImpactDraft] = useState<ExpectedImpactDraft>(EMPTY_EXPECTED_IMPACT);
   const [actionError, setActionError] = useState("");
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -263,6 +269,20 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
     }
     const main = data.main;
     const recommended = main.options.find((o) => o.rank === main.recommendedOptionRank);
+    const parsedImpact = parseExpectedImpact(impactDraft);
+    if (!parsedImpact.ok) {
+      setActionError(
+        t(
+          locale,
+          parsedImpact.error === "value"
+            ? "decisions.impact.valueInvalid"
+            : parsedImpact.error === "currency"
+              ? "decisions.impact.currencyInvalid"
+              : "decisions.impact.rangeInvalid"
+        )
+      );
+      return;
+    }
     setActionPending(true);
     setActionError("");
     try {
@@ -274,6 +294,7 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
           sectorId: session.sectorId,
           choice: "accepted",
           chosenAction: recommended?.title ?? main.title,
+          ...(parsedImpact.impact ? { expectedImpact: parsedImpact.impact } : {}),
         }),
       });
       if (!res.ok) {
@@ -474,6 +495,8 @@ export function TaisExecutiveScreen({ onStatus }: { onStatus?: (applicable: bool
                 error={actionError}
                 onApprove={approveMainDecision}
                 onPostpone={() => patchDecisionState("under_review")}
+                impactDraft={impactDraft}
+                onImpactDraftChange={setImpactDraft}
               />
             ) : (
               <p className="text-sm text-abys-muted rounded-xl border border-abys-cream-border bg-white/60 px-3 py-2.5">
@@ -578,6 +601,8 @@ function MainDecisionCard({
   error,
   onApprove,
   onPostpone,
+  impactDraft,
+  onImpactDraftChange,
 }: {
   locale: Locale;
   decision: TaisMainDecisionView;
@@ -585,6 +610,8 @@ function MainDecisionCard({
   error?: string;
   onApprove: () => void | Promise<void>;
   onPostpone: () => void | Promise<void>;
+  impactDraft: ExpectedImpactDraft;
+  onImpactDraftChange: (draft: ExpectedImpactDraft) => void;
 }) {
   const recommended = decision.options.find((o) => o.rank === decision.recommendedOptionRank);
   return (
@@ -679,6 +706,46 @@ function MainDecisionCard({
           {t(locale, "tais.postpone")}
         </button>
       </div>
+      <details className="mb-2 rounded-lg border border-abys-cream-border bg-white/50 px-2.5 py-1.5 text-[11px]">
+        <summary className="cursor-pointer text-abys-muted">
+          {t(locale, "decisions.impact.toggle")}
+        </summary>
+        <p className="mt-1 text-[10px] text-abys-muted">{t(locale, "decisions.impact.hint")}</p>
+        <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+          <input
+            inputMode="decimal"
+            value={impactDraft.value}
+            onChange={(e) => onImpactDraftChange({ ...impactDraft, value: e.target.value })}
+            placeholder={t(locale, "decisions.impact.value")}
+            disabled={pending}
+            className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1"
+          />
+          <input
+            value={impactDraft.currency}
+            onChange={(e) => onImpactDraftChange({ ...impactDraft, currency: e.target.value.toUpperCase() })}
+            maxLength={3}
+            placeholder={t(locale, "decisions.impact.currency")}
+            disabled={pending}
+            className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1"
+          />
+          <input
+            inputMode="decimal"
+            value={impactDraft.low}
+            onChange={(e) => onImpactDraftChange({ ...impactDraft, low: e.target.value })}
+            placeholder={t(locale, "decisions.impact.low")}
+            disabled={pending}
+            className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1"
+          />
+          <input
+            inputMode="decimal"
+            value={impactDraft.high}
+            onChange={(e) => onImpactDraftChange({ ...impactDraft, high: e.target.value })}
+            placeholder={t(locale, "decisions.impact.high")}
+            disabled={pending}
+            className="text-xs rounded-lg border border-abys-cream-border bg-white/70 px-2 py-1"
+          />
+        </div>
+      </details>
       <details className="text-xs">
         <summary className="cursor-pointer text-abys-accent">{t(locale, "tais.why")}</summary>
         <div className="mt-1.5 space-y-1 text-abys-ink">

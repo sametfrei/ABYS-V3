@@ -10,6 +10,7 @@ import { getSector, type Sector } from "@/lib/sectors";
 import { getRole } from "@/lib/roles";
 import { SEVERITY_META } from "@/lib/signals";
 import { newId } from "@/lib/entities";
+import { parseExpectedImpact } from "@/lib/expected-impact";
 import {
   type DecisionCase,
   type ActionOption,
@@ -1473,10 +1474,40 @@ function OptionsPanel({
   const [choosing, setChoosing] = useState<{ mode: DecisionChoice; option?: ActionOption } | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
+  const [impactValue, setImpactValue] = useState("");
+  const [impactCurrency, setImpactCurrency] = useState("AZN");
+  const [impactLow, setImpactLow] = useState("");
+  const [impactHigh, setImpactHigh] = useState("");
+  const [impactError, setImpactError] = useState("");
 
   const feasible = c.options.filter((o) => o.feasible);
   const infeasible = c.options.filter((o) => !o.feasible);
   const recommended = c.options.find((o) => o.id === c.recommendedOptionId);
+
+  /** Opsiyonel beklenen ekonomik etki — doldurulmuşsa doğrular, yoksa null. */
+  function buildExpectedImpact() {
+    setImpactError("");
+    const parsed = parseExpectedImpact({
+      value: impactValue,
+      currency: impactCurrency,
+      low: impactLow,
+      high: impactHigh,
+    });
+    if (!parsed.ok) {
+      setImpactError(
+        t(
+          readLocale(),
+          parsed.error === "value"
+            ? "decisions.impact.valueInvalid"
+            : parsed.error === "currency"
+              ? "decisions.impact.currencyInvalid"
+              : "decisions.impact.rangeInvalid"
+        )
+      );
+      throw new Error("invalid_impact");
+    }
+    return parsed.impact;
+  }
 
   async function commit() {
     if (!choosing || busy) return;
@@ -1490,6 +1521,15 @@ function OptionsPanel({
     // Sunucu modunda karar SUNUCUYA yazılır: /api/decisions kararı kaydeder,
     // kabul/değiştir kararında hesap verebilir aksiyonu yaratır ve denetime
     // işler (org daima oturumdan). Oturum yoksa prototip localStorage akışı.
+    let expectedImpact: ReturnType<typeof buildExpectedImpact> = null;
+    if (choosing.mode !== "rejected") {
+      try {
+        expectedImpact = buildExpectedImpact();
+      } catch {
+        return;
+      }
+    }
+
     if (serverMode) {
       setBusy(true);
       try {
@@ -1502,6 +1542,7 @@ function OptionsPanel({
             choice: choosing.mode,
             reason: reason.trim(),
             chosenAction,
+            ...(expectedImpact ? { expectedImpact } : {}),
           }),
         });
         if (!res.ok)
@@ -1635,6 +1676,49 @@ function OptionsPanel({
               }
               className="w-full text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
             />
+            {choosing.mode !== "rejected" && (
+              <details className="rounded-lg border border-abys-cream-border bg-white/50 px-3 py-2">
+                <summary className="cursor-pointer text-xs font-medium text-abys-ink">
+                  {t(locale, "decisions.impact.toggle")}
+                </summary>
+                <p className="mt-1 text-[11px] text-abys-muted">{t(locale, "decisions.impact.hint")}</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <input
+                    inputMode="decimal"
+                    value={impactValue}
+                    onChange={(e) => setImpactValue(e.target.value)}
+                    placeholder={t(locale, "decisions.impact.value")}
+                    className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
+                  />
+                  <input
+                    value={impactCurrency}
+                    onChange={(e) => setImpactCurrency(e.target.value.toUpperCase())}
+                    maxLength={3}
+                    placeholder={t(locale, "decisions.impact.currency")}
+                    className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
+                  />
+                  <input
+                    inputMode="decimal"
+                    value={impactLow}
+                    onChange={(e) => setImpactLow(e.target.value)}
+                    placeholder={t(locale, "decisions.impact.low")}
+                    className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
+                  />
+                  <input
+                    inputMode="decimal"
+                    value={impactHigh}
+                    onChange={(e) => setImpactHigh(e.target.value)}
+                    placeholder={t(locale, "decisions.impact.high")}
+                    className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
+                  />
+                </div>
+                {impactError ? (
+                  <p role="alert" className="mt-1 text-xs text-abys-critical">
+                    {impactError}
+                  </p>
+                ) : null}
+              </details>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={commit}

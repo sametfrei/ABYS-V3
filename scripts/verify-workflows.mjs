@@ -191,6 +191,48 @@ try {
     }
   }
 
+  // ---- Beklenen ekonomik etki: ana kartta giriş + Karar Değeri Defteri ----
+  {
+    const toggle = page.getByText("Beklenen ekonomik etki (opsiyonel)").first();
+    await toggle.waitFor({ timeout: 30_000 });
+    await toggle.click();
+    const details = page.locator("details").filter({ hasText: "Beklenen ekonomik etki (opsiyonel)" }).first();
+    const fieldCount = await details.locator("input").count();
+    if (fieldCount >= 4) ok("beklenen etki alanları görünür", `${fieldCount} alan`);
+    else bad("beklenen etki alanları", `${fieldCount} input`);
+
+    let economics = (await apiJson(page, "GET", "/api/decision-ledger")).body?.summary?.economics ?? null;
+    if (!economics || typeof economics.reconciledCount !== "number") {
+      bad("karar değeri defteri", JSON.stringify(economics));
+    } else {
+      ok("karar değeri defteri ekonomisi okunur", `mutabakat=${economics.reconciledCount}`);
+      if ((economics.expectedValueCount ?? 0) === 0) {
+        const inputs = details.locator("input");
+        await inputs.nth(0).fill("30000");
+        await inputs.nth(1).fill("AZN");
+        await inputs.nth(2).fill("15000");
+        await inputs.nth(3).fill("45000");
+        const summary = await apiJson(page, "GET", "/api/tais/executive-summary");
+        const approved = await apiJson(page, "POST", "/api/decisions", {
+          caseId: summary.body?.main?.caseId,
+          sectorId: "other",
+          choice: "accepted",
+          chosenAction: summary.body?.main?.title ?? "",
+        });
+        if (approved.status === 200) {
+          economics = (await apiJson(page, "GET", "/api/decision-ledger")).body?.summary?.economics ?? economics;
+        } else {
+          ok("onay zaten kayıtlı (beklenen etki önceki oturumdan)", `HTTP ${approved.status}`);
+        }
+      }
+      if ((economics.expectedValueCount ?? 0) > 0) {
+        ok("beklenen etki deftere işlendi", `${economics.expectedValueCount} karar`);
+      } else {
+        bad("beklenen etki deftere işlenmedi", JSON.stringify(economics));
+      }
+    }
+  }
+
   // ---- Konnektör yaşam döngüsü: oluştur → senkronize et → geçmiş → eşleme onayı ----
   const ADMIN_EMAIL = process.env.SMOKE_DATA_EMAIL ?? "veri.yoneticisi@tais.demo";
   const ADMIN_PASSWORD = process.env.SMOKE_DATA_PASSWORD ?? PASSWORD;
