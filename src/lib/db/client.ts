@@ -1,4 +1,5 @@
 import { PGlite } from "@electric-sql/pglite";
+import { MIGRATIONS } from "./migrations";
 
 /**
  * ABYS kalıcılık katmanı — gömülü PostgreSQL (PGlite).
@@ -56,10 +57,23 @@ export function getPendingMigrationApprovals(): PendingMigrationApproval[] {
 
 /** Migration'ları bir kez uygular; her API route'u await migrate() ile başlar. */
 export async function migrate(): Promise<void> {
-  const { MIGRATIONS } = await import("./migrations");
+  // Statik import: dinamik import her istekte yeni bir modül çözümleme
+  // promise'i üretiyordu; sıcak geliştirmede bu zincir birikim yapabiliyor.
   if (!globalThis.__abysDbReady || globalThis.__abysDbMigratedCount !== MIGRATIONS.length) {
+    const ready = runMigrations();
+    globalThis.__abysDbReady = ready;
     globalThis.__abysDbMigratedCount = MIGRATIONS.length;
-    globalThis.__abysDbReady = runMigrations();
+    try {
+      await ready;
+    } catch (err) {
+      // Başarısız promise global'de kalırsa sistem bir daha denenemez.
+      // Yalnızca bu denemeye ait promise'i temizle (eşzamanlı yeni denemeyi ezme).
+      if (globalThis.__abysDbReady === ready) {
+        globalThis.__abysDbReady = undefined;
+        globalThis.__abysDbMigratedCount = -1;
+      }
+      throw err;
+    }
   }
   return globalThis.__abysDbReady;
 }
@@ -73,7 +87,6 @@ async function runMigrations(): Promise<void> {
       applied TIMESTAMPTZ NOT NULL DEFAULT now()
     );
   `);
-  const { MIGRATIONS } = await import("./migrations");
   const done = await db.query<{ id: number }>("SELECT id FROM _migrations");
   const doneIds = new Set(done.rows.map((r) => r.id));
   const pending: PendingMigrationApproval[] = [];
