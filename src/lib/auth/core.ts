@@ -10,6 +10,9 @@ import { getDb, migrate } from "@/lib/db/client";
 
 const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // 12 saat
 
+/** Oturum çerez adı; route handler'lar ve sunucu kapıları aynı sabiti kullanır. */
+export const SESSION_COOKIE = "abys_session";
+
 /**
  * Local desktop runtime is served over loopback HTTP, so its session cookie
  * must not be marked Secure. Hosted deployments keep the secure default

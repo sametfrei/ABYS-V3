@@ -49,6 +49,18 @@ export type ShellKey =
   | "login.submitting"
   | "login.forgot"
   | "login.sso"
+  | "login.showPassword"
+  | "login.hidePassword"
+  | "login.brandKicker"
+  | "login.brandHeadline"
+  | "login.brandBody"
+  | "login.point1"
+  | "login.point2"
+  | "login.point3"
+  | "login.formKicker"
+  | "login.secureSession"
+  | "login.demoTitle"
+  | "login.demoHint"
   | "login.error.invalid"
   | "login.error.emailRequired"
   | "login.error.tooMany"
@@ -1817,6 +1829,42 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     en: "If you forgot your password, contact your organization administrator.",
   },
   "login.sso": { tr: "Kurumsal hesapla giriş →", en: "Sign in with enterprise account →" },
+  "login.showPassword": { tr: "Parolayı göster", en: "Show password" },
+  "login.hidePassword": { tr: "Parolayı gizle", en: "Hide password" },
+  "login.brandKicker": {
+    tr: "KURUMSAL KARAR KATMANI",
+    en: "ENTERPRISE DECISION LAYER",
+  },
+  "login.brandHeadline": {
+    tr: "Sinyalleri netliğe çevirin.",
+    en: "Turn signals into clarity.",
+  },
+  "login.brandBody": {
+    tr: "Risk, fırsat ve karar akışını tek, kanıtlı bir çalışma alanında görün.",
+    en: "See risk, opportunity, and decision flow in one evidence-backed workspace.",
+  },
+  "login.point1": {
+    tr: "Kanıtlı risk ve fırsat sinyalleri",
+    en: "Evidence-backed risk and opportunity signals",
+  },
+  "login.point2": {
+    tr: "Rolünüze göre şekillenen karar akışı",
+    en: "A decision flow shaped around your role",
+  },
+  "login.point3": {
+    tr: "Denetlenebilir kurumsal hafıza",
+    en: "Auditable institutional memory",
+  },
+  "login.formKicker": { tr: "GÜVENLİ ERİŞİM", en: "SECURE ACCESS" },
+  "login.secureSession": {
+    tr: "Sunucu tarafı oturum · 12 saat",
+    en: "Server-side session · 12 hours",
+  },
+  "login.demoTitle": { tr: "Demo erişimi", en: "Demo access" },
+  "login.demoHint": {
+    tr: "Parola kurulum ve giriş belgesindedir.",
+    en: "The password is in the setup and sign-in document.",
+  },
   "login.error.invalid": {
     tr: "E-posta ya da parola hatalı.",
     en: "Incorrect email or password.",

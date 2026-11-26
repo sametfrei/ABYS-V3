@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { redirectIfAuthenticated } from "@/lib/auth/guard";
 import { isSsoConfigured } from "@/lib/auth/oidc";
 import { LOCALE_COOKIE, parseLocale } from "@/lib/i18n";
 import { LoginForm } from "./LoginForm";
@@ -15,6 +16,8 @@ export default async function LoginPage({
   searchParams: Promise<{ sso_error?: string }>;
 }) {
   const params = await searchParams;
+  // Oturum açmış kullanıcı login formunu tekrar görmez.
+  await redirectIfAuthenticated();
   const store = await cookies();
   const locale = parseLocale(store.get(LOCALE_COOKIE)?.value);
   return (

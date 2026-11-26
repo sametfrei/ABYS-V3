@@ -13,6 +13,7 @@
     "connectors:scheduler": "node scripts/connector-scheduler.mjs",
     "smoke:e2e": "node scripts/smoke-e2e.mjs",
     "smoke:browser": "node scripts/browser-smoke.mjs",
+    "smoke:login": "node scripts/login-smoke.mjs",
     "verify:workflows": "node scripts/verify-workflows.mjs",
     "build": "next build",
     "start": "next start",

@@ -60,11 +60,19 @@ async function main() {
   // 1) Genel sayfalar
   for (const [name, path] of [
     ["giriş sayfası", "/login"],
-    ["ana sayfa", "/"],
     ["404 sayfası", "/bu-sayfa-yok"],
   ]) {
     const r = await req(path);
     expectStatus(name, r.status, path === "/bu-sayfa-yok" ? 404 : 200);
+  }
+
+  // Oturumsuz ana adres pazarlama sayfası değil, login'e yönlendirmeli.
+  const root = await req("/");
+  const rootLocation = root.headers.get("location") ?? "";
+  if (root.status === 307 && rootLocation.endsWith("/login")) {
+    ok("ana sayfa login'e yönlendiriyor", "HTTP 307");
+  } else {
+    bad("ana sayfa login yönlendirmesi", `${root.status} ${rootLocation}`);
   }
 
   // 2) Sağlık

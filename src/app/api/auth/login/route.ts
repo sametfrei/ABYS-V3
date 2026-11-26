@@ -2,13 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { getDb, migrate } from "@/lib/db/client";
-import { authCookieIsSecure, verifyPassword, createSession } from "@/lib/auth/core";
+import {
+  authCookieIsSecure,
+  verifyPassword,
+  createSession,
+  SESSION_COOKIE,
+} from "@/lib/auth/core";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { checkLoginRate, recordLoginFailure, resetLoginRate } from "@/lib/rate-limit";
 import { parseBody } from "@/lib/validation";
 import { LOCALE_COOKIE, parseLocale, t } from "@/lib/i18n";
 
-export const SESSION_COOKIE = "abys_session";
+export { SESSION_COOKIE };
 
 // Sayı/nesne gibi yanlış tipli alanlar TypeError -> 500 yerine 400 üretir.
 const loginBodySchema = z.object({
