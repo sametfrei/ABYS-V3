@@ -33,6 +33,8 @@ const DEFAULT_BASE_URL = "https://evren-llmapi.ssyz.org.tr/v1";
 const DEFAULT_MODEL = "deepseek-v4.1-flash";
 const DEFAULT_MAX_TOKENS = 8192;
 const REQUEST_TIMEOUT_MS = 180_000;
+const OPTIONS_TIMEOUT_MS = 120_000;
+const OPTIONS_RETRY_TIMEOUT_MS = 60_000;
 
 const ABYS_SYSTEM_PROMPT = `Sen ABYS Intelligence'ın kurumsal karar zekâsısın.
 
@@ -101,9 +103,9 @@ function tokenBudget(requested?: number): number {
   const configured = Number(process.env.EVREN_MAX_TOKENS || DEFAULT_MAX_TOKENS);
   const safeConfigured = Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_MAX_TOKENS;
   // EVREN'de reasoning ve nihai yanıt aynı max_tokens havuzunu paylaşır.
-  // Platform yönergesindeki 4096 tavsiyesinin altına düşme; uzun ABYS
-  // karar çıktılarında 8192 varsayılan bütçe kullan.
-  return Math.max(4096, safeConfigured, requested ?? 0);
+  // EVREN_MAX_TOKENS üst sınırdır; çağrı bazlı daha küçük bütçeye izin ver.
+  // Platform önerisi gereği hiçbir çağrı 4096'nın altına düşmez.
+  return Math.max(4096, Math.min(safeConfigured, requested ?? safeConfigured));
 }
 
 function toStrictJsonSchema(schema: JsonSchema): JsonSchema {
@@ -151,11 +153,13 @@ async function complete({
   schema,
   maxTokens,
   schemaName,
+  timeoutMs,
 }: {
   prompt: string;
   schema?: JsonSchema;
   maxTokens?: number;
   schemaName?: string;
+  timeoutMs?: number;
 }): Promise<string> {
   const key = apiKey();
   const model = modelName();
@@ -193,7 +197,7 @@ async function complete({
             }
           : {}),
       }),
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs ?? REQUEST_TIMEOUT_MS),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -478,6 +482,90 @@ Yukarıdaki HER risk kategorisi için bir değerlendirme üret. severity yalnız
   return parsed.assessments ?? [];
 }
 
+function buildCompactOptionsPrompt(params: AnalyzeCasesParams, diagnosis: AiDiagnosis): string {
+  const evidence = (diagnosis.evidence ?? [])
+    .map((item) => `- [${item.reliability}] ${item.source}: ${item.fact}`)
+    .join("\n");
+  const domainKnowledge = params.domainKnowledge.trim().slice(0, 1800);
+  const data = params.data.trim().slice(0, 3500);
+
+  return `ABYS karar motoru — yalnızca aksiyon seçeneklerini üret. Teşhisi yeniden yazma. Sektör: ${params.sectorLabel}.
+
+TEŞHİS: ${diagnosis.title}
+ÖNEM: ${diagnosis.severity}; güven %${diagnosis.confidence}.
+İŞ ETKİSİ: ${diagnosis.businessImpact}
+KANITLAR:
+${evidence || "Kanıt özeti yok; yeni kanıt uydurma."}
+
+KESİN OPERASYONEL KISITLAR:
+${params.constraints}
+
+REFERANS BİLGİSİ:
+${domainKnowledge || "Ek referans bilgisi sağlanmadı."}
+
+OPERASYONEL VERİ:
+"""
+${data}
+"""
+
+SADECE options ve recommendedOptionRank içeren JSON üret.
+Kurallar:
+- En fazla 3 kısa seçenek üret; tercihen 2 uygulanabilir ve açık bir kısıta takılan 1 uygulanamaz seçenek.
+- En az 1 uygulanabilir seçenek bulunmalı. Önerilen rank mutlaka feasible=true olan seçeneğin rank'ı olmalı.
+- Her seçeneğin başlığı, detayı, fizibilite gerekçesi, ödünleşimi ve beklenen sonucu tek kısa cümle olsun.
+- Yalnızca verilen veri ve kısıtlarla mümkün olan aksiyonları öner. Veride olmayan şube, kanal, ekip, tedarikçi veya yetki varmış gibi varsayma.
+- Kaynakta bulunmayan tutar, hedef, yüzde veya kesin zaman uydurma. Sayısal tahmin gerekiyorsa açıkça tahmini olarak işaretle.
+- Kredi, personel, fiyat, ödeme tarihi veya operasyon kısıtlarını ihlal eden seçenek feasible=false olmalı ve hangi kısıtı ihlal ettiğini yaz.
+- Tüm metinler Türkçe; boş seçenek listesi veya rank 0 döndürme.`;
+}
+
+function validDecisionOptions(result: AiOptionsResult): boolean {
+  if (!Array.isArray(result.options) || result.options.length === 0 || result.options.length > 3) return false;
+  const ranks = new Set<number>();
+  for (const option of result.options) {
+    if (!Number.isInteger(option.rank) || option.rank < 1 || ranks.has(option.rank)) return false;
+    ranks.add(option.rank);
+  }
+  return result.options.some(
+    (option) => option.rank === result.recommendedOptionRank && option.feasible === true
+  );
+}
+
+async function generateDecisionOptions(
+  params: AnalyzeCasesParams,
+  diagnosis: AiDiagnosis
+): Promise<AiOptionsResult> {
+  const attempts = [
+    { label: "normal", prompt: buildOptionsPrompt(params, diagnosis), timeoutMs: OPTIONS_TIMEOUT_MS },
+    { label: "kompakt tekrar", prompt: buildCompactOptionsPrompt(params, diagnosis), timeoutMs: OPTIONS_RETRY_TIMEOUT_MS },
+  ];
+  let lastError: unknown;
+
+  for (const attempt of attempts) {
+    try {
+      const result = parseJson<AiOptionsResult>(
+        await complete({
+          prompt: attempt.prompt,
+          schema: optionsJsonSchema as JsonSchema,
+          schemaName: "abys_decision_options",
+          maxTokens: 4096,
+          timeoutMs: attempt.timeoutMs,
+        })
+      );
+      if (validDecisionOptions(result)) return result;
+      lastError = new Error("EVREN seçenek çıktısı geçerli ve uygulanabilir bir öneri içermiyor.");
+    } catch (err) {
+      lastError = err;
+    }
+    console.warn(
+      `[evren-two-stage] ${attempt.label} seçenek üretimi başarısız; ${attempt.label === "normal" ? "kısa prompt ile yeniden deneniyor" : "işlem güvenli biçimde durdurulacak"}.`
+    );
+  }
+
+  const reason = lastError instanceof Error ? lastError.message : "bilinmeyen hata";
+  throw new Error(`EVREN teşhisi üretti ancak uygulanabilir karar seçeneklerini tamamlayamadı; eksik seçenekli vaka döndürülmedi. Son hata: ${reason}`);
+}
+
 async function analyzeDecisionCases(params: AnalyzeCasesParams): Promise<AiDecisionCase[]> {
   const diagnosis = parseJson<AiDiagnosis>(
     await complete({
@@ -488,27 +576,11 @@ async function analyzeDecisionCases(params: AnalyzeCasesParams): Promise<AiDecis
     })
   );
 
-  let options: AiOptionsResult = { options: [], recommendedOptionRank: 0 };
-  try {
-    options = parseJson<AiOptionsResult>(
-      await complete({
-        prompt: buildOptionsPrompt(params, diagnosis),
-        schema: optionsJsonSchema as JsonSchema,
-        schemaName: "abys_decision_options",
-        maxTokens: 8192,
-      })
-    );
-  } catch (err) {
-    // Teşhis geçerliyse, seçenek üretimi başarısız olduğunda teşhisi kaybetme.
-    console.warn(
-      `[evren-two-stage] seçenek üretimi başarısız; teşhis korunuyor: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
-
+  const options = await generateDecisionOptions(params, diagnosis);
   const merged: AiDecisionCase = {
     ...diagnosis,
-    options: options.options ?? [],
-    recommendedOptionRank: options.recommendedOptionRank ?? 0,
+    options: options.options,
+    recommendedOptionRank: options.recommendedOptionRank,
   };
   return [merged];
 }

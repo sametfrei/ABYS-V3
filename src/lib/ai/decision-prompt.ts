@@ -264,8 +264,10 @@ KURALLAR:
    - Her seçeneğin trade-off'unu ve beklenen sonucunu yaz.
    - Amaç teorik olarak mükemmel aksiyon değil, önümüzdeki dakikalarda GERÇEKTEN uygulanabilecek en iyi aksiyondur.
 3. recommendedOptionRank: önerdiğin seçeneğin rank değeri (genelde 1, en iyi uygulanabilir seçenek).
-4. Tüm metinler Türkçe olacak.
-5. KISA YAZ: her metin alanı en fazla 1-2 kısa cümle. En fazla 3 seçenek (biri kısıta takılan uygulanamaz örnek olsun). Toplam çıktıyı kompakt tut.
+4. Veride açıkça bulunmayan şube, kanal, ayrı depo, ekip, alternatif tedarikçi, personel veya yetki varmış gibi varsayma. Bu yapıların varlığı doğrulanmıyorsa stok dağıtma, başka şubeye yönlendirme, alternatif kaynaktan alım veya ilgili yetkiyi gerektiren aksiyon önerme.
+5. Her aksiyonun gerçekten uygulanabilmesi için gereken veri, kaynak ve yetkiyi kontrol et. Eksikse aksiyonu uygulanabilir gibi sunma; uygulanabilirlik notunda eksik ön koşulu belirt.
+6. Tüm metinler Türkçe olacak.
+7. KISA YAZ: her metin alanı en fazla 1-2 kısa cümle. En fazla 3 seçenek (biri kısıta takılan uygulanamaz örnek olsun). Toplam çıktıyı kompakt tut.
 
 OPERASYONEL VERİ (referans için):
 """

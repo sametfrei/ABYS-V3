@@ -55,6 +55,26 @@ describe("buildOptionsPrompt", () => {
     expect(prompt).toContain("bilinmiyor");
   });
 
+  it("kanıtlanmamış şube, kanal, depo, ekip veya tedarikçi varsayımıyla aksiyon üretmeyi engeller", () => {
+    const diagnosis: AiDiagnosis = {
+      categoryId: "inventory",
+      categoryLabel: "Stok",
+      severity: "warning",
+      title: "Stok kapsamı kısa.",
+      businessImpact: "Tedarik gecikirse satış aksayabilir.",
+      confidence: 70,
+      confidenceRationale: "Stok ve satış verisi mevcut.",
+      evidence: [{ source: "ERP", fact: "18 adet stok var.", reliability: "verified" }],
+      assumptions: [],
+      historicalComparison: "Geçmiş veri sağlanmadı.",
+      counterfactual: { narrative: "Stok tükenebilir.", projectedImpact: "Bilinmiyor.", timeHorizon: "Bilinmiyor." },
+    };
+    const prompt = buildOptionsPrompt(baseParams(), diagnosis);
+    expect(prompt).toContain("şube, kanal, ayrı depo, ekip, alternatif tedarikçi");
+    expect(prompt).toContain("varmış gibi varsayma");
+    expect(prompt).toContain("ön koşulu");
+  });
+
   it("counterfactual'ın yalnızca bir alt alanı eksikken diğerlerini korur", () => {
     const diagnosis: AiDiagnosis = {
       categoryId: "cat-1",
