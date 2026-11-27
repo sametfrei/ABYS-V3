@@ -116,15 +116,16 @@ export interface AiProvider {
  *   Bu, yönetici tarafından .env ile verilmiş AÇIK bir karardır ve her bulut
  *   kullanımı sunucu loguna yazılır; providerId yanıtla birlikte UI'a gider.
  * CLOUD_ONLY: Sadece bulut (Gemini) — demo/hızlı sonuç senaryosu için.
+ * EVREN_ONLY: Yalnızca EVREN LLM API; yerel veya Gemini fallback yok.
  *
  * Eski AI_PROVIDER değişkeni geriye dönük desteklenir:
  * ollama→LOCAL_ONLY, auto→CLOUD_ALLOWED, gemini→CLOUD_ONLY.
  */
-export type AiPolicy = "LOCAL_ONLY" | "CLOUD_ALLOWED" | "CLOUD_ONLY" | "DEMO_DETERMINISTIC";
+export type AiPolicy = "LOCAL_ONLY" | "CLOUD_ALLOWED" | "CLOUD_ONLY" | "EVREN_ONLY" | "DEMO_DETERMINISTIC";
 
 function activePolicy(): AiPolicy {
   const p = (process.env.AI_POLICY || "").toUpperCase();
-  if (p === "LOCAL_ONLY" || p === "CLOUD_ALLOWED" || p === "CLOUD_ONLY" || p === "DEMO_DETERMINISTIC") return p;
+  if (p === "LOCAL_ONLY" || p === "CLOUD_ALLOWED" || p === "CLOUD_ONLY" || p === "EVREN_ONLY" || p === "DEMO_DETERMINISTIC") return p;
   // Geriye dönük uyumluluk — eski değişken varsa politikaya çevir.
   switch (process.env.AI_PROVIDER) {
     case "gemini":
@@ -146,8 +147,18 @@ async function cloudProvider(): Promise<AiProvider> {
   return geminiProvider;
 }
 
+async function evrenCloudProvider(): Promise<AiProvider> {
+  const { evrenProvider } = await import("./providers/evren");
+  return evrenProvider;
+}
+
 export async function getActiveProvider(): Promise<AiProvider> {
   const policy = activePolicy();
+
+  if (policy === "EVREN_ONLY") {
+    console.info("[ai-policy] EVREN_ONLY: tüm AI istekleri EVREN LLM API'ye gönderiliyor; Ollama/Gemini fallback kapalı.");
+    return evrenCloudProvider();
+  }
 
   if (policy === "DEMO_DETERMINISTIC") {
     console.info("[ai-policy] DEMO_DETERMINISTIC: model çağrılmadı, deterministik çıktı üretiliyor.");

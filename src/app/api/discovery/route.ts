@@ -4,15 +4,17 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import {
   buildDiscovery,
   BusinessProfileError,
   confirmBusinessProfile,
   getConfirmedBusinessProfile,
+  getLatestDraftBusinessProfile,
   listIndustryPackCatalog,
 } from "@/lib/db/repos/business-context";
 import { getSemanticGraph } from "@/lib/db/repos/semantic-graph";
+import { listKpiObservationSummaries } from "@/lib/db/repos/kpi-values";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { localizedError, localizedErrorFromCookies } from "@/lib/api-i18n";
 
@@ -36,14 +38,26 @@ export async function GET() {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }
 
-  const [build, confirmedProfile, graph] = await Promise.all([
+  const [build, confirmedProfile, draftProfile, graph, observationSummaries] = await Promise.all([
     buildDiscovery(session.orgId),
     getConfirmedBusinessProfile(session.orgId),
+    getLatestDraftBusinessProfile(session.orgId),
     getSemanticGraph(session.orgId, 500),
+    listKpiObservationSummaries(session.orgId),
   ]);
+  const observedByLabel = new Map(
+    observationSummaries.map((summary) => [summary.label, summary])
+  );
+  // "Hesaplanabilir" ile "gerçekten hesaplandı" ayrımı: her KPI önerisi,
+  // varsa gerçek gözlem sayısı/son değeri/kökeniyle birlikte sunulur.
+  const kpis = build.result.kpis.map((kpi) => ({
+    ...kpi,
+    observed: observedByLabel.get(kpi.kpi.name) ?? null,
+  }));
 
   return NextResponse.json({
     ...build.result,
+    kpis,
     inputs: {
       entities: build.inputs.entityCounts,
       fieldCount: build.inputs.fieldNames.length,
@@ -66,6 +80,18 @@ export async function GET() {
       : null,
     profileIsStale:
       confirmedProfile !== null && confirmedProfile.sourceFingerprint !== build.fingerprint,
+    draftProfile: draftProfile
+      ? {
+          id: draftProfile.id,
+          version: draftProfile.version,
+          confidence: draftProfile.confidence,
+          sourceFingerprint: draftProfile.sourceFingerprint,
+          createdAt: draftProfile.createdAt,
+          proposal:
+            draftProfile.snapshot.kind === "draft" ? draftProfile.snapshot.proposal : null,
+        }
+      : null,
+    draftIsStale: draftProfile !== null && draftProfile.sourceFingerprint !== build.fingerprint,
     graphSummary: {
       coverage: graph.coverage,
       resolution: graph.resolution,

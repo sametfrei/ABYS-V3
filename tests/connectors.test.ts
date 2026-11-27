@@ -50,7 +50,7 @@ const {
   upsertCanonicalRecords,
 } = await import("../src/lib/db/repos/connectors");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { restAdapter, validateRestConfig } = await import("../src/lib/connectors/rest-adapter");
 const { listDefinitions, getAdapter, getDefinition } = await import("../src/lib/connectors/registry");
 const connectorsRoute = await import("../src/app/api/connectors/route");
@@ -444,7 +444,7 @@ describe("Konnektör API'si", () => {
     configId = body.id;
 
     nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
-    const list = await connectorsRoute.GET();
+    const list = await connectorsRoute.GET(new NextRequest("http://localhost/api/connectors"));
     const listBody = (await list.json()) as {
       configs: { id: string; config: Record<string, unknown> }[];
       definitions: unknown[];
@@ -473,7 +473,7 @@ describe("Konnektör API'si", () => {
     expect(res.status).toBe(200);
 
     nextHeaders.__setTestCookie(SESSION_COOKIE, ceoA);
-    const list = await connectorsRoute.GET();
+    const list = await connectorsRoute.GET(new NextRequest("http://localhost/api/connectors"));
     const body = (await list.json()) as {
       configs: { name: string; config: Record<string, unknown> }[];
     };
@@ -1138,15 +1138,21 @@ describe("Konnektör API'si", () => {
 
     const anomalies = await anomalyRoute.GET();
     const anomalyBody = (await anomalies.json()) as {
-      results: { label: string; anomalies: { value: number }[] }[];
+      results: { label: string; entity: string | null; externalId: string | null }[];
     };
     expect(anomalies.status).toBe(200);
-    expect(anomalyBody.results).toContainEqual(
-      expect.objectContaining({
-        label: "Sipariş Tutarı",
-        anomalies: expect.arrayContaining([expect.objectContaining({ value: 500 })]),
-      })
+    // Her sipariş ayrı bir varlıktır (order-0 … order-10); 11 siparişi tek
+    // etiket altında birleştirmek yapay bir "500" aykırılığı üretirdi. Kapsamlı
+    // seri kimliği bunu engeller: her sipariş tek noktalık ayrı seridir.
+    expect(anomalyBody.results.map((result) => result.label)).not.toContain("Sipariş Tutarı");
+    const orderSeries = await getDb().query<{ series: number; points: number }>(
+      `SELECT count(DISTINCT external_id)::int AS series,
+              count(*)::int AS points
+         FROM kpi_values
+        WHERE org_id = $1 AND label = 'Sipariş Tutarı'`,
+      [ORG_A]
     );
+    expect(orderSeries.rows[0]).toMatchObject({ series: 11, points: 11 });
 
     const process = await getProcessEvents(ORG_A, 90);
     expect(process.rows.filter((event) => event.subject === "customer-1")).toHaveLength(11);
@@ -1340,7 +1346,7 @@ describe("Konnektör API'si", () => {
 
   it("başka org konfigürasyona erişemez", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, adminB);
-    const list = await connectorsRoute.GET();
+    const list = await connectorsRoute.GET(new NextRequest("http://localhost/api/connectors"));
     expect(((await list.json()) as { configs: unknown[] }).configs).toHaveLength(0);
 
     const sync = await syncRoute.POST(new Request("http://localhost", { method: "POST" }), {

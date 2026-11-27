@@ -40,6 +40,16 @@ const nextConfig: NextConfig = {
   ...(process.env.BUILD_STANDALONE === "1" ? { output: "standalone" as const } : {}),
   serverExternalPackages: ["@electric-sql/pglite"],
   env: { BUILD_SHA: buildSha, BUILD_TIME: buildTime },
+  experimental: {
+    // Dev kararlılığı: Turbopack dosya sistemi cache'i (Next 16.1'de dev'de
+    // varsayılan açık) uzun oturumlarda bellekte birikiyor. Bu proje tek
+    // süreçli PGlite ile çalıştığı için cache kazancı, kararlılıktan sonra
+    // gelir. Kapatmak yalnızca dev'i etkiler; üretim derlemesi değişmez.
+    turbopackFileSystemCacheForDev: false,
+    // Başlangıçta tüm sayfa modüllerini önceden yüklemek yerel bellek
+    // tabanını gereksiz büyütüyordu; talep üzerine yükleme yeterli.
+    preloadEntriesOnStart: false,
+  },
   // Güvenli varsayılan başlıklar. CSP bilinçli olarak eklenmedi: Next.js
   // inline runtime script'leriyle çakışmadan ayrı bir nonce stratejisi gerekir.
   async headers() {

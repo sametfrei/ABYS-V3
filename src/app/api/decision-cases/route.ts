@@ -10,7 +10,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { insertCases, listCasesForOrg, buildServerMemory } from "@/lib/db/repos/decisions";
 import { getConfidenceCalibration } from "@/lib/db/repos/decision-ledger";
 import { logModelRun } from "@/lib/db/repos/model-runs";

@@ -26,6 +26,7 @@ vi.mock("next/headers", () => ({
 
 // Oturumda sektör ve kurum vardır: org_id daima buradan gelmelidir.
 vi.mock("@/lib/auth/core", () => ({
+  SESSION_COOKIE: "abys_session",
   getSession: async () => ({
     userId: "user-1",
     orgId: "org-from-session",

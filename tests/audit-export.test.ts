@@ -32,7 +32,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { hasPermission } = await import("../src/lib/auth/permissions");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET: exportAudit } = await import("../src/app/api/audit/export/route");
 const { recordAuditEvent } = await import("../src/lib/db/repos/audit");
 

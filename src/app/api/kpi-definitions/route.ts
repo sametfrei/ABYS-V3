@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { upsertDefinition, listDefinitions } from "@/lib/db/repos/kpi-registry";
 import { localizedError, localizedErrorFromCookies } from "@/lib/api-i18n";
 

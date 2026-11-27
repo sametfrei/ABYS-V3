@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { listForecastSnapshots } from "@/lib/db/repos/forecast-snapshots";
 import { toSnapshotCsv } from "@/lib/forecast-snapshot-csv";
 import { localizedError } from "@/lib/api-i18n";

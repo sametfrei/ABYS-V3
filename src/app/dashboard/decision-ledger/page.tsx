@@ -57,12 +57,46 @@ interface LedgerEntry {
     evidence: string | null;
   } | null;
   economicVariance: { amount: number; percent: number | null; currency: string } | null;
+  measurement: {
+    kpiLabel: string;
+    direction: "lower_is_better" | "higher_is_better";
+    before: { value: number; at: string; datasetId: string; sourceLabel: string };
+    after: { value: number; at: string; datasetId: string; sourceLabel: string };
+    delta: number;
+    pctChange: number | null;
+    result: "improved" | "unchanged" | "worsened";
+    actionStartedAt: string;
+    actionDoneAt: string;
+    measurementAt: string;
+    method: string;
+    definition: {
+      id: string;
+      name: string;
+      unit: string | null;
+      source: string;
+      sourceRef: string | null;
+      formulaHash: string | null;
+      versionKnown: boolean;
+      formulaText: string | null;
+      capturedAt: string;
+    } | null;
+    verified: true;
+  } | null;
+  approval: {
+    decidedById: string;
+    decidedRole: string | null;
+    permission: string | null;
+    source: "human" | "system" | "unknown";
+    approvedAt: string | null;
+    auditId: string | null;
+  } | null;
   outcome: LedgerOutcome | null;
 }
 
 interface Summary {
   totalDecisions: number;
   withOutcome: number;
+  withVerifiedMeasurement: number;
   improved: number;
   unchanged: number;
   worsened: number;
@@ -319,10 +353,11 @@ export default function DecisionLedgerPage() {
           <>
             {summary && (
               <>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
                   {[
                     ["ledger.totalDecisions", summary.totalDecisions],
                     ["ledger.withOutcome", summary.withOutcome],
+                    ["ledger.withVerifiedMeasurement", summary.withVerifiedMeasurement],
                     ["ledger.improved", summary.improved],
                     ["ledger.worsened", summary.worsened],
                   ].map(([label, value]) => (
@@ -656,6 +691,20 @@ export default function DecisionLedgerPage() {
                     </p>
                   )}
 
+                  {entry.approval && (
+                    <p className="mt-2 text-[11px] text-abys-muted">
+                      {formatMessage(locale, "ledger.approvalProvenance", {
+                        user: entry.approval.decidedById || "—",
+                        role: entry.approval.decidedRole ?? "—",
+                        permission: entry.approval.permission ?? "—",
+                        source: entry.approval.source,
+                        time: entry.approval.approvedAt
+                          ? formatDate(entry.approval.approvedAt, locale)
+                          : "—",
+                        audit: entry.approval.auditId ?? "—",
+                      })}
+                    </p>
+                  )}
                   {entry.businessImpact && (
                     <p className="mt-2 text-xs text-abys-ink">
                       <span className="text-abys-muted">{t(locale, "ledger.businessImpact")} </span>
@@ -724,6 +773,59 @@ export default function DecisionLedgerPage() {
                           {formatMessage(locale, "ledger.evidence", { evidence: entry.actualImpact.evidence })}
                         </p>
                       )}
+                    </div>
+                  )}
+                  {entry.measurement && (
+                    <div className="mt-2 rounded-lg border border-abys-healthy/30 bg-abys-healthy-soft/50 px-3 py-2 text-xs">
+                      <p className="font-semibold text-abys-ink">
+                        {t(locale, "ledger.verifiedMeasurement")}
+                        {" · "}
+                        {entry.measurement.direction === "lower_is_better"
+                          ? t(locale, "ledger.directionLowerIsBetter")
+                          : t(locale, "ledger.directionHigherIsBetter")}
+                      </p>
+                      <p className="mt-0.5 text-abys-ink">
+                        {formatMessage(locale, "ledger.measurementLine", {
+                          kpi: entry.measurement.kpiLabel,
+                          before: formatNumber(entry.measurement.before.value, locale),
+                          after: formatNumber(entry.measurement.after.value, locale),
+                          delta: formatNumber(entry.measurement.delta, locale),
+                          percent: formatPercent(entry.measurement.pctChange, locale),
+                        })}
+                      </p>
+                      <p className="mt-0.5 text-abys-muted">
+                        {formatMessage(locale, "ledger.measurementSource", {
+                          beforeSource: entry.measurement.before.sourceLabel,
+                          afterSource: entry.measurement.after.sourceLabel,
+                        })}
+                      </p>
+                      <p className="text-abys-muted">
+                        {formatMessage(locale, "ledger.measurementWindow", {
+                          start: formatDate(entry.measurement.actionStartedAt, locale),
+                          end: formatDate(entry.measurement.actionDoneAt, locale),
+                          measured: formatDate(entry.measurement.measurementAt, locale),
+                        })}
+                      </p>
+                      <p className="text-abys-muted">
+                        {formatMessage(locale, "ledger.measurementMethod", {
+                          method: entry.measurement.method,
+                        })}
+                      </p>
+                      {entry.measurement.definition && (
+                        <p className="text-abys-muted">
+                          {formatMessage(locale, "ledger.measurementDefinition", {
+                            unit: entry.measurement.definition.unit ?? "—",
+                            source: entry.measurement.definition.source,
+                            version: entry.measurement.definition.versionKnown
+                              ? entry.measurement.definition.sourceRef ?? "—"
+                              : t(locale, "ledger.versionHashOnly"),
+                            hash: entry.measurement.definition.formulaHash ?? "—",
+                          })}
+                        </p>
+                      )}
+                      <p className="mt-0.5 font-semibold text-abys-muted">
+                        {t(locale, "ledger.measurementCausality")}
+                      </p>
                     </div>
                   )}
                   {entry.outcome && (

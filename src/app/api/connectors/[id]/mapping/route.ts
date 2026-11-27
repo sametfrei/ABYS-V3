@@ -5,7 +5,7 @@ import { createHash } from "crypto";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { getAdapter } from "@/lib/connectors/registry";
 import type { CanonicalEntity, ConnectorConfig } from "@/lib/connectors/types";
 import type { MappingSuggestion } from "@/lib/connectors/contracts";

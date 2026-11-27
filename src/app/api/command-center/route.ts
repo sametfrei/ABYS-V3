@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth/core";
 import { getConfidenceCalibration } from "@/lib/db/repos/decision-ledger";
 import { isOverdue, overdueDays } from "@/lib/action-deadline";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**

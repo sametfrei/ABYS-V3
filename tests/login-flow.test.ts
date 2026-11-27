@@ -31,7 +31,8 @@ vi.mock("next/headers", () => ({
   }),
 }));
 
-const { POST, SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { POST } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { getDb, migrate } = await import("../src/lib/db/client");
 const {
   authCookieIsSecure,

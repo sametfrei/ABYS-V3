@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
-import { SESSION_COOKIE } from "../login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 
 /** Aktif oturum bilgisi — UI bunun üzerinden kim olduğunu öğrenir. */
 export async function GET() {

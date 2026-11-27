@@ -32,7 +32,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 };
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, getSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET: listSessions, DELETE: revokeSession } = await import(
   "../src/app/api/auth/sessions/route"
 );
@@ -96,12 +96,12 @@ describe("oturum yönetimi API'si", () => {
 
   it("oturum yoksa 401 döner", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, undefined);
-    expect((await listSessions()).status).toBe(401);
+    expect((await listSessions(new NextRequest("http://localhost/api/auth/sessions"))).status).toBe(401);
   });
 
   it("yalnızca kullanıcının kendi aktif oturumlarını listeler", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, current);
-    const res = await listSessions();
+    const res = await listSessions(new NextRequest("http://localhost/api/auth/sessions"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       sessions: Array<{ id: string; current: boolean; createdAt: string; expiresAt: string }>;
@@ -117,7 +117,7 @@ describe("oturum yönetimi API'si", () => {
 
   it("cihaz bilgisi ve son görülme yalnızca oturum sahibine döner", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, current);
-    const body = (await (await listSessions()).json()) as {
+    const body = (await (await listSessions(new NextRequest("http://localhost/api/auth/sessions"))).json()) as {
       sessions: Array<{ id: string; userAgent: string | null; lastSeenAt: string }>;
     };
     const mine = body.sessions.find((s) => s.id === current);

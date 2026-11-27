@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { listIssues, type QualityStatus } from "@/lib/db/repos/data-quality";
 import { toDataQualityCsv } from "@/lib/data-quality-csv";
 import { recordAuditEvent } from "@/lib/db/repos/audit";

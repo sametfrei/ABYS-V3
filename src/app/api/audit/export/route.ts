@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { parseAuditLimit } from "@/lib/data/route-schemas";
 import { toAuditCsv, type AuditCsvRow } from "@/lib/audit-csv";
 import { recordAuditEvent } from "@/lib/db/repos/audit";

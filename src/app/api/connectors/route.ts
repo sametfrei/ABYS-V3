@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { getAdapter, getDefinition, listDefinitions } from "@/lib/connectors/registry";
 import { createConnectorConfig, listConnectorConfigs } from "@/lib/db/repos/connectors";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
@@ -75,11 +75,10 @@ const postSchema = z.object({
 });
 
 /** GET — kayıt defteri tanımları + org'un kayıtlı konfigürasyonları. */
-export async function GET(req?: NextRequest) {
-  const localeRequest = req ?? new Request("http://localhost/api/connectors");
+export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return localizedError(localeRequest, "api.auth.sessionRequired", 401);
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "view_decisions")) {
     return NextResponse.json({ error: permissionError("view_decisions") }, { status: 403 });
   }

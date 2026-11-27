@@ -44,6 +44,13 @@ interface Variable {
   max: number;
   step: number;
 }
+interface MeasuredBinding {
+  value: number;
+  kpiLabel: string;
+  observedAt: string;
+  numericPoints: number;
+  sourceLabels: string[];
+}
 interface Template {
   id: string;
   label: string;
@@ -51,6 +58,7 @@ interface Template {
   variables: Variable[];
   formulaText: string;
   limitations: string[];
+  bindings?: Record<string, MeasuredBinding | null>;
 }
 interface Simulation {
   samples: number;
@@ -69,6 +77,7 @@ interface RunResult {
   runs: { name: string; inputs: Record<string, number>; results: { label: string; value: number; unit: string }[] }[];
   sensitivity: { variable: string; effect: string }[];
   simulation: Simulation | null;
+  inputOrigins?: Record<string, { kind: string; kpiLabel?: string; clamped?: boolean }>;
   provenance: { formulaText: string; limitations: string[]; engine: string; calculatedAt: string; note: string };
   scenarioId: string | null;
 }
@@ -119,6 +128,7 @@ export default function ScenariosPage() {
   const [result, setResult] = useState<RunResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [name, setName] = useState("");
+  const [useMeasured, setUseMeasured] = useState(false);
   const [twinComparison, setTwinComparison] = useState<TwinComparison | null>(null);
   const [twinBusy, setTwinBusy] = useState(false);
 
@@ -156,8 +166,25 @@ export default function ScenariosPage() {
 
   if (session === undefined) return null;
 
+  function applyMeasured(t: Template, enabled: boolean) {
+    setUseMeasured(enabled);
+    setInputs(
+      Object.fromEntries(
+        t.variables.map((variable) => {
+          const binding = enabled ? t.bindings?.[variable.id] : null;
+          const value = binding
+            ? Math.max(variable.min, Math.min(variable.max, binding.value))
+            : variable.value;
+          return [variable.id, value];
+        })
+      )
+    );
+    setResult(null);
+  }
+
   function pick(t: Template) {
     setSelected(t);
+    setUseMeasured(false);
     setInputs(Object.fromEntries(t.variables.map((v) => [v.id, v.value])));
     setResult(null);
     setTwinComparison(null);
@@ -171,7 +198,15 @@ export default function ScenariosPage() {
       const r = await fetch("/api/scenarios", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectorId, templateId: selected.id, inputs, save, name, simulate: true }),
+        body: JSON.stringify({
+          sectorId,
+          templateId: selected.id,
+          inputs,
+          save,
+          name,
+          simulate: true,
+          useMeasuredValues: useMeasured,
+        }),
       });
       const j = await r.json();
       if (!r.ok) {
@@ -276,25 +311,47 @@ export default function ScenariosPage() {
           <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 space-y-4">
             <p className="text-sm text-abys-muted">{selected.description}</p>
 
-            {selected.variables.map((v) => (
-              <div key={v.id}>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-sm text-abys-ink">{v.label}</label>
-                  <span className="font-mono text-sm text-abys-navy">
-                    {inputs[v.id] ?? v.value} {v.unit}
-                  </span>
-                </div>
+            {selected.variables.some((v) => selected.bindings?.[v.id]) && (
+              <label className="flex items-center gap-2 text-xs text-abys-muted">
                 <input
-                  type="range"
-                  min={v.min}
-                  max={v.max}
-                  step={v.step}
-                  value={inputs[v.id] ?? v.value}
-                  onChange={(e) => setInputs((s) => ({ ...s, [v.id]: Number(e.target.value) }))}
-                  className="w-full accent-abys-accent"
+                  type="checkbox"
+                  checked={useMeasured}
+                  onChange={(event) => applyMeasured(selected, event.target.checked)}
                 />
-              </div>
-            ))}
+                {t(locale, "scenarios.useMeasured")}
+              </label>
+            )}
+
+            {selected.variables.map((v) => {
+              const binding = selected.bindings?.[v.id];
+              return (
+                <div key={v.id}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-sm text-abys-ink">{v.label}</label>
+                    <span className="font-mono text-sm text-abys-navy">
+                      {inputs[v.id] ?? v.value} {v.unit}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={v.min}
+                    max={v.max}
+                    step={v.step}
+                    value={inputs[v.id] ?? v.value}
+                    onChange={(e) => setInputs((s) => ({ ...s, [v.id]: Number(e.target.value) }))}
+                    className="w-full accent-abys-accent"
+                  />
+                  {binding && (
+                    <p className="text-[10px] text-abys-muted mt-0.5">
+                      {formatMessage(locale, "scenarios.measuredBinding", {
+                        label: binding.kpiLabel,
+                        value: binding.value,
+                      })}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
 
             <div className="flex flex-wrap gap-2 items-center pt-2">
               <input
@@ -439,6 +496,18 @@ export default function ScenariosPage() {
                   at: new Date(result.provenance.calculatedAt).toLocaleString(locale),
                 })}
               </p>
+              {result.inputOrigins && (
+                <p className="text-xs text-abys-muted mb-2">
+                  {formatMessage(locale, "scenarios.inputOrigins", {
+                    measured: Object.values(result.inputOrigins).filter(
+                      (origin) => origin.kind === "measured_kpi"
+                    ).length,
+                    defaults: Object.values(result.inputOrigins).filter(
+                      (origin) => origin.kind !== "measured_kpi"
+                    ).length,
+                  })}
+                </p>
+              )}
               <p className="text-xs tracking-widest text-abys-muted font-semibold mb-1">
                 {t(locale, "scenarios.limitsHeading")}
               </p>

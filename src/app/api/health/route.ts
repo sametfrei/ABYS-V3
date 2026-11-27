@@ -14,6 +14,7 @@ export async function GET() {
     await migrate();
     await getDb().query("SELECT 1");
     const pendingMigrations = getPendingMigrationApprovals();
+    const memory = process.memoryUsage();
     return NextResponse.json({
       ok: true,
       service: "abys",
@@ -24,6 +25,19 @@ export async function GET() {
         commit: process.env.BUILD_SHA || "unknown",
         builtAt: process.env.BUILD_TIME || "unknown",
       },
+      // Geliştirme/tanılama görünürlüğü: bellek artışını ölçmeden "düzeldi"
+      // denemez. Üretimde bu alan dönmez.
+      ...(process.env.NODE_ENV !== "production"
+        ? {
+            memory: {
+              rss: memory.rss,
+              heapUsed: memory.heapUsed,
+              heapTotal: memory.heapTotal,
+              external: memory.external,
+              at: new Date().toISOString(),
+            },
+          }
+        : {}),
     });
   } catch {
     return NextResponse.json(

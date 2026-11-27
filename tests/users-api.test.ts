@@ -42,7 +42,7 @@ const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword, verifyPassword } = await import(
   "../src/lib/auth/core"
 );
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET: usersGET, POST: usersPOST } = await import("../src/app/api/users/route");
 const { PATCH: userPATCH } = await import("../src/app/api/users/[id]/route");
 
@@ -99,19 +99,19 @@ describe("kullanıcı yönetimi API'si", () => {
 
   it("oturum yoksa 401 döner", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, undefined);
-    const res = await usersGET();
+    const res = await usersGET(new NextRequest("http://localhost/api/users"));
     expect(res.status).toBe(401);
   });
 
   it("manage_users izni olmayan rol 403 alır", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, ceoSession);
-    const res = await usersGET();
+    const res = await usersGET(new NextRequest("http://localhost/api/users"));
     expect(res.status).toBe(403);
   });
 
   it("GET yalnızca oturum org'unun kullanıcılarını döner", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, adminSession);
-    const res = await usersGET();
+    const res = await usersGET(new NextRequest("http://localhost/api/users"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as { users: Array<{ email: string; orgId: string }> };
     expect(body.users.map((u) => u.email).sort()).toEqual([

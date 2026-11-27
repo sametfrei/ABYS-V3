@@ -713,7 +713,34 @@ function OutcomeForm({
   const [measurementEnd, setMeasurementEnd] = useState("");
   const [evidence, setEvidence] = useState("");
   const [busy, setBusy] = useState(false);
+  const [measuring, setMeasuring] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  async function measureWithKpi() {
+    setMeasuring(true);
+    setErr(null);
+    try {
+      const res = await fetch("/api/outcomes/measure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          decisionId,
+          ...(outNote.trim() ? { note: outNote } : {}),
+          ...(lesson.trim() ? { lesson } : {}),
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        setErr(body?.error ?? t(locale, "actions.outcomeSaveFailed"));
+        return;
+      }
+      onDone();
+    } catch {
+      setErr(t(locale, "actions.outcomeSaveFailed"));
+    } finally {
+      setMeasuring(false);
+    }
+  }
 
   async function save() {
     if (!outNote.trim()) {
@@ -790,6 +817,16 @@ function OutcomeForm({
       <p className="text-xs font-semibold text-abys-muted uppercase">
         {t(locale, "actions.outcomeHeading")}
       </p>
+      <div className="rounded-lg border border-abys-accent/30 bg-abys-accent-soft/40 px-3 py-2 space-y-1.5">
+        <p className="text-[11px] text-abys-muted m-0">{t(locale, "actions.measureWithKpiHint")}</p>
+        <button
+          onClick={measureWithKpi}
+          disabled={measuring || busy}
+          className="text-xs rounded-full bg-abys-accent text-white px-4 py-1.5 hover:opacity-90 disabled:opacity-50"
+        >
+          {measuring ? t(locale, "actions.measuring") : t(locale, "actions.measureWithKpi")}
+        </button>
+      </div>
       {expectedImpact && (
         <div className="rounded-lg bg-white/60 px-3 py-2 text-[11px] text-abys-muted">
           <p className="font-semibold text-abys-ink">

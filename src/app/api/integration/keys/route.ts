@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { createApiKey, listApiKeys, revokeApiKey, type Scope } from "@/lib/integrations/api-key";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { localizedError, localizedErrorWith, requestLocale } from "@/lib/api-i18n";
@@ -15,11 +15,10 @@ import { t } from "@/lib/i18n";
 
 const VALID_SCOPES: Scope[] = ["events:write", "read:advisors", "read:all"];
 
-export async function GET(req?: NextRequest) {
-  const localeRequest = req ?? new Request("http://localhost/api/integration/keys");
+export async function GET(req: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
-  if (!session) return localizedError(localeRequest, "api.auth.sessionRequired", 401);
+  if (!session) return localizedError(req, "api.auth.sessionRequired", 401);
   if (!hasPermission(session.role, "ingest_data")) {
     return NextResponse.json({ error: permissionError("ingest_data") }, { status: 403 });
   }

@@ -143,6 +143,26 @@ export async function listDefinitions(orgId: string): Promise<KpiDefinition[]> {
 }
 
 /**
+ * Yön çıkarımı: kritik/uyarı eşiğinin hedefe göre konumu. Düşük değer kötüyse
+ * true. Eşikler yoksa güvenli varsayım düşük değerin kötü olduğudur.
+ * Deterministik ve saf; KPI değerlendirme ile sinyal sınıflandırma aynı
+ * kuralı paylaşır.
+ */
+export function lowerIsWorseValue(
+  warnThreshold: number | null,
+  criticalThreshold: number | null,
+  target: number | null
+): boolean {
+  return criticalThreshold !== null && warnThreshold !== null
+    ? criticalThreshold <= warnThreshold
+    : criticalThreshold !== null && target !== null
+      ? criticalThreshold <= target
+      : warnThreshold !== null && target !== null
+        ? warnThreshold <= target
+        : true;
+}
+
+/**
  * Bir KPI değerini org'un kayıtlı eşiklerine karşı deterministik olarak
  * değerlendirir. Yön (düşük mü kötü, yüksek mi kötü) kritik eşiğin uyarı
  * eşiğine/hedefe göre konumundan çıkarılır — modele sayı ürettirilmez.
@@ -163,14 +183,7 @@ export async function evaluateAgainstThresholds(
     return { status: "unknown", definition };
   }
 
-  const lowerIsWorse =
-    criticalThreshold !== null && warnThreshold !== null
-      ? criticalThreshold <= warnThreshold
-      : criticalThreshold !== null && target !== null
-        ? criticalThreshold <= target
-        : warnThreshold !== null && target !== null
-          ? warnThreshold <= target
-          : true;
+  const lowerIsWorse = lowerIsWorseValue(warnThreshold, criticalThreshold, target);
 
   if (lowerIsWorse) {
     if (criticalThreshold !== null && value <= criticalThreshold) return { status: "critical", definition };

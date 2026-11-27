@@ -51,7 +51,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession } = await import("../src/lib/auth/core");
 const { insertCases } = await import("../src/lib/db/repos/decisions");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { POST: decisionsPOST } = await import("../src/app/api/decisions/route");
 const { GET: causalGET, POST: causalPOST } = await import("../src/app/api/causal/route");
 const { GET: kpiGET } = await import("../src/app/api/kpi-definitions/route");
@@ -197,7 +197,7 @@ describe("API oturum + izin + org kontrolü", () => {
 
     it("GET /api/outcomes", async () => {
       nextHeaders.__setTestCookie(SESSION_COOKIE, undefined);
-      const res = await outcomesGET();
+      const res = await outcomesGET(getRequest("/api/outcomes"));
       expect(res.status).toBe(401);
     });
 

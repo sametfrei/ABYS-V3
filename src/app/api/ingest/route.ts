@@ -10,7 +10,7 @@ import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { parseTable } from "@/lib/data/parse-table";
 import { sectorIdSchema } from "@/lib/data/route-schemas";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { localizedError } from "@/lib/api-i18n";
 
 export const maxDuration = 600;

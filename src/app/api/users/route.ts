@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { getSession, hashPassword, type SessionInfo } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { parseBody } from "@/lib/validation";
 import { roleSchema } from "@/lib/data/route-schemas";
 import { passwordSchema } from "@/lib/password-policy";
@@ -32,16 +32,15 @@ const createUserSchema = z.object({
   password: passwordSchema,
 });
 
-async function requireManageUsers(req?: NextRequest): Promise<
+async function requireManageUsers(req: NextRequest): Promise<
   { ok: true; session: SessionInfo } | { ok: false; response: NextResponse }
 > {
-  const localeRequest = req ?? new NextRequest("http://localhost/api/users");
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) {
     return {
       ok: false,
-      response: localizedError(localeRequest, "api.auth.sessionRequired", 401),
+      response: localizedError(req, "api.auth.sessionRequired", 401),
     };
   }
   if (!hasPermission(session.role, "manage_users")) {
@@ -54,7 +53,7 @@ async function requireManageUsers(req?: NextRequest): Promise<
 }
 
 /** GET /api/users — kurumun kullanıcıları (parola hash'i asla dönmez). */
-export async function GET(req?: NextRequest) {
+export async function GET(req: NextRequest) {
   const auth = await requireManageUsers(req);
   if (!auth.ok) return auth.response;
 

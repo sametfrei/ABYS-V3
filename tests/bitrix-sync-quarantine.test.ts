@@ -60,7 +60,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 };
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { POST: syncRoute } = await import(
   "../src/app/api/integrations/bitrix24/sync/route"
 );

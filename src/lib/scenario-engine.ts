@@ -17,6 +17,12 @@ export interface ScenarioVariable {
   min: number;
   max: number;
   step: number;
+  /**
+   * Bu değişkenin gerçek KPI serisinden beslenebileceği açık etiket adları.
+   * Yalnızca birebir (büyük/küçük harf duyarsız) eşleşme kabul edilir; bulanık
+   * eşleştirme yapılmaz, aksi halde ölçülmemiş değer ölçülmüş gibi sunulur.
+   */
+  kpiAliases?: string[];
 }
 
 export interface ScenarioTemplate {
@@ -36,9 +42,36 @@ const AVIATION_TURNAROUND: ScenarioTemplate = {
   description:
     "Rötar dakikası ve etkilenen bağlantı sayısına göre doğrudan maliyet ve yayılma etkisi.",
   variables: [
-    { id: "delayMin", label: "Rötar süresi", unit: "dk", value: 30, min: 0, max: 180, step: 5 },
-    { id: "connections", label: "Etkilenen bağlantı uçuşu", unit: "adet", value: 2, min: 0, max: 20, step: 1 },
-    { id: "rushBags", label: "Yetişmeyen transfer bagajı", unit: "adet", value: 10, min: 0, max: 200, step: 5 },
+    {
+      id: "delayMin",
+      label: "Rötar süresi",
+      unit: "dk",
+      value: 30,
+      min: 0,
+      max: 180,
+      step: 5,
+      kpiAliases: ["Rötar süresi", "Rötar süresi (dk)", "delay_minutes"],
+    },
+    {
+      id: "connections",
+      label: "Etkilenen bağlantı uçuşu",
+      unit: "adet",
+      value: 2,
+      min: 0,
+      max: 20,
+      step: 1,
+      kpiAliases: ["Etkilenen bağlantı uçuşu", "Etkilenen bağlantı sayısı"],
+    },
+    {
+      id: "rushBags",
+      label: "Yetişmeyen transfer bagajı",
+      unit: "adet",
+      value: 10,
+      min: 0,
+      max: 200,
+      step: 5,
+      kpiAliases: ["Yetişmeyen transfer bagajı", "Yetişmeyen bagaj sayısı"],
+    },
   ],
   formulaText:
     "doğrudan = rötar_dk × 100 €/dk · yayılma = bağlantı × 0.4 × rötar_dk × 100 €/dk · bagaj = adet × 50 €",
@@ -65,9 +98,36 @@ const MANUFACTURING_DOWNTIME: ScenarioTemplate = {
   label: "Hat duruşu ve teslim gecikmesi",
   description: "Duruş süresi ve ceza oranına göre maliyet ile teslim gecikmesi etkisi.",
   variables: [
-    { id: "downtimeHours", label: "Duruş süresi", unit: "saat", value: 4, min: 0, max: 72, step: 1 },
-    { id: "contractValue", label: "Sözleşme bedeli", unit: "TL", value: 500000, min: 0, max: 10000000, step: 50000 },
-    { id: "delayWeeks", label: "Teslim gecikmesi", unit: "hafta", value: 1, min: 0, max: 12, step: 1 },
+    {
+      id: "downtimeHours",
+      label: "Duruş süresi",
+      unit: "saat",
+      value: 4,
+      min: 0,
+      max: 72,
+      step: 1,
+      kpiAliases: ["Duruş süresi", "Duruş süresi (saat)", "Makine duruş süresi", "downtime_hours"],
+    },
+    {
+      id: "contractValue",
+      label: "Sözleşme bedeli",
+      unit: "TL",
+      value: 500000,
+      min: 0,
+      max: 10000000,
+      step: 50000,
+      kpiAliases: ["Sözleşme bedeli", "contract_value"],
+    },
+    {
+      id: "delayWeeks",
+      label: "Teslim gecikmesi",
+      unit: "hafta",
+      value: 1,
+      min: 0,
+      max: 12,
+      step: 1,
+      kpiAliases: ["Teslim gecikmesi", "Teslim gecikmesi (hafta)"],
+    },
   ],
   formulaText: "duruş = saat × 5.000 TL/saat · ceza = sözleşme × %0,5 × hafta",
   limitations: [
@@ -90,8 +150,26 @@ const LOGISTICS_ETA: ScenarioTemplate = {
   label: "ETA sapması ve ağ etkisi",
   description: "Ana hat gecikmesinin dağıtım turlarına yayılması ve bekleme maliyeti.",
   variables: [
-    { id: "delayHours", label: "Ana hat gecikmesi", unit: "saat", value: 2, min: 0, max: 24, step: 1 },
-    { id: "routes", label: "Etkilenen dağıtım turu", unit: "adet", value: 3, min: 0, max: 30, step: 1 },
+    {
+      id: "delayHours",
+      label: "Ana hat gecikmesi",
+      unit: "saat",
+      value: 2,
+      min: 0,
+      max: 24,
+      step: 1,
+      kpiAliases: ["Ana hat gecikmesi", "Ana hat gecikmesi (saat)"],
+    },
+    {
+      id: "routes",
+      label: "Etkilenen dağıtım turu",
+      unit: "adet",
+      value: 3,
+      min: 0,
+      max: 30,
+      step: 1,
+      kpiAliases: ["Etkilenen dağıtım turu", "Etkilenen rota sayısı"],
+    },
   ],
   formulaText: "bekleme = saat × 400 TL/saat · ağ etkisi = gecikme × 1.7 (ampirik yayılma)",
   limitations: [
@@ -113,9 +191,36 @@ const GENERIC_CAPACITY: ScenarioTemplate = {
   label: "Kapasite açığı etkisi",
   description: "Eksik kapasitenin iş yükü ve gecikmeye etkisi (sektör-bağımsız).",
   variables: [
-    { id: "missingStaff", label: "Eksik personel", unit: "kişi", value: 2, min: 0, max: 50, step: 1 },
-    { id: "hours", label: "Süre", unit: "saat", value: 8, min: 1, max: 72, step: 1 },
-    { id: "hourlyCost", label: "Saatlik maliyet", unit: "TL/saat", value: 300, min: 0, max: 5000, step: 50 },
+    {
+      id: "missingStaff",
+      label: "Eksik personel",
+      unit: "kişi",
+      value: 2,
+      min: 0,
+      max: 50,
+      step: 1,
+      kpiAliases: ["Eksik personel", "Eksik personel sayısı"],
+    },
+    {
+      id: "hours",
+      label: "Süre",
+      unit: "saat",
+      value: 8,
+      min: 1,
+      max: 72,
+      step: 1,
+      kpiAliases: ["Süre", "Süre (saat)"],
+    },
+    {
+      id: "hourlyCost",
+      label: "Saatlik maliyet",
+      unit: "TL/saat",
+      value: 300,
+      min: 0,
+      max: 5000,
+      step: 50,
+      kpiAliases: ["Saatlik maliyet", "Saatlik maliyet (TL/saat)"],
+    },
   ],
   formulaText: "kayıp kapasite = eksik_kişi × saat · maliyet = kayıp × saatlik_maliyet",
   limitations: ["Verimlilik kaybı doğrusal varsayıldı; gerçekte eşik etkileri olabilir."],

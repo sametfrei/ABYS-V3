@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
 import { loadProfile } from "@/lib/profile";
 import { useStored } from "@/lib/use-stored";
@@ -49,6 +50,79 @@ function codeLabel(locale: Locale, prefix: string, code: string): string {
 
 function formatNumber(value: number, locale: Locale): string {
   return value.toLocaleString(locale);
+}
+
+interface DbSignalRow {
+  id: string;
+  category_id: string;
+  severity: string;
+  title: string;
+  payload: Record<string, unknown>;
+  created_at: string;
+}
+
+const DB_SEVERITIES: Signal["severity"][] = ["critical", "warning", "info", "healthy"];
+
+/** Kayıtlı risk sinyalini mevcut kart görünümüne çevirir; sayı uydurmaz. */
+function dbSignalToSignal(row: DbSignalRow): Signal {
+  const payload = row.payload as {
+    kind?: string;
+    label?: string;
+    metricValue?: number;
+    baseline?: number;
+    score?: number;
+    direction?: string;
+    sampleSize?: number;
+    seriesPoints?: number;
+    classificationReason?: string;
+    series?: {
+      datasetLabel?: string | null;
+      entity?: string | null;
+      externalId?: string | null;
+      period?: string | null;
+      periodKnown?: boolean;
+      reportingFrequency?: string | null;
+      definitionHash?: string | null;
+      definitionUnit?: string | null;
+    };
+    timestamp?: string;
+    note?: string;
+  };
+  const isKpiSignal = payload.kind === "kpi_anomaly" || payload.kind === "kpi_opportunity";
+  const scope = [
+    payload.series?.entity,
+    payload.series?.externalId,
+    payload.series?.period,
+  ]
+    .filter((value) => value !== null && value !== undefined && value !== "")
+    .join(" · ");
+  const sources = isKpiSignal
+    ? [
+        `${payload.label}: ${payload.metricValue}`,
+        `Taban: ${payload.baseline} · Skor: ${payload.score} (${payload.direction})`,
+        `Analiz penceresi: ${payload.sampleSize} · seri: ${payload.seriesPoints ?? payload.sampleSize}`,
+        scope ? `Kapsam: ${scope}` : `Kapsam: ${payload.series?.datasetLabel ?? "veri seti"}`,
+        payload.series?.period == null ? "Gözlem dönemi: bilinmiyor" : "",
+        payload.series?.reportingFrequency
+          ? `Raporlama sıklığı: ${payload.series.reportingFrequency}`
+          : "",
+        payload.series?.definitionUnit ? `Birim: ${payload.series.definitionUnit}` : "",
+        payload.classificationReason ? `Sınıf: ${payload.classificationReason}` : "",
+        "Yöntem: medyan/MAD (deterministik)",
+      ].filter((line) => line.length > 0 && !line.includes("undefined"))
+    : [payload.note ?? row.category_id];
+  return {
+    id: row.id,
+    categoryId: row.category_id,
+    categoryLabel: isKpiSignal ? "KPI" : row.category_id,
+    severity: DB_SEVERITIES.includes(row.severity as Signal["severity"])
+      ? (row.severity as Signal["severity"])
+      : "warning",
+    title: row.title,
+    sources,
+    isReal: false,
+    dataAsOf: payload.timestamp ?? row.created_at,
+  };
 }
 
 /** TaisRisk kaydını mevcut Signal görünümüne çevirir (kanıt kayıtları KAYNAKLAR olarak listelenir). */
@@ -103,6 +177,23 @@ export default function AlertsPage() {
   const isTais = session?.orgCode === "tais-ikf-demo";
   const profile = session ? null : localProfile;
   const [taisRisks, setTaisRisks] = useState<TaisRisk[] | null>(null);
+  const [dbSignals, setDbSignals] = useState<Signal[] | null>(null);
+  useEffect(() => {
+    if (!session || isTais) return;
+    let cancelled = false;
+    fetch("/api/signals", { cache: "no-store" })
+      .then(async (res) => (res.ok ? ((await res.json()).signals as DbSignalRow[]) : []))
+      .then((rows) => {
+        if (!cancelled) setDbSignals(rows.map(dbSignalToSignal));
+      })
+      .catch(() => {
+        if (!cancelled) setDbSignals([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, isTais]);
+
   useEffect(() => {
     if (!isTais) return;
     let cancelled = false;
@@ -121,9 +212,14 @@ export default function AlertsPage() {
 
   const signals = isTais
     ? (taisRisks ?? []).map((risk) => taisRiskToSignal(risk, locale))
-    : profile
-      ? sectorSignals
-      : [];
+    : session
+      ? (dbSignals ?? [])
+      : profile
+        ? sectorSignals
+        : [];
+  const [caseBusy, setCaseBusy] = useState(false);
+  const [caseMessage, setCaseMessage] = useState("");
+  const [caseError, setCaseError] = useState("");
   const [statusOverrides, setStatusOverrides] = useState<Record<string, SignalStatus>>({});
   const taisStatuses = Object.fromEntries((taisRisks ?? []).map((risk) => [risk.id, risk.status]));
   const statuses = isTais ? taisStatuses : { ...(stored?.statuses ?? {}), ...statusOverrides };
@@ -132,7 +228,7 @@ export default function AlertsPage() {
   if (session === undefined) return null;
 
   function setStatus(signalId: string, status: SignalStatus) {
-    if (isTais) return;
+    if (isTais || session) return;
     upsertEntity<HandledSignal>("handled-signals", {
       id: signalId,
       createdAt: new Date().toISOString(),
@@ -140,6 +236,35 @@ export default function AlertsPage() {
       status,
     });
     setStatusOverrides((s) => ({ ...s, [signalId]: status }));
+  }
+
+  async function generateCaseDrafts() {
+    setCaseBusy(true);
+    setCaseMessage("");
+    setCaseError("");
+    try {
+      const res = await fetch("/api/decision-cases/from-signals", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(
+          body.error ??
+            formatMessage(locale, "alerts.caseDraftFailedHttp", { status: res.status })
+        );
+      }
+      setCaseMessage(
+        formatMessage(locale, "alerts.caseDraftResult", {
+          generated: body.generated ?? 0,
+          existing: body.existing ?? 0,
+          skipped: body.skipped ?? 0,
+        })
+      );
+    } catch (err) {
+      setCaseError(
+        err instanceof Error ? err.message : t(locale, "alerts.caseDraftFailed")
+      );
+    } finally {
+      setCaseBusy(false);
+    }
   }
 
   return (
@@ -152,12 +277,39 @@ export default function AlertsPage() {
       />
 
       <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl space-y-3">
+        {session && !isTais && (
+          <div className="rounded-xl border border-abys-accent/25 bg-white/70 p-4 flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => void generateCaseDrafts()}
+              disabled={caseBusy}
+              className="text-sm rounded-full bg-abys-navy text-white px-4 py-1.5 hover:opacity-90 disabled:opacity-40"
+            >
+              {caseBusy
+                ? t(locale, "alerts.generatingCaseDrafts")
+                : t(locale, "alerts.generateCaseDrafts")}
+            </button>
+            <Link
+              href="/dashboard/decisions"
+              className="text-xs text-abys-accent hover:underline"
+            >
+              {t(locale, "alerts.openDecisions")}
+            </Link>
+            {caseMessage && (
+              <span className="text-[11px] text-abys-muted">{caseMessage}</span>
+            )}
+            {caseError && (
+              <span className="text-[11px] text-abys-critical">{caseError}</span>
+            )}
+          </div>
+        )}
         {isTais && taisRisks === null && (
           <p className="text-sm text-abys-muted">{t(locale, "alerts.loadingTais")}</p>
         )}
-        {signals.length === 0 && !(isTais && taisRisks === null) && (
-          <p className="text-sm text-abys-muted">{t(locale, "alerts.empty")}</p>
-        )}
+        {signals.length === 0 &&
+          !(isTais && taisRisks === null) &&
+          !(session && dbSignals === null) && (
+            <p className="text-sm text-abys-muted">{t(locale, "alerts.empty")}</p>
+          )}
         {signals.map((s) => {
           const status = statuses[s.id] ?? "open";
           const meta = SEVERITY_META[s.severity];
@@ -233,6 +385,10 @@ export default function AlertsPage() {
                     <p className="text-xs text-abys-muted mb-5">
                       {t(locale, "alerts.taisStatusNote")}
                     </p>
+                  ) : session ? (
+                    <p className="text-xs text-abys-muted mb-5">
+                      {t(locale, "alerts.dbSignalNote")}
+                    </p>
                   ) : (
                     <div className="flex gap-2 mb-5">
                       <StatusButton current={status} target="handled" onClick={() => setStatus(s.id, "handled")} />
@@ -244,7 +400,7 @@ export default function AlertsPage() {
                     </div>
                   )}
 
-                   {!isTais && <WarRoom signalId={s.id} />}
+                   {!isTais && !session && <WarRoom signalId={s.id} />}
                 </div>
               )}
             </div>

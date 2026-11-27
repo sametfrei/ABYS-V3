@@ -3,13 +3,20 @@ import type { Transaction } from "@electric-sql/pglite";
 import { getDb, migrate } from "../client";
 import type { CanonicalRecord, RestConnectorConfig } from "@/lib/connectors/types";
 import { canonicalFieldName } from "@/lib/connectors/contracts";
-import { calculateKpiSpec } from "@/lib/industry/kpi-calculators";
-import { listKpiSpecCandidates, resolveKpiSpec } from "@/lib/industry/packs";
+import { calculateKpiSpec, hasKpiCalculator } from "@/lib/industry/kpi-calculators";
+import { getPack, listKpiSpecCandidates, resolveKpiSpec } from "@/lib/industry/packs";
+import type { KpiSpec } from "@/lib/industry/types";
+import { getConfirmedBusinessProfile, getConfirmedBusinessProfileInTx } from "./business-context";
+import { listKpiDefinitionSnapshots } from "./kpi-definition-provenance";
 
 export interface ConnectorPromotionResult {
   kpiObservationCount: number;
   processEventCount: number;
   computedKpiObservationCount: number;
+  /** Onaylanmış iş profilinden otomatik seçilip hesaplanan KPI gözlemleri. */
+  autoComputedKpiObservationCount: number;
+  /** Otomatik seçim için uygun bulunan KPI tanımı sayısı. */
+  autoSelectedKpiCount: number;
   skippedKpiCount: number;
   skippedComputedKpiCount: number;
   skippedEventCount: number;
@@ -63,10 +70,13 @@ export async function promoteConnectorRecords(params: {
 }): Promise<ConnectorPromotionResult> {
   if (!params.tx) await migrate();
   const db = params.tx ?? getDb();
+  const definitionSnapshots = await listKpiDefinitionSnapshots(db, params.orgId);
   const warnings: string[] = [];
   let kpiObservationCount = 0;
   let processEventCount = 0;
   let computedKpiObservationCount = 0;
+  let autoComputedKpiObservationCount = 0;
+  let autoSelectedKpiCount = 0;
   let skippedKpiCount = 0;
   let skippedComputedKpiCount = 0;
   let skippedEventCount = 0;
@@ -76,6 +86,8 @@ export async function promoteConnectorRecords(params: {
       kpiObservationCount,
       processEventCount,
       computedKpiObservationCount,
+      autoComputedKpiObservationCount,
+      autoSelectedKpiCount,
       skippedKpiCount,
       skippedComputedKpiCount,
       skippedEventCount,
@@ -121,25 +133,94 @@ export async function promoteConnectorRecords(params: {
       )
     ),
   ];
-  const computedKpiEntries = Object.entries(params.config.computedKpiMap ?? {}).flatMap(
-    ([key, label]) => {
-      const located = resolveKpiSpec(key, configuredFields);
-      if (!located) {
-        const [packId, id] = key.includes(":") ? key.split(":", 2) : [undefined, key];
-        const candidates = listKpiSpecCandidates(id).filter(
-          (candidate) => !packId || candidate.packId === packId
-        );
+  interface ComputedKpiEntry {
+    key: string;
+    label: string;
+    spec: KpiSpec;
+    automatic: boolean;
+  }
+
+  const explicitComputedEntries: ComputedKpiEntry[] = Object.entries(
+    params.config.computedKpiMap ?? {}
+  ).flatMap(([key, label]) => {
+    const located = resolveKpiSpec(key, configuredFields);
+    if (!located) {
+      const [packId, id] = key.includes(":") ? key.split(":", 2) : [undefined, key];
+      const candidates = listKpiSpecCandidates(id).filter(
+        (candidate) => !packId || candidate.packId === packId
+      );
+      warn(
+        warnings,
+        candidates.length > 1
+          ? `Hesaplanan KPI '${key}' belirsiz; packId:kpiId biçimi gerekli, atlandı.`
+          : `Hesaplanan KPI '${key}' katalogda bulunamadı; atlandı.`
+      );
+      return [];
+    }
+    return [{ key, label, spec: located.spec, automatic: false }];
+  });
+
+  /**
+   * Onaylanmış iş profili varsa ve operatör açık bir `computedKpiMap`
+   * tanımlamadıysa, paket KPI'ları otomatik seçilir. Seçim yalnızca gerekli
+   * alanların TAMAMI aynı varlığın kayıtlarında birlikte bulunduğunda yapılır;
+   * alanlar varlıklara dağılmışsa KPI hesaplanabilir sayılmaz.
+   */
+  const autoEntriesByEntity = new Map<string, ComputedKpiEntry[]>();
+  const hasExplicitComputedMap = Object.keys(params.config.computedKpiMap ?? {}).length > 0;
+  if (!hasExplicitComputedMap) {
+    const profile = params.tx
+      ? await getConfirmedBusinessProfileInTx(params.tx, params.orgId)
+      : await getConfirmedBusinessProfile(params.orgId);
+    const pack = profile ? getPack(profile.industryPackId) : undefined;
+    if (pack) {
+      // Operatörün elle yazdığı tanım korunur. Aynı adda bir KPI'ı paket
+      // formülüyle otomatik hesaplamak, kaydedilen değerin formül kökenini
+      // yanlış gösterir; bu yüzden otomatik seçimde atlanır.
+      const manualNames = new Set(
+        [...definitionSnapshots.values()]
+          .filter((definition) => definition.source === "manual")
+          .map((definition) => definition.name)
+      );
+      const manuallyOwned = pack.kpis.filter((spec) => manualNames.has(spec.name));
+      if (manuallyOwned.length > 0) {
         warn(
           warnings,
-          candidates.length > 1
-            ? `Hesaplanan KPI '${key}' belirsiz; packId:kpiId biçimi gerekli, atlandı.`
-            : `Hesaplanan KPI '${key}' katalogda bulunamadı; atlandı.`
+          `Manuel tanımlı KPI'lar otomatik hesaplanmadı: ${manuallyOwned
+            .map((spec) => spec.name)
+            .join(", ")}.`
         );
-        return [];
       }
-      return [{ key, label, spec: located.spec }];
+
+      const entityFields = new Map<string, Set<string>>();
+      for (const record of params.records) {
+        const fields = entityFields.get(record.entity) ?? new Set<string>();
+        for (const field of Object.keys(record.fields)) fields.add(field);
+        entityFields.set(record.entity, fields);
+      }
+      for (const [entity, fields] of entityFields) {
+        const entries: ComputedKpiEntry[] = pack.kpis
+          .filter((spec) => !manualNames.has(spec.name))
+          .filter((spec) => hasKpiCalculator(spec.functionName))
+          .filter((spec) => spec.requiredFields.every((field) => fields.has(field)))
+          .map((spec) => ({
+            key: `${pack.id}:${spec.id}`,
+            label: spec.name,
+            spec,
+            automatic: true,
+          }));
+        if (entries.length === 0) continue;
+        autoEntriesByEntity.set(entity, entries);
+        autoSelectedKpiCount += entries.length;
+      }
+      if (autoSelectedKpiCount > 0) {
+        warn(
+          warnings,
+          `Onaylanmış iş profili (${pack.id} v${pack.version}): ${autoSelectedKpiCount} KPI otomatik hesaplama için seçildi.`
+        );
+      }
     }
-  );
+  }
   for (const record of params.records) {
     for (const [field, label] of kpiEntries) {
       const canonicalField = canonicalFieldName(params.config.entity, field);
@@ -168,21 +249,50 @@ export async function promoteConnectorRecords(params: {
         field,
         observedAt
       );
+      const definition = definitionSnapshots.get(label);
       await db.query(
-        `INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO kpi_values
+           (id, org_id, dataset_id, label, value, created_at,
+            definition_id, definition_hash, definition_version,
+            entity, external_id, period)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          ON CONFLICT (id) DO UPDATE
            SET dataset_id = EXCLUDED.dataset_id,
                label = EXCLUDED.label,
                value = EXCLUDED.value,
-               created_at = EXCLUDED.created_at
+               created_at = EXCLUDED.created_at,
+               definition_id = EXCLUDED.definition_id,
+               definition_hash = EXCLUDED.definition_hash,
+               definition_version = EXCLUDED.definition_version,
+               entity = EXCLUDED.entity,
+               external_id = EXCLUDED.external_id,
+               period = EXCLUDED.period
          RETURNING id`,
-        [id, params.orgId, datasetId, label, String(value), observedAt]
+        [
+          id,
+          params.orgId,
+          datasetId,
+          label,
+          String(value),
+          observedAt,
+          definition?.id ?? null,
+          definition?.formulaHash ?? null,
+          definition?.sourceRef ?? null,
+          record.entity,
+          record.externalId,
+          // Gözlem dönemi connector kaydında yoksa NULL kalır; tanımın
+          // update_frequency değeri raporlama sıklığıdır, dönem değildir.
+          null,
+        ]
       );
       kpiObservationCount++;
     }
 
-    for (const entry of computedKpiEntries) {
+    const recordComputedEntries = [
+      ...explicitComputedEntries,
+      ...(autoEntriesByEntity.get(record.entity) ?? []),
+    ];
+    for (const entry of recordComputedEntries) {
       const calculation = calculateKpiSpec(entry.spec, record.fields);
       if (calculation.value === null) {
         skippedComputedKpiCount++;
@@ -215,17 +325,43 @@ export async function promoteConnectorRecords(params: {
         entry.key,
         observedAt
       );
+      const definition = definitionSnapshots.get(entry.label);
       await db.query(
-        `INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO kpi_values
+           (id, org_id, dataset_id, label, value, created_at,
+            definition_id, definition_hash, definition_version,
+            entity, external_id, period)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          ON CONFLICT (id) DO UPDATE
            SET dataset_id = EXCLUDED.dataset_id,
                label = EXCLUDED.label,
                value = EXCLUDED.value,
-               created_at = EXCLUDED.created_at`,
-        [id, params.orgId, datasetId, entry.label, String(calculation.value), observedAt]
+               created_at = EXCLUDED.created_at,
+               definition_id = EXCLUDED.definition_id,
+               definition_hash = EXCLUDED.definition_hash,
+               definition_version = EXCLUDED.definition_version,
+               entity = EXCLUDED.entity,
+               external_id = EXCLUDED.external_id,
+               period = EXCLUDED.period`,
+        [
+          id,
+          params.orgId,
+          datasetId,
+          entry.label,
+          String(calculation.value),
+          observedAt,
+          definition?.id ?? null,
+          definition?.formulaHash ?? null,
+          definition?.sourceRef ?? null,
+          record.entity,
+          record.externalId,
+          // Gözlem dönemi connector kaydında yoksa NULL kalır; tanımın
+          // update_frequency değeri raporlama sıklığıdır, dönem değildir.
+          null,
+        ]
       );
       computedKpiObservationCount++;
+      if (entry.automatic) autoComputedKpiObservationCount++;
       kpiObservationCount++;
     }
 
@@ -288,6 +424,8 @@ export async function promoteConnectorRecords(params: {
     kpiObservationCount,
     processEventCount,
     computedKpiObservationCount,
+    autoComputedKpiObservationCount,
+    autoSelectedKpiCount,
     skippedKpiCount,
     skippedComputedKpiCount,
     skippedEventCount,

@@ -1098,4 +1098,154 @@ export const MIGRATIONS: Migration[] = [
       ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_agent TEXT;
     `,
   },
+  {
+    id: 37,
+    name: "KPI tabanli sonuc olcumu: dogrulanmis kanit zinciri",
+    sql: `
+      -- Gerçekleşen sonucu insan beyanından ayırır: aynı KPI'nın eylem
+      -- öncesi ve sonrası gerçek gözlemleri, veri seti kökeni ve yöntemle
+      -- birlikte saklanır. Karar başına tek doğrulanmış ölçüm yazılabilir;
+      -- böylece ledger'da mükerrer/çelişkili kanıt oluşmaz.
+      CREATE TABLE decision_kpi_measurements (
+        id                TEXT PRIMARY KEY,
+        org_id            TEXT NOT NULL REFERENCES organizations(id),
+        decision_id       TEXT NOT NULL REFERENCES decision_records(id),
+        outcome_id        TEXT NOT NULL REFERENCES outcomes(id),
+        kpi_label         TEXT NOT NULL,
+        direction         TEXT NOT NULL CHECK (direction IN ('lower_is_better', 'higher_is_better')),
+        before_value      NUMERIC NOT NULL,
+        before_at         TIMESTAMPTZ NOT NULL,
+        before_dataset_id TEXT NOT NULL REFERENCES datasets(id),
+        before_source     TEXT,
+        after_value       NUMERIC NOT NULL,
+        after_at          TIMESTAMPTZ NOT NULL,
+        after_dataset_id  TEXT NOT NULL REFERENCES datasets(id),
+        after_source      TEXT,
+        delta             NUMERIC NOT NULL,
+        pct_change        NUMERIC,
+        result            TEXT NOT NULL CHECK (result IN ('improved', 'unchanged', 'worsened')),
+        baseline_cutoff   TIMESTAMPTZ NOT NULL,
+        measurement_at    TIMESTAMPTZ NOT NULL,
+        method            TEXT NOT NULL,
+        provenance        JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE UNIQUE INDEX decision_kpi_measurement_once
+        ON decision_kpi_measurements(org_id, decision_id);
+      CREATE UNIQUE INDEX decision_kpi_measurement_outcome
+        ON decision_kpi_measurements(org_id, outcome_id);
+      CREATE INDEX decision_kpi_measurement_org
+        ON decision_kpi_measurements(org_id, created_at DESC);
+    `,
+  },
+  {
+    id: 38,
+    name: "KPI tanim snapshot'i ve insan onayi provenance'i",
+    sql: `
+      -- Gözlem, hangi KPI tanımının hangi formül/birim/kaynak sürümüyle
+      -- üretildiğini taşır. Eski satırlar NULL kalır; bilinmeyen sürüm
+      -- tahminle doldurulmaz ve bu gözlemler doğrulanmış ölçümde kullanılmaz.
+      ALTER TABLE kpi_values ADD COLUMN IF NOT EXISTS definition_id TEXT;
+      ALTER TABLE kpi_values ADD COLUMN IF NOT EXISTS definition_hash TEXT;
+      ALTER TABLE kpi_values ADD COLUMN IF NOT EXISTS definition_version TEXT;
+      CREATE INDEX IF NOT EXISTS kpi_values_definition_provenance
+        ON kpi_values(org_id, label, definition_hash);
+
+      -- Ölçüm anındaki tanımın değiştirilemez tam snapshot'ı.
+      ALTER TABLE decision_kpi_measurements
+        ADD COLUMN IF NOT EXISTS definition_snapshot JSONB;
+      ALTER TABLE decision_kpi_measurements
+        ADD COLUMN IF NOT EXISTS definition_hash TEXT;
+      ALTER TABLE decision_kpi_measurements
+        ADD COLUMN IF NOT EXISTS definition_version TEXT;
+
+      CREATE OR REPLACE FUNCTION prevent_decision_kpi_measurement_mutation()
+      RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'decision_kpi_measurements append-only: UPDATE/DELETE yasak';
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER decision_kpi_measurements_append_only
+        BEFORE UPDATE OR DELETE ON decision_kpi_measurements
+        FOR EACH ROW EXECUTE FUNCTION prevent_decision_kpi_measurement_mutation();
+
+      -- İnsan onayı: kim, hangi org, hangi rol/yetki, ne zaman, hangi audit
+      -- kaydıyla. Eski satırlar NULL kalır ve doğrulanmış ölçümde kullanılmaz.
+      ALTER TABLE decision_records ADD COLUMN IF NOT EXISTS decided_by_id TEXT;
+      ALTER TABLE decision_records ADD COLUMN IF NOT EXISTS decided_role TEXT;
+      ALTER TABLE decision_records ADD COLUMN IF NOT EXISTS approval_permission TEXT;
+      ALTER TABLE decision_records ADD COLUMN IF NOT EXISTS approval_source TEXT
+        CHECK (approval_source IS NULL OR approval_source IN ('human', 'system'));
+      ALTER TABLE decision_records ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
+      ALTER TABLE decision_records ADD COLUMN IF NOT EXISTS approval_audit_id TEXT;
+      CREATE INDEX IF NOT EXISTS decision_records_approval
+        ON decision_records(org_id, approval_source, approved_at DESC);
+
+      -- Onay provenance'ı bir kez yazıldıktan sonra sessizce değiştirilemez.
+      -- NULL'dan doldurma (eski kayıt migrasyonu) serbesttir; dolu alan değişmez.
+      CREATE OR REPLACE FUNCTION prevent_decision_approval_mutation()
+      RETURNS trigger AS $$
+      BEGIN
+        IF OLD.decided_by_id IS NOT NULL AND (
+          OLD.decided_by_id IS DISTINCT FROM NEW.decided_by_id OR
+          OLD.decided_role IS DISTINCT FROM NEW.decided_role OR
+          OLD.approval_permission IS DISTINCT FROM NEW.approval_permission OR
+          OLD.approval_source IS DISTINCT FROM NEW.approval_source OR
+          OLD.approved_at IS DISTINCT FROM NEW.approved_at OR
+          OLD.approval_audit_id IS DISTINCT FROM NEW.approval_audit_id
+        ) THEN
+          RAISE EXCEPTION 'decision approval provenance immutable';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER decision_approval_immutable
+        BEFORE UPDATE ON decision_records
+        FOR EACH ROW EXECUTE FUNCTION prevent_decision_approval_mutation();
+    `,
+  },
+  {
+    id: 39,
+    name: "onay provenance'i: sistem kayitlarini da dondur",
+    sql: `
+      -- Migration 38 yalnızca decided_by_id doluysa donduruyordu. Sistem
+      -- kayıtlarında decided_by_id NULL, approval_source='system' olabilir;
+      -- bunların sonradan 'human' yapılması da engellenir. Legacy tamamen
+      -- NULL satırlarda ilk doldurma serbest kalır.
+      CREATE OR REPLACE FUNCTION prevent_decision_approval_mutation()
+      RETURNS trigger AS $$
+      BEGIN
+        IF (OLD.decided_by_id IS NOT NULL OR OLD.approval_source IS NOT NULL) AND (
+          OLD.decided_by_id IS DISTINCT FROM NEW.decided_by_id OR
+          OLD.decided_role IS DISTINCT FROM NEW.decided_role OR
+          OLD.approval_permission IS DISTINCT FROM NEW.approval_permission OR
+          OLD.approval_source IS DISTINCT FROM NEW.approval_source OR
+          OLD.approved_at IS DISTINCT FROM NEW.approved_at OR
+          OLD.approval_audit_id IS DISTINCT FROM NEW.approval_audit_id
+        ) THEN
+          RAISE EXCEPTION 'decision approval provenance immutable';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `,
+  },
+  {
+    id: 40,
+    name: "KPI gozlem kapsami: entity, dis kimlik ve donem",
+    sql: `
+      -- Aynı etiketli farklı varlık/kaynak/dönem gözlemleri tek seride
+      -- birleşmemelidir. period GÖZLEM DÖNEMİDİR (ör. "2026-Q1"); tanımın
+      -- update_frequency değeri raporlama sıklığıdır ve buraya yazılmaz.
+      -- Eski satırlar NULL kalır; bilinmeyen kapsam/dönem tahminle
+      -- doldurulmaz ve connector kaynaklı eski NULL kapsamlar analiz dışı kalır.
+      ALTER TABLE kpi_values ADD COLUMN IF NOT EXISTS entity TEXT;
+      ALTER TABLE kpi_values ADD COLUMN IF NOT EXISTS external_id TEXT;
+      ALTER TABLE kpi_values ADD COLUMN IF NOT EXISTS period TEXT;
+      CREATE INDEX IF NOT EXISTS kpi_values_series_identity
+        ON kpi_values(org_id, label, dataset_id, entity, external_id, period, created_at DESC);
+    `,
+  },
 ];

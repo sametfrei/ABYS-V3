@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 
 /**
  * Canlı olay akışı (SSE). GET /api/integration/stream
@@ -32,18 +32,28 @@ export async function GET(req: NextRequest) {
 
   const orgId = session.orgId;
   const encoder = new TextEncoder();
+  let closeStream: (() => void) | null = null;
 
   const stream = new ReadableStream({
     start(controller) {
       let closed = false;
+      // Aynı anda birden fazla poll çalışmasını engeller. Yavaş bir PGlite
+      // sorgusu 5 sn'yi aşarsa setInterval yeni poll'lar başlatır ve bekleyen
+      // sorgu/promise/closure sayısı sınırsız büyürdü (bellek taşması).
+      let pollInFlight = false;
       let lastCheck = new Date();
+      const timers: {
+        interval?: ReturnType<typeof setInterval>;
+        heartbeat?: ReturnType<typeof setInterval>;
+        autoClose?: ReturnType<typeof setTimeout>;
+      } = {};
 
       const send = (obj: unknown) => {
         if (closed) return;
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
         } catch {
-          closed = true;
+          close();
         }
       };
 
@@ -52,16 +62,17 @@ export async function GET(req: NextRequest) {
         try {
           controller.enqueue(encoder.encode(`: heartbeat\n\n`));
         } catch {
-          closed = true;
+          close();
         }
       };
 
       const close = () => {
         if (closed) return;
         closed = true;
-        clearInterval(interval);
-        clearInterval(heartbeat);
-        clearTimeout(autoClose);
+        if (timers.interval) clearInterval(timers.interval);
+        if (timers.heartbeat) clearInterval(timers.heartbeat);
+        if (timers.autoClose) clearTimeout(timers.autoClose);
+        req.signal.removeEventListener("abort", close);
         try {
           controller.close();
         } catch {
@@ -70,7 +81,8 @@ export async function GET(req: NextRequest) {
       };
 
       const poll = async () => {
-        if (closed) return;
+        if (closed || pollInFlight) return;
+        pollInFlight = true;
         const checkedAt = new Date();
         try {
           await migrate();
@@ -87,7 +99,8 @@ export async function GET(req: NextRequest) {
             `SELECT id, event_type, actor_ref, subject_ref, occurred_at, payload, source
              FROM integration_events
              WHERE org_id = $1 AND received_at > $2
-             ORDER BY received_at ASC`,
+             ORDER BY received_at ASC
+             LIMIT 500`,
             [orgId, lastCheck.toISOString()]
           );
           lastCheck = checkedAt;
@@ -97,15 +110,31 @@ export async function GET(req: NextRequest) {
         } catch (err) {
           const message = err instanceof Error ? err.message : "Bilinmeyen hata.";
           send({ type: "error", error: message });
+        } finally {
+          pollInFlight = false;
         }
       };
 
-      send({ type: "start" });
-      const interval = setInterval(poll, POLL_INTERVAL_MS);
-      const heartbeat = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
-      const autoClose = setTimeout(close, MAX_DURATION_MS);
-
+      closeStream = close;
       req.signal.addEventListener("abort", close);
+      // İstek başlamadan önce iptal edilmişse timer kurmadan kapat.
+      if (req.signal.aborted) {
+        close();
+        return;
+      }
+
+      send({ type: "start" });
+      // send() enqueue hatasında close() çalışır; bu durumda timer kurma.
+      if (closed) return;
+
+      timers.interval = setInterval(poll, POLL_INTERVAL_MS);
+      timers.heartbeat = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+      timers.autoClose = setTimeout(close, MAX_DURATION_MS);
+    },
+    // İstemci stream'i iptal ederse (abort sinyali gelmese bile) tüm
+    // timer'lar ve dinleyiciler temizlenir.
+    cancel() {
+      closeStream?.();
     },
   });
 

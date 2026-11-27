@@ -63,12 +63,21 @@ export async function getAllKpiSeries(
   limitPerLabel = 120
 ): Promise<Map<string, { values: number[]; timestamps: string[] }>> {
   await migrate();
+  // Sınır SQL'de uygulanır: tüm geçmişi JS'e taşıyıp sonra kesmek, KPI tablosu
+  // büyüdükçe bellek tüketimini kontrolsüz artırıyordu (dev sunucusunda OOM).
   const r = await getDb().query<{ label: string; value: string; created_at: string | Date }>(
     `SELECT label, value, created_at
-       FROM kpi_values
-      WHERE org_id = $1 AND value ~ $2
-      ORDER BY label ASC, created_at ASC`,
-    [orgId, NUMERIC_VALUE_REGEX]
+       FROM (
+         SELECT id, label, value, created_at,
+                row_number() OVER (
+                  PARTITION BY label ORDER BY created_at DESC, id DESC
+                ) AS rn
+           FROM kpi_values
+          WHERE org_id = $1 AND value ~ $2
+       ) recent
+      WHERE rn <= $3
+      ORDER BY label ASC, created_at ASC, id ASC`,
+    [orgId, NUMERIC_VALUE_REGEX, Math.max(1, limitPerLabel)]
   );
   const out = new Map<string, { values: number[]; timestamps: string[] }>();
   for (const row of r.rows) {
@@ -80,14 +89,6 @@ export async function getAllKpiSeries(
       row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at)
     );
     out.set(row.label, entry);
-  }
-  for (const [label, entry] of out) {
-    if (entry.values.length > limitPerLabel) {
-      out.set(label, {
-        values: entry.values.slice(-limitPerLabel),
-        timestamps: entry.timestamps.slice(-limitPerLabel),
-      });
-    }
   }
   return out;
 }

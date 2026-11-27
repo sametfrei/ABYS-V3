@@ -33,7 +33,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 };
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { compareDigitalTwinScenario } = await import("../src/lib/digital-twin-comparison");
 const { POST } = await import("../src/app/api/digital-twin/compare/route");
 

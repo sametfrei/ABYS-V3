@@ -13,7 +13,6 @@ import { checkLoginRate, recordLoginFailure, resetLoginRate } from "@/lib/rate-l
 import { parseBody } from "@/lib/validation";
 import { LOCALE_COOKIE, parseLocale, t } from "@/lib/i18n";
 
-export { SESSION_COOKIE };
 
 // Sayı/nesne gibi yanlış tipli alanlar TypeError -> 500 yerine 400 üretir.
 const loginBodySchema = z.object({

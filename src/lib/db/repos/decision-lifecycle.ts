@@ -1,6 +1,8 @@
+import { randomBytes } from "node:crypto";
 import type { Transaction } from "@electric-sql/pglite";
 import { getDb, migrate } from "../client";
 import type { ExpectedEconomicImpact } from "@/lib/decision-economics";
+import { hasPermission } from "@/lib/auth/permissions";
 import { createActionInTransaction } from "./actions";
 import { recordDecisionInTransaction } from "./decisions";
 import { recordAuditEventInTransaction } from "./audit";
@@ -16,7 +18,10 @@ export class DecisionLifecycleError extends Error {
 
   constructor(
     message: string,
-    public readonly reason: "not_found" | "already_decided"
+    public readonly reason:
+      | "not_found"
+      | "already_decided"
+      | "unauthorized_approver"
   ) {
     super(message);
     this.name = "DecisionLifecycleError";
@@ -43,6 +48,8 @@ export async function recordHumanDecision(params: {
   expectedImpact?: ExpectedEconomicImpact | null;
   actorId: string;
   actorName: string;
+  /** Onay anındaki oturum rolü; yoksa users tablosundan okunur. */
+  actorRole?: string;
   auditWriter?: AuditWriter;
 }): Promise<{ recordId: string; actionId: string | null }> {
   await migrate();
@@ -62,7 +69,7 @@ export async function recordHumanDecision(params: {
     // tohumunun "sistem" aktörlü kaydı öneri tabanıdır, insan onayını engellemez
     // (bkz. src/lib/demo/tais/decisions.ts).
     const existing = await tx.query<{ id: string }>(
-      "SELECT id FROM decision_records WHERE org_id = $1 AND case_id = $2 AND choice IN ('accepted', 'modified') AND decided_by <> 'sistem' LIMIT 1",
+      "SELECT id FROM decision_records WHERE org_id = $1 AND case_id = $2 AND choice IN ('accepted', 'modified') AND LOWER(decided_by) <> 'sistem' LIMIT 1",
       [params.orgId, params.caseId]
     );
     if (existing.rows[0]) {
@@ -72,7 +79,41 @@ export async function recordHumanDecision(params: {
       );
     }
 
-    const recordId = await recordDecisionInTransaction(tx, {
+    let role = params.actorRole?.trim() || null;
+    if (!role) {
+      const user = await tx.query<{ role: string }>(
+        "SELECT role FROM users WHERE id = $1 AND org_id = $2",
+        [params.actorId, params.orgId]
+      );
+      role = user.rows[0]?.role ?? null;
+    }
+    if (role && !hasPermission(role, "record_decision")) {
+      throw new DecisionLifecycleError(
+        "Bu rol karar kaydetmeye yetkili değil.",
+        "unauthorized_approver"
+      );
+    }
+
+    // Audit, karar satırından önce yazılır ki onay kaydı kendi audit
+    // referansını taşıyabilsin. İkisi aynı transaction'dadır.
+    const recordId = randomBytes(8).toString("hex");
+    const approvalPermission = role ? "record_decision" : null;
+    const auditId = await writeAudit(tx, {
+      orgId: params.orgId,
+      actor: params.actorName,
+      type: "decision_made",
+      summary: `Karar verildi: ${params.choice}`,
+      detail: JSON.stringify({
+        caseId: params.caseId,
+        decisionId: recordId,
+        actorId: params.actorId,
+        role,
+        permission: approvalPermission,
+        source: "human",
+      }),
+    });
+    await recordDecisionInTransaction(tx, {
+      id: recordId,
       orgId: params.orgId,
       caseId: params.caseId,
       sectorId: caseRow.sector_id,
@@ -83,13 +124,12 @@ export async function recordHumanDecision(params: {
         chosenAction: params.chosenAction ?? "",
       },
       expectedImpact: params.expectedImpact ?? null,
-    });
-    await writeAudit(tx, {
-      orgId: params.orgId,
-      actor: params.actorName,
-      type: "decision_made",
-      summary: `Karar verildi: ${params.choice}`,
-      detail: JSON.stringify({ caseId: params.caseId, decisionId: recordId, actorId: params.actorId }),
+      decidedById: params.actorId,
+      decidedRole: role,
+      approvalPermission,
+      approvalSource: "human",
+      approvedAt: new Date().toISOString(),
+      approvalAuditId: auditId,
     });
 
     let actionId: string | null = null;

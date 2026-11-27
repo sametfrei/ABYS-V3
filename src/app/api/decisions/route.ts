@@ -4,7 +4,7 @@ import { z } from "zod";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { updateDecisionState, DECISION_STATES } from "@/lib/db/repos/decisions";
 import {
   DecisionLifecycleError,
@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
       expectedImpact,
       actorId: session.userId,
       actorName: session.displayName,
+      actorRole: session.role,
     });
     return NextResponse.json(result);
   } catch (err) {

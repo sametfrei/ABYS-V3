@@ -272,6 +272,9 @@ export type ShellKey =
   | "actions.approveHuman"
   | "actions.outcomeRequired"
   | "actions.outcomeSaveFailed"
+  | "actions.measureWithKpi"
+  | "actions.measureWithKpiHint"
+  | "actions.measuring"
   | "actions.outcomeHeading"
   | "actions.outcomeImproved"
   | "actions.outcomeUnchanged"
@@ -483,6 +486,11 @@ export type ShellKey =
   | "forecast.above"
   | "forecast.below"
   | "forecast.medianMadNote"
+  | "forecast.persistSignals"
+  | "forecast.persistingSignals"
+  | "forecast.signalsGenerated"
+  | "forecast.signalsFailed"
+  | "forecast.signalsFailedHttp"
   | "forecast.calculating"
   | "forecast.forecastLoadFailed"
   | "forecast.forecastLoadFailedHttp"
@@ -556,6 +564,7 @@ export type ShellKey =
   | "ledger.empty"
   | "ledger.totalDecisions"
   | "ledger.withOutcome"
+  | "ledger.withVerifiedMeasurement"
   | "ledger.improved"
   | "ledger.worsened"
   | "ledger.executionHeading"
@@ -637,6 +646,17 @@ export type ShellKey =
   | "ledger.evidence"
   | "ledger.outcome"
   | "ledger.lesson"
+  | "ledger.verifiedMeasurement"
+  | "ledger.measurementLine"
+  | "ledger.measurementSource"
+  | "ledger.measurementWindow"
+  | "ledger.measurementMethod"
+  | "ledger.measurementDefinition"
+  | "ledger.measurementCausality"
+  | "ledger.versionHashOnly"
+  | "ledger.approvalProvenance"
+  | "ledger.directionLowerIsBetter"
+  | "ledger.directionHigherIsBetter"
   | "ledger.percentBaseZero"
   | "ledger.rateNoSample"
   | "audit.eyebrow"
@@ -860,6 +880,13 @@ export type ShellKey =
   | "alerts.dataAsOf"
   | "alerts.sources"
   | "alerts.taisStatusNote"
+  | "alerts.dbSignalNote"
+  | "alerts.generateCaseDrafts"
+  | "alerts.generatingCaseDrafts"
+  | "alerts.caseDraftResult"
+  | "alerts.caseDraftFailed"
+  | "alerts.caseDraftFailedHttp"
+  | "alerts.openDecisions"
   | "alerts.warRoom"
   | "alerts.noNotes"
   | "alerts.notePlaceholder"
@@ -1291,13 +1318,32 @@ export type ShellKey =
   | "discovery.kpiEmpty"
   | "discovery.colStatus"
   | "discovery.colFormula"
+  | "discovery.colObserved"
   | "discovery.colMissing"
+  | "discovery.observedLine"
+  | "discovery.observedInvalid"
+  | "discovery.observedNone"
+  | "discovery.observedManual"
   | "discovery.conceptsHeading"
   | "discovery.conceptsHint"
   | "discovery.conceptsCoverage"
   | "discovery.modelsHeading"
   | "discovery.modelsEmpty"
   | "discovery.modelNote"
+  | "discovery.draftHeading"
+  | "discovery.draftBadge"
+  | "discovery.draftHint"
+  | "discovery.draftExists"
+  | "discovery.draftProposal"
+  | "discovery.draftStale"
+  | "discovery.draftEmpty"
+  | "discovery.draftAck"
+  | "discovery.draftCreate"
+  | "discovery.draftCreating"
+  | "discovery.draftCreated"
+  | "discovery.draftCurrent"
+  | "discovery.draftNeedAck"
+  | "discovery.draftFailed"
   | "discovery.availability.available"
   | "discovery.availability.partial"
   | "discovery.availability.unavailable"
@@ -1585,6 +1631,9 @@ export type ShellKey =
   | "scenarios.twinCurrencyNew"
   | "scenarios.twinCurrencyExisting"
   | "scenarios.sensitivityHeading"
+  | "scenarios.useMeasured"
+  | "scenarios.measuredBinding"
+  | "scenarios.inputOrigins"
   | "scenarios.provenanceHeading"
   | "scenarios.engine"
   | "scenarios.calculatedAt"
@@ -2385,6 +2434,12 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "actions.approveHuman": { tr: "İnsan onayı ver", en: "Approve as human" },
   "actions.outcomeRequired": { tr: "Sonuç açıklaması gerekli.", en: "Outcome description is required." },
   "actions.outcomeSaveFailed": { tr: "Sonuç kaydedilemedi.", en: "Outcome could not be saved." },
+  "actions.measureWithKpi": { tr: "KPI ile ölç ve kaydet", en: "Measure with KPI and save" },
+  "actions.measureWithKpiHint": {
+    tr: "Eylem öncesi ve sonrası aynı KPI'nın gerçek gözlemleri karşılaştırılır; eksik gözlem veya belirsiz yön varsa kayıt yapılmaz. Sonuç, gözlenen değişimdir; nedensel etki iddiası değildir.",
+    en: "Compares real observations of the same KPI before and after the action; saves nothing when observations or direction are insufficient. The result is an observed change, not a causal claim.",
+  },
+  "actions.measuring": { tr: "KPI ölçülüyor…", en: "Measuring KPI…" },
   "actions.outcomeHeading": { tr: "Gerçekleşen sonuç", en: "Actual outcome" },
   "actions.outcomeImproved": { tr: "İyileşti", en: "Improved" },
   "actions.outcomeUnchanged": { tr: "Değişmedi", en: "Unchanged" },
@@ -2868,6 +2923,20 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "forecast.anomalyScore": { tr: "skor {score}", en: "score {score}" },
   "forecast.above": { tr: "üst", en: "above" },
   "forecast.below": { tr: "alt", en: "below" },
+  "forecast.persistSignals": { tr: "Sinyal olarak kaydet", en: "Save as signals" },
+  "forecast.persistingSignals": { tr: "Kaydediliyor...", en: "Saving..." },
+  "forecast.signalsGenerated": {
+    tr: "{generated} yeni sinyal, {existing} mevcut sinyal; {cases} karar taslağı oluşturuldu.",
+    en: "{generated} new signals, {existing} existing signals; {cases} decision drafts created.",
+  },
+  "forecast.signalsFailed": {
+    tr: "Sinyaller kaydedilemedi.",
+    en: "Signals could not be saved.",
+  },
+  "forecast.signalsFailedHttp": {
+    tr: "Sinyaller kaydedilemedi (HTTP {status}).",
+    en: "Signals could not be saved (HTTP {status}).",
+  },
   "forecast.medianMadNote": {
     tr: "Median/MAD tabanlı istatistiksel sinyal; nedensellik iddiası değildir.",
     en: "A median/MAD-based statistical signal; not a claim of causality.",
@@ -3026,6 +3095,7 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   },
   "ledger.totalDecisions": { tr: "Toplam karar", en: "Total decisions" },
   "ledger.withOutcome": { tr: "Sonuçlanan", en: "With outcome" },
+  "ledger.withVerifiedMeasurement": { tr: "KPI ile doğrulanan", en: "KPI-verified" },
   "ledger.improved": { tr: "İyileşen", en: "Improved" },
   "ledger.worsened": { tr: "Kötüleşen", en: "Worsened" },
   "ledger.executionHeading": {
@@ -3170,6 +3240,38 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "ledger.evidence": { tr: "Kanıt: {evidence}", en: "Evidence: {evidence}" },
   "ledger.outcome": { tr: "Sonuç:", en: "Outcome:" },
   "ledger.lesson": { tr: "Ders:", en: "Lesson:" },
+  "ledger.verifiedMeasurement": { tr: "Doğrulanmış KPI ölçümü", en: "Verified KPI measurement" },
+  "ledger.measurementLine": {
+    tr: "{kpi}: {before} → {after} (fark {delta}, {percent})",
+    en: "{kpi}: {before} → {after} (change {delta}, {percent})",
+  },
+  "ledger.measurementSource": {
+    tr: "Kaynak: {beforeSource} / {afterSource}",
+    en: "Source: {beforeSource} / {afterSource}",
+  },
+  "ledger.measurementWindow": {
+    tr: "Eylem {start} – {end} · ölçüm {measured}",
+    en: "Action {start} – {end} · measured {measured}",
+  },
+  "ledger.measurementMethod": { tr: "Yöntem: {method}", en: "Method: {method}" },
+  "ledger.measurementDefinition": {
+    tr: "Birim: {unit} · Tanım kaynağı: {source} · Sürüm: {version} · Formül hash: {hash}",
+    en: "Unit: {unit} · Definition source: {source} · Version: {version} · Formula hash: {hash}",
+  },
+  "ledger.versionHashOnly": {
+    tr: "etiket yok (hash ile doğrulandı)",
+    en: "no label (verified by hash)",
+  },
+  "ledger.approvalProvenance": {
+    tr: "Onay provenance'ı: {user} · rol {role} · yetki {permission} · kaynak {source} · {time} · audit {audit}",
+    en: "Approval provenance: {user} · role {role} · permission {permission} · source {source} · {time} · audit {audit}",
+  },
+  "ledger.measurementCausality": {
+    tr: "Bu, eylem sonrası gözlenen KPI değişimidir; eylemin nedensel etkisi kanıtlanmamıştır.",
+    en: "This is the KPI change observed after the action; the action's causal effect is not proven.",
+  },
+  "ledger.directionLowerIsBetter": { tr: "düşük daha iyi", en: "lower is better" },
+  "ledger.directionHigherIsBetter": { tr: "yüksek daha iyi", en: "higher is better" },
   "ledger.percentBaseZero": { tr: "taban sıfır", en: "zero baseline" },
   "ledger.rateNoSample": { tr: "örnek yok", en: "no samples" },
   "audit.eyebrow": { tr: "DENETİM", en: "AUDIT" },
@@ -3536,6 +3638,28 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "alerts.confidenceValue": { tr: "%{value}", en: "{value}%" },
   "alerts.dataAsOf": { tr: "Veri güncelliği:", en: "Data as of:" },
   "alerts.sources": { tr: "KAYNAKLAR", en: "SOURCES" },
+  "alerts.generateCaseDrafts": {
+    tr: "KPI sinyallerinden karar taslağı oluştur",
+    en: "Create decision drafts from KPI signals",
+  },
+  "alerts.generatingCaseDrafts": { tr: "Oluşturuluyor...", en: "Creating..." },
+  "alerts.caseDraftResult": {
+    tr: "{generated} yeni taslak, {existing} mevcut, {skipped} atlandı.",
+    en: "{generated} new drafts, {existing} existing, {skipped} skipped.",
+  },
+  "alerts.caseDraftFailed": {
+    tr: "Karar taslakları oluşturulamadı.",
+    en: "Decision drafts could not be created.",
+  },
+  "alerts.caseDraftFailedHttp": {
+    tr: "Karar taslakları oluşturulamadı (HTTP {status}).",
+    en: "Decision drafts could not be created (HTTP {status}).",
+  },
+  "alerts.openDecisions": { tr: "Kararlar ekranını aç", en: "Open decisions" },
+  "alerts.dbSignalNote": {
+    tr: "Bu sinyal kayıtlı KPI gözlemlerinden deterministik olarak üretildi; durum yönetimi bu ekranda kalıcı değildir.",
+    en: "This signal was produced deterministically from recorded KPI observations; status changes are not persisted on this screen.",
+  },
   "alerts.taisStatusNote": {
     tr: "Durum merkezi TAIS risk motorundan gelir; bu hesaplanan bulgu halen açıktır.",
     en: "Status comes from the central TAIS risk engine; this calculated finding is still open.",
@@ -4097,7 +4221,18 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "discovery.kpiEmpty": { tr: "Sınıflandırma oluşmadığı için KPI önerisi yok.", en: "No KPI suggestion because no classification was produced." },
   "discovery.colStatus": { tr: "Durum", en: "Status" },
   "discovery.colFormula": { tr: "Formül", en: "Formula" },
+  "discovery.colObserved": { tr: "Gözlem", en: "Observed" },
   "discovery.colMissing": { tr: "Eksik alanlar", en: "Missing fields" },
+  "discovery.observedLine": {
+    tr: "{count} gözlem · son {value}",
+    en: "{count} observations · latest {value}",
+  },
+  "discovery.observedInvalid": {
+    tr: "{count} geçersiz değer",
+    en: "{count} invalid values",
+  },
+  "discovery.observedNone": { tr: "Henüz hesaplanmadı", en: "Not computed yet" },
+  "discovery.observedManual": { tr: "Manuel tanım", en: "Manual definition" },
   "discovery.conceptsHeading": { tr: "ORTAK İŞ KAVRAMLARI", en: "COMMON BUSINESS CONCEPTS" },
   "discovery.conceptsHint": {
     tr: "Sektör paketinden bağımsız; yalnızca gözlenen alan ve varlık adlarından çıkarıldı.",
@@ -4116,6 +4251,47 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     tr: "Kavram kombinasyonuna dayalı öneridir; doğrulanmış sektör değildir.",
     en: "Suggestions based on concept combinations; not a verified sector.",
   },
+  "discovery.draftHeading": { tr: "KEŞİF TASLAĞI", en: "DISCOVERY DRAFT" },
+  "discovery.draftBadge": { tr: "Taslak", en: "Draft" },
+  "discovery.draftHint": {
+    tr: "Katalogda güvenilir karşılığı olmayan veri için saklanır. Doğrulanmış profil değildir; KPI aktive etmez ve otomatik hesaplamaya girmez.",
+    en: "Stored for data without a reliable catalog match. It is not a verified profile, activates no KPIs and never feeds automatic calculation.",
+  },
+  "discovery.draftExists": {
+    tr: "Taslak v{version} · güven %{confidence} · {at}",
+    en: "Draft v{version} · confidence {confidence}% · {at}",
+  },
+  "discovery.draftProposal": {
+    tr: "{fields} alan · {entities} varlık · {concepts} kavram · {models} iş modeli önerisi",
+    en: "{fields} fields · {entities} entities · {concepts} concepts · {models} business model suggestions",
+  },
+  "discovery.draftStale": {
+    tr: "Veri değişti; taslak güncel değil. Yeni taslak oluşturabilirsiniz.",
+    en: "Data changed; the draft is stale. You can create a new draft.",
+  },
+  "discovery.draftEmpty": {
+    tr: "Kısmi kanıta dayalı taslak oluşturabilirsiniz; yönetici onayı gerekir.",
+    en: "You can create a draft based on partial evidence; manager acknowledgement is required.",
+  },
+  "discovery.draftAck": {
+    tr: "Kısmi kanıtı inceledim; taslak oluşturulsun.",
+    en: "I reviewed the partial evidence; create a draft.",
+  },
+  "discovery.draftCreate": { tr: "Taslak oluştur", en: "Create draft" },
+  "discovery.draftCreating": { tr: "Oluşturuluyor...", en: "Creating..." },
+  "discovery.draftCreated": {
+    tr: "Taslak v{version} oluşturuldu; onaylanmış profil değildir.",
+    en: "Draft v{version} created; it is not a confirmed profile.",
+  },
+  "discovery.draftCurrent": {
+    tr: "Taslak güncel; yeni sürüm oluşturulmadı.",
+    en: "The draft is current; no new version was created.",
+  },
+  "discovery.draftNeedAck": {
+    tr: "Taslak için kısmi kanıtı onaylamalısınız.",
+    en: "You must acknowledge the partial evidence to create a draft.",
+  },
+  "discovery.draftFailed": { tr: "Taslak oluşturulamadı.", en: "Could not create the draft." },
   "discovery.availability.available": { tr: "Kullanılabilir", en: "Available" },
   "discovery.availability.partial": { tr: "Kısmi", en: "Partial" },
   "discovery.availability.unavailable": { tr: "Veri yok", en: "No data" },
@@ -4424,6 +4600,18 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "scenarios.twinCurrencyNew": { tr: "Yeni para birimi: {list}", en: "New currency: {list}" },
   "scenarios.twinCurrencyExisting": { tr: "Mevcut para birimleri", en: "Existing currencies" },
   "scenarios.sensitivityHeading": { tr: "DUYARLILIK", en: "SENSITIVITY" },
+  "scenarios.useMeasured": {
+    tr: "Ölçülen KPI değerlerini kullan (yalnızca birebir eşleşenler)",
+    en: "Use measured KPI values (exact matches only)",
+  },
+  "scenarios.measuredBinding": {
+    tr: "Ölçülen KPI: {label} = {value}",
+    en: "Measured KPI: {label} = {value}",
+  },
+  "scenarios.inputOrigins": {
+    tr: "Girdi kaynakları: {measured} ölçülen KPI, {defaults} varsayılan/kullanıcı girdisi.",
+    en: "Input sources: {measured} measured KPIs, {defaults} defaults/user inputs.",
+  },
   "scenarios.provenanceHeading": { tr: "HESAP KAYNAĞI", en: "CALCULATION SOURCE" },
   "scenarios.engine": { tr: "Motor: {engine}", en: "Engine: {engine}" },
   "scenarios.calculatedAt": { tr: "Hesaplandı: {at}", en: "Calculated: {at}" },

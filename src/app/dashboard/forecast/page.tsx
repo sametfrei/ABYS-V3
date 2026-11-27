@@ -245,6 +245,9 @@ export default function ForecastPage() {
   const [alerts, setAlerts] = useState<AnomalySummary[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [signalBusy, setSignalBusy] = useState(false);
+  const [signalMessage, setSignalMessage] = useState("");
+  const [signalError, setSignalError] = useState("");
 
   useEffect(() => {
     const effectLocale = readLocale();
@@ -291,6 +294,35 @@ export default function ForecastPage() {
       cancelled = true;
     };
   }, []);
+
+  async function persistSignals() {
+    setSignalBusy(true);
+    setSignalMessage("");
+    setSignalError("");
+    try {
+      const res = await fetch("/api/anomalies", { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(
+          body.error ??
+            formatMessage(locale, "forecast.signalsFailedHttp", { status: res.status })
+        );
+      }
+      setSignalMessage(
+        formatMessage(locale, "forecast.signalsGenerated", {
+          generated: body.generated ?? 0,
+          existing: body.existing ?? 0,
+          cases: body.decisionCases?.generated ?? 0,
+        })
+      );
+    } catch (err) {
+      setSignalError(
+        err instanceof Error ? err.message : t(locale, "forecast.signalsFailed")
+      );
+    } finally {
+      setSignalBusy(false);
+    }
+  }
 
   async function pick(label: string) {
     setSelected(label);
@@ -392,6 +424,23 @@ export default function ForecastPage() {
             <p className="text-[11px] text-abys-muted mt-1">
               {t(locale, "forecast.medianMadNote")}
             </p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => void persistSignals()}
+                disabled={signalBusy}
+                className="text-xs rounded-full border border-abys-critical px-3 py-1 text-abys-critical hover:bg-white/50 disabled:opacity-40"
+              >
+                {signalBusy
+                  ? t(locale, "forecast.persistingSignals")
+                  : t(locale, "forecast.persistSignals")}
+              </button>
+              {signalMessage && (
+                <span className="text-[11px] text-abys-muted">{signalMessage}</span>
+              )}
+              {signalError && (
+                <span className="text-[11px] text-abys-critical">{signalError}</span>
+              )}
+            </div>
           </div>
         )}
 

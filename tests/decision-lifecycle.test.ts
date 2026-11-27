@@ -56,14 +56,41 @@ describe("karar → aksiyon atomik yaşam döngüsü", () => {
       chosenAction: "Tedarikçi sözleşmesini yenile",
       actorId: "user-a",
       actorName: "CEO A",
+      actorRole: "ceo",
     });
     expect(result.actionId).toBeTruthy();
     const db = getDb();
-    const decision = await db.query<{ choice: string; sector_id: string }>(
-      "SELECT choice, sector_id FROM decision_records WHERE id = $1 AND org_id = $2",
+    const decision = await db.query<{
+      choice: string;
+      sector_id: string;
+      decided_by_id: string | null;
+      decided_role: string | null;
+      approval_permission: string | null;
+      approval_source: string | null;
+      approved_at: string | null;
+      approval_audit_id: string | null;
+    }>(
+      `SELECT choice, sector_id, decided_by_id, decided_role, approval_permission,
+              approval_source, approved_at, approval_audit_id
+         FROM decision_records WHERE id = $1 AND org_id = $2`,
       [result.recordId, ORG_A]
     );
-    expect(decision.rows[0]).toMatchObject({ choice: "accepted", sector_id: "aviation" });
+    expect(decision.rows[0]).toMatchObject({
+      choice: "accepted",
+      sector_id: "aviation",
+      decided_by_id: "user-a",
+      decided_role: "ceo",
+      approval_permission: "record_decision",
+      approval_source: "human",
+    });
+    expect(decision.rows[0]?.approved_at).toBeTruthy();
+    expect(decision.rows[0]?.approval_audit_id).toBeTruthy();
+    const audit = await db.query<{ type: string; detail: string }>(
+      "SELECT type, detail FROM audit_events WHERE id = $1 AND org_id = $2",
+      [decision.rows[0]?.approval_audit_id, ORG_A]
+    );
+    expect(audit.rows[0]?.type).toBe("decision_made");
+    expect(audit.rows[0]?.detail).toContain(result.recordId);
     const action = await db.query<{ decision_id: string; status: string }>(
       "SELECT decision_id, status FROM actions WHERE id = $1 AND org_id = $2",
       [result.actionId, ORG_A]
@@ -111,6 +138,72 @@ describe("karar → aksiyon atomik yaşam döngüsü", () => {
       [ORG_A]
     );
     expect(actions.rows[0]?.n).toBe(0);
+  });
+
+  it("yetkisiz rol onay veremez; karar ve aksiyon oluşmaz", async () => {
+    await insertCase("case-lifecycle-unauthorized", ORG_A);
+    await expect(
+      recordHumanDecision({
+        orgId: ORG_A,
+        caseId: "case-lifecycle-unauthorized",
+        choice: "accepted",
+        actorId: "guest-a",
+        actorName: "Guest A",
+        actorRole: "guest",
+      })
+    ).rejects.toMatchObject({ reason: "unauthorized_approver" });
+    const decisions = await getDb().query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM decision_records WHERE org_id = $1 AND case_id = $2",
+      [ORG_A, "case-lifecycle-unauthorized"]
+    );
+    expect(Number(decisions.rows[0]?.n)).toBe(0);
+  });
+
+  it("onay provenance'ı yazıldıktan sonra sessizce değiştirilemez", async () => {
+    await insertCase("case-lifecycle-immutable", ORG_A);
+    const created = await recordHumanDecision({
+      orgId: ORG_A,
+      caseId: "case-lifecycle-immutable",
+      choice: "accepted",
+      actorId: "ceo-a",
+      actorName: "CEO A",
+      actorRole: "ceo",
+    });
+    await expect(
+      getDb().query(
+        "UPDATE decision_records SET decided_role = 'guest' WHERE id = $1 AND org_id = $2",
+        [created.recordId, ORG_A]
+      )
+    ).rejects.toThrow(/provenance immutable|immutable/i);
+    const row = await getDb().query<{ decided_role: string | null }>(
+      "SELECT decided_role FROM decision_records WHERE id = $1 AND org_id = $2",
+      [created.recordId, ORG_A]
+    );
+    expect(row.rows[0]?.decided_role).toBe("ceo");
+  });
+
+  it("sistem onay kaydı sonradan insan onayına çevrilemez", async () => {
+    await insertCase("case-lifecycle-system-immutable", ORG_A);
+    await getDb().query(
+      `INSERT INTO decision_records
+         (id, org_id, case_id, sector_id, choice, decided_by, payload, approval_source)
+       VALUES ('dr-system-immutable', $1, 'case-lifecycle-system-immutable', 'aviation',
+               'accepted', 'sistem', '{}'::jsonb, 'system')`,
+      [ORG_A]
+    );
+    await expect(
+      getDb().query(
+        `UPDATE decision_records
+            SET approval_source = 'human', decided_by_id = 'attacker'
+          WHERE id = 'dr-system-immutable' AND org_id = $1`,
+        [ORG_A]
+      )
+    ).rejects.toThrow(/provenance immutable|immutable/i);
+    const row = await getDb().query<{ approval_source: string | null }>(
+      "SELECT approval_source FROM decision_records WHERE id = 'dr-system-immutable' AND org_id = $1",
+      [ORG_A]
+    );
+    expect(row.rows[0]?.approval_source).toBe("system");
   });
 
   it("başka kurumun vakası için karar üretmez", async () => {

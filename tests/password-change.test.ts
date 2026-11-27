@@ -34,7 +34,7 @@ const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, getSession, hashPassword, verifyPassword } = await import(
   "../src/lib/auth/core"
 );
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { POST: changePassword } = await import("../src/app/api/auth/password/route");
 const { resetRateLimits } = await import("../src/lib/rate-limit");
 

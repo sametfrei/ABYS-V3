@@ -5,12 +5,12 @@ import { getDb } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { insertLink, listLinks, updateStatus, RELATION_STATUSES } from "@/lib/db/repos/causal";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { localizedError } from "@/lib/api-i18n";
 
-export const CAUSAL_METHODS = [
+const CAUSAL_METHODS = [
   "randomized_controlled_trial",
   "quasi_experimental",
   "difference_in_differences",

@@ -31,7 +31,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 };
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET } = await import("../src/app/api/forecast/route");
 const { forecastSeries, MIN_FORECAST_POINTS } = await import("../src/lib/forecasting");
 const { getKpiSeries } = await import("../src/lib/db/repos/forecast");

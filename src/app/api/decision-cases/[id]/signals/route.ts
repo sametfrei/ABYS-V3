@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
 import { linkCaseSignal, listCaseSignals } from "@/lib/db/repos/decision-signals";
-import { SESSION_COOKIE } from "../../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { localizedError } from "@/lib/api-i18n";
 
 const linkSchema = z.object({

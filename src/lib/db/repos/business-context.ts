@@ -48,6 +48,7 @@ export interface KpiActivationResult {
 
 export interface BusinessProfileSnapshot {
   schemaVersion: 1;
+  kind?: "confirmed";
   discovery: DiscoveryResult;
   inputs: DiscoveryInputSummary;
   observedSchema: ObservedEntitySchema[];
@@ -57,6 +58,30 @@ export interface BusinessProfileSnapshot {
     subsectorId: string | null;
   };
 }
+
+/**
+ * Katalogda karşılığı olmayan veya güveni yetersiz bir işletme için taslak.
+ * Doğrulanmış profil değildir: KPI aktive etmez, otomatik hesaplamaya girmez
+ * ve `getConfirmedBusinessProfile` tarafından döndürülmez.
+ */
+export interface DraftBusinessProfileSnapshot {
+  schemaVersion: 1;
+  kind: "draft";
+  discovery: DiscoveryResult;
+  inputs: DiscoveryInputSummary;
+  observedSchema: ObservedEntitySchema[];
+  proposal: {
+    suggestedPackIds: string[];
+    conceptIds: string[];
+    businessModelHintIds: string[];
+    fieldCount: number;
+    entityCount: number;
+  };
+}
+
+export type StoredBusinessProfileSnapshot =
+  | BusinessProfileSnapshot
+  | DraftBusinessProfileSnapshot;
 
 export interface ConfirmedBusinessProfile {
   id: string;
@@ -68,7 +93,7 @@ export interface ConfirmedBusinessProfile {
   subsectorId: string | null;
   confidence: number;
   sourceFingerprint: string;
-  snapshot: BusinessProfileSnapshot;
+  snapshot: StoredBusinessProfileSnapshot;
   createdBy: string;
   createdAt: string;
 }
@@ -77,7 +102,8 @@ export type BusinessProfileErrorCode =
   | "NO_DISCOVERY_EVIDENCE"
   | "PACK_NOT_DETECTED"
   | "INVALID_SUBSECTOR"
-  | "CONFIRMATION_REQUIRED";
+  | "CONFIRMATION_REQUIRED"
+  | "PACK_ALREADY_DETECTED";
 
 export class BusinessProfileError extends Error {
   constructor(
@@ -238,7 +264,7 @@ function mapProfile(row: {
   subsector_id: string | null;
   confidence: number;
   source_fingerprint: string;
-  snapshot: BusinessProfileSnapshot;
+  snapshot: StoredBusinessProfileSnapshot;
   created_by: string;
   created_at: string | Date;
 }): ConfirmedBusinessProfile {
@@ -263,7 +289,7 @@ const PROFILE_COLUMNS =
 
 type QueryExecutor = Pick<PGlite, "query"> | Pick<Transaction, "query">;
 
-async function queryConfirmedBusinessProfile(
+async function queryLatestProfile(
   db: QueryExecutor,
   orgId: string
 ): Promise<ConfirmedBusinessProfile | null> {
@@ -275,11 +301,139 @@ async function queryConfirmedBusinessProfile(
   return r.rows[0] ? mapProfile(r.rows[0]) : null;
 }
 
+async function queryConfirmedBusinessProfile(
+  db: QueryExecutor,
+  orgId: string
+): Promise<ConfirmedBusinessProfile | null> {
+  const r = await db.query<Parameters<typeof mapProfile>[0]>(
+    `SELECT ${PROFILE_COLUMNS} FROM business_profiles
+      WHERE org_id = $1 AND status = 'confirmed'
+      ORDER BY version DESC LIMIT 1`,
+    [orgId]
+  );
+  return r.rows[0] ? mapProfile(r.rows[0]) : null;
+}
+
+async function queryDraftBusinessProfile(
+  db: QueryExecutor,
+  orgId: string
+): Promise<ConfirmedBusinessProfile | null> {
+  const r = await db.query<Parameters<typeof mapProfile>[0]>(
+    `SELECT ${PROFILE_COLUMNS} FROM business_profiles
+      WHERE org_id = $1 AND status = 'draft'
+      ORDER BY version DESC LIMIT 1`,
+    [orgId]
+  );
+  return r.rows[0] ? mapProfile(r.rows[0]) : null;
+}
+
 export async function getConfirmedBusinessProfile(
   orgId: string
 ): Promise<ConfirmedBusinessProfile | null> {
   await migrate();
   return queryConfirmedBusinessProfile(getDb(), orgId);
+}
+
+/** Aynı transaction içinde okuma — senkron commit'i kilit yarışına girmeden. */
+export async function getConfirmedBusinessProfileInTx(
+  tx: Transaction,
+  orgId: string
+): Promise<ConfirmedBusinessProfile | null> {
+  return queryConfirmedBusinessProfile(tx, orgId);
+}
+
+/** Onaylanmış profil değildir; yalnızca keşif taslağı olarak sunulur. */
+export async function getLatestDraftBusinessProfile(
+  orgId: string
+): Promise<ConfirmedBusinessProfile | null> {
+  await migrate();
+  return queryDraftBusinessProfile(getDb(), orgId);
+}
+
+/**
+ * Katalogda güvenilir karşılığı olmayan işletme verisi için keşif taslağı
+ * oluşturur. Taslak KPI aktive etmez ve onaylanmış profil sayılmaz; yönetici
+ * kısmi kanıtı açıkça onaylamadan oluşturulamaz.
+ */
+export async function createDraftBusinessProfile(params: {
+  orgId: string;
+  actor: string;
+  acknowledgeEvidence?: boolean;
+}): Promise<{ profile: ConfirmedBusinessProfile; idempotent: boolean }> {
+  await migrate();
+  const build = await buildDiscovery(params.orgId);
+  if (build.inputs.fieldNames.length === 0) {
+    throw new BusinessProfileError(
+      "NO_DISCOVERY_EVIDENCE",
+      "Taslak için bağlı sistemlerden gözlenmiş alan yok."
+    );
+  }
+  if (!build.result.requiresConfirmation) {
+    throw new BusinessProfileError(
+      "PACK_ALREADY_DETECTED",
+      "Keşif güvenilir bir sektör paketi öneriyor; taslak yerine paketi onaylayın."
+    );
+  }
+  if (params.acknowledgeEvidence !== true) {
+    throw new BusinessProfileError(
+      "CONFIRMATION_REQUIRED",
+      "Taslak kısmi kanıta dayanır; açık onay gerekir."
+    );
+  }
+
+  const db = getDb();
+  return db.transaction(async (tx) => {
+    await tx.query("SELECT id FROM organizations WHERE id = $1 FOR UPDATE", [params.orgId]);
+
+    const confirmed = await queryConfirmedBusinessProfile(tx, params.orgId);
+    if (confirmed && confirmed.sourceFingerprint === build.fingerprint) {
+      throw new BusinessProfileError(
+        "PACK_ALREADY_DETECTED",
+        "Bu veri kümesi için onaylanmış iş profili zaten var."
+      );
+    }
+
+    const latest = await queryLatestProfile(tx, params.orgId);
+    if (latest && latest.status === "draft" && latest.sourceFingerprint === build.fingerprint) {
+      return { profile: latest, idempotent: true };
+    }
+
+    const snapshot: DraftBusinessProfileSnapshot = {
+      schemaVersion: 1,
+      kind: "draft",
+      discovery: build.result,
+      inputs: build.inputs,
+      observedSchema: build.schema,
+      proposal: {
+        suggestedPackIds: build.result.rankings.map((ranking) => ranking.packId),
+        conceptIds: build.result.concepts.map((concept) => concept.id),
+        businessModelHintIds: build.result.businessModelHints.map((hint) => hint.id),
+        fieldCount: build.inputs.fieldNames.length,
+        entityCount: Object.keys(build.inputs.entityCounts).length,
+      },
+    };
+    const id = randomBytes(12).toString("hex");
+    const inserted = await tx.query<Parameters<typeof mapProfile>[0]>(
+      `INSERT INTO business_profiles
+         (id, org_id, version, status, industry_pack_id, industry_pack_version,
+          subsector_id, confidence, source_fingerprint, snapshot, created_by)
+       VALUES (
+         $1, $2,
+         (SELECT coalesce(max(version), 0) + 1 FROM business_profiles WHERE org_id = $2),
+         'draft', 'unrecognized', 0, NULL, $3, $4, $5, $6
+       )
+       RETURNING ${PROFILE_COLUMNS}`,
+      [
+        id,
+        params.orgId,
+        build.result.confidence,
+        build.fingerprint,
+        JSON.stringify(snapshot),
+        params.actor,
+      ]
+    );
+    return { profile: mapProfile(inserted.rows[0]), idempotent: false };
+  });
 }
 
 export async function listBusinessProfileVersions(
@@ -412,6 +566,12 @@ export async function confirmBusinessProfile(params: {
         idempotent: true,
       };
     }
+
+    // Onaylanan paket, aynı veri için bekleyen taslakları geçersiz kılar.
+    await tx.query(
+      "UPDATE business_profiles SET status = 'superseded' WHERE org_id = $1 AND status = 'draft'",
+      [params.orgId]
+    );
 
     const activation = await activateIndustryPackWith(tx, params.orgId, pack);
     const snapshot: BusinessProfileSnapshot = {

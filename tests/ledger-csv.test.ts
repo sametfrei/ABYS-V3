@@ -40,6 +40,8 @@ function entry(overrides: Partial<LedgerEntry> = {}): LedgerEntry {
       evidence: null,
     },
     economicVariance: { amount: -20000, percent: -16.67, currency: "TRY" },
+    approval: null,
+    measurement: null,
     outcome: {
       result: "improved",
       note: "Satış korundu",
@@ -98,6 +100,69 @@ describe("karar defteri CSV üretimi", () => {
     expect(row[17]).toBe("");
     expect(row[21]).toBe("");
     expect(row[4]).toBe("0.72");
+  });
+
+  it("doğrulanmış KPI ölçümünü ham değerleriyle dışa aktarır", () => {
+    const row = ledgerEntryToRow(
+      entry({
+        measurement: {
+          kpiLabel: "Gecikme Süresi",
+          direction: "lower_is_better",
+          before: {
+            value: 40,
+            at: "2026-01-05T09:00:00.000Z",
+            datasetId: "ds-1",
+            sourceLabel: "ERP",
+          },
+          after: {
+            value: 12,
+            at: "2026-02-05T09:00:00.000Z",
+            datasetId: "ds-2",
+            sourceLabel: "Operasyon",
+          },
+          delta: -28,
+          pctChange: -70,
+          result: "improved",
+          actionStartedAt: "2026-01-06T09:00:00.000Z",
+          actionDoneAt: "2026-01-08T17:00:00.000Z",
+          measurementAt: "2026-02-06T09:00:00.000Z",
+          method: "test",
+          definition: {
+            id: "def-1",
+            name: "Gecikme Süresi",
+            unit: "dk",
+            source: "manual",
+            sourceRef: "kpi-v3",
+            formulaHash: "abc123",
+            versionKnown: true,
+            formulaText: "ortalama(bitis - baslangic)",
+            capturedAt: "2026-02-06T09:00:00.000Z",
+          },
+          verified: true,
+        },
+      })
+    );
+    expect(row.slice(-25, -6)).toEqual([
+      "Gecikme Süresi",
+      "40",
+      "2026-01-05T09:00:00.000Z",
+      "12",
+      "2026-02-05T09:00:00.000Z",
+      "-28",
+      "-70",
+      "improved",
+      "ERP",
+      "Operasyon",
+      "true",
+      "dk",
+      "manual",
+      "kpi-v3",
+      "abc123",
+      "def-1",
+      "ortalama(bitis - baslangic)",
+      "true",
+      "2026-02-06T09:00:00.000Z",
+    ]);
   });
 
   it("boş defterde yalnızca başlık satırı döner", () => {

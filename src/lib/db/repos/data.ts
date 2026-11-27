@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { getDb, migrate } from "../client";
 import type { RiskAssessment } from "@/lib/ai/provider";
+import { listKpiDefinitionSnapshots } from "./kpi-definition-provenance";
 
 /**
  * Veri katmanı repository'si: veri seti (ham içerik korunur — veri soyu),
@@ -13,7 +14,7 @@ export async function insertDataset(params: {
   sourceLabel: string;
   rawContent: string;
   ingestedBy: string;
-  kpis?: { label: string; value: string }[];
+  kpis?: { label: string; value: string; period?: string | null }[];
 }): Promise<string> {
   await migrate();
   const db = getDb();
@@ -23,10 +24,27 @@ export async function insertDataset(params: {
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [id, params.orgId, params.sectorId, params.sourceLabel, params.rawContent, params.ingestedBy]
   );
+  const definitions = await listKpiDefinitionSnapshots(db, params.orgId);
   for (const k of params.kpis ?? []) {
+    const definition = definitions.get(k.label);
     await db.query(
-      "INSERT INTO kpi_values (id, org_id, dataset_id, label, value) VALUES ($1, $2, $3, $4, $5)",
-      [randomBytes(8).toString("hex"), params.orgId, id, k.label, k.value]
+      `INSERT INTO kpi_values
+         (id, org_id, dataset_id, label, value,
+          definition_id, definition_hash, definition_version, period)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [
+        randomBytes(8).toString("hex"),
+        params.orgId,
+        id,
+        k.label,
+        k.value,
+        definition?.id ?? null,
+        definition?.formulaHash ?? null,
+        definition?.sourceRef ?? null,
+        // Gözlem dönemi yalnızca açıkça verilirse yazılır; tanımın
+        // update_frequency değeri raporlama sıklığıdır, dönem değildir.
+        k.period ?? null,
+      ]
     );
   }
   return id;
@@ -62,8 +80,11 @@ export async function insertRiskSignals(
   return n;
 }
 
-export async function listSignals(orgId: string, sectorId?: string) {
+export async function listSignals(orgId: string, sectorId?: string, limit = 200) {
   await migrate();
+  // Üst sınır: sinyal tablosu zamanla büyür; sınırsız yükleme liste ekranında
+  // ve dev sunucusunda belleği kontrolsüz tüketirdi.
+  const boundedLimit = Math.min(1000, Math.max(1, Math.round(limit)));
   const r = await getDb().query<{
     id: string;
     sector_id: string;
@@ -77,8 +98,9 @@ export async function listSignals(orgId: string, sectorId?: string) {
   }>(
     `SELECT id, sector_id, dataset_id, category_id, severity, title, status, payload, created_at
      FROM signals WHERE org_id = $1 ${sectorId ? "AND sector_id = $2" : ""}
-     ORDER BY created_at DESC`,
-    sectorId ? [orgId, sectorId] : [orgId]
+     ORDER BY created_at DESC
+     LIMIT $${sectorId ? 3 : 2}`,
+    sectorId ? [orgId, sectorId, boundedLimit] : [orgId, boundedLimit]
   );
   return r.rows;
 }

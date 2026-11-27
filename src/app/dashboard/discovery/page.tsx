@@ -50,6 +50,17 @@ interface KpiAvailability {
   partialEntities: string[];
   nonNumericFields: string[];
   scope: "entity" | "organization";
+  observed: {
+    label: string;
+    observationCount: number;
+    numericCount: number;
+    latestValue: string | null;
+    latestObservedAt: string | null;
+    sourceLabels: string[];
+    definitionSource: string | null;
+    definitionSourceRef: string | null;
+    formulaText: string | null;
+  } | null;
 }
 
 interface DetectedConcept {
@@ -153,6 +164,21 @@ interface Discovery {
   observedSchema: ObservedEntitySchema[];
   confirmedProfile: ConfirmedProfile | null;
   profileIsStale: boolean;
+  draftProfile: {
+    id: string;
+    version: number;
+    confidence: number;
+    createdAt: string;
+    sourceFingerprint: string;
+    proposal: {
+      suggestedPackIds: string[];
+      conceptIds: string[];
+      businessModelHintIds: string[];
+      fieldCount: number;
+      entityCount: number;
+    } | null;
+  } | null;
+  draftIsStale: boolean;
   graphSummary: {
     coverage: {
       recordsRead: number;
@@ -214,6 +240,8 @@ export default function DiscoveryPage() {
   const [message, setMessage] = useState("");
   const [packId, setPackId] = useState("");
   const [subsectorId, setSubsectorId] = useState("");
+  const [draftAcknowledge, setDraftAcknowledge] = useState(false);
+  const [draftBusy, setDraftBusy] = useState(false);
   const [goldenRecords, setGoldenRecords] = useState<GoldenRecordSummary[]>([]);
   const [digitalTwin, setDigitalTwin] = useState<DigitalTwinState | null>(null);
   const [twinAsOf, setTwinAsOf] = useState("");
@@ -403,6 +431,46 @@ export default function DiscoveryPage() {
     }
   }
 
+  async function createDraftProfile() {
+    if (!draftAcknowledge) {
+      setError(t(readLocale(), "discovery.draftNeedAck"));
+      return;
+    }
+    setDraftBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const res = await fetch("/api/discovery/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acknowledgeEvidence: true }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? `Taslak oluşturulamadı (HTTP ${res.status}).`);
+      setMessage(
+        body.idempotent
+          ? t(readLocale(), "discovery.draftCurrent")
+          : formatMessage(readLocale(), "discovery.draftCreated", {
+              version: body.profile.version,
+            })
+      );
+      setDraftAcknowledge(false);
+      await loadDiscovery();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t(readLocale(), "discovery.draftFailed")
+      );
+    } finally {
+      setDraftBusy(false);
+    }
+  }
+
+  const draftEligible =
+    data !== null &&
+    !data.confirmedProfile &&
+    (data.requiresConfirmation || !data.primary) &&
+    data.inputs.fieldCount > 0;
+
   return (
     <div>
       <PageHeader
@@ -580,6 +648,75 @@ export default function DiscoveryPage() {
               </div>
             </div>
 
+            {(data.draftProfile || draftEligible) && (
+              <div className="rounded-xl border border-abys-warning/30 bg-white/70 p-5 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-xs tracking-widest text-abys-warning font-semibold">
+                      {t(locale, "discovery.draftHeading")}
+                    </p>
+                    <p className="text-sm text-abys-ink mt-1">
+                      {t(locale, "discovery.draftHint")}
+                    </p>
+                  </div>
+                  <span className="text-[10px] rounded-full bg-abys-warning-soft px-2 py-1 text-abys-warning">
+                    {t(locale, "discovery.draftBadge")}
+                  </span>
+                </div>
+
+                {data.draftProfile && (
+                  <div className="space-y-1">
+                    <p className="text-[11px] text-abys-muted">
+                      {formatMessage(locale, "discovery.draftExists", {
+                        version: data.draftProfile.version,
+                        confidence: data.draftProfile.confidence,
+                        at: new Date(data.draftProfile.createdAt).toLocaleString(locale),
+                      })}
+                    </p>
+                    {data.draftProfile.proposal && (
+                      <p className="text-[11px] text-abys-muted">
+                        {formatMessage(locale, "discovery.draftProposal", {
+                          fields: data.draftProfile.proposal.fieldCount,
+                          entities: data.draftProfile.proposal.entityCount,
+                          concepts: data.draftProfile.proposal.conceptIds.length,
+                          models: data.draftProfile.proposal.businessModelHintIds.length,
+                        })}
+                      </p>
+                    )}
+                    {data.draftIsStale && (
+                      <p className="rounded-lg bg-abys-warning-soft px-3 py-2 text-xs text-abys-warning">
+                        {t(locale, "discovery.draftStale")}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {(!data.draftProfile || data.draftIsStale) && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-abys-muted">{t(locale, "discovery.draftEmpty")}</p>
+                    <label className="flex items-start gap-2 text-xs text-abys-ink">
+                      <input
+                        type="checkbox"
+                        checked={draftAcknowledge}
+                        onChange={(event) => setDraftAcknowledge(event.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>{t(locale, "discovery.draftAck")}</span>
+                    </label>
+                    <button
+                      onClick={() => void createDraftProfile()}
+                      disabled={draftBusy || !draftAcknowledge}
+                      className="text-sm rounded-full border border-abys-warning px-4 py-1.5 text-abys-warning hover:bg-abys-warning-soft disabled:opacity-40"
+                    >
+                      {draftBusy
+                        ? t(locale, "discovery.draftCreating")
+                        : t(locale, "discovery.draftCreate")}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {data.rankings.length > 1 && (
               <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5">
                 <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">
@@ -609,6 +746,7 @@ export default function DiscoveryPage() {
                       <th className="py-1 font-medium">KPI</th>
                       <th className="py-1 font-medium">{t(locale, "discovery.colStatus")}</th>
                       <th className="py-1 font-medium">{t(locale, "discovery.colFormula")}</th>
+                      <th className="py-1 font-medium">{t(locale, "discovery.colObserved")}</th>
                       <th className="py-1 font-medium">{t(locale, "discovery.colMissing")}</th>
                     </tr>
                   </thead>
@@ -645,6 +783,37 @@ export default function DiscoveryPage() {
                           ) : null}
                         </td>
                         <td className="py-1 text-xs text-abys-muted max-w-[220px]">{k.kpi.formula}</td>
+                        <td className="py-1 text-xs text-abys-muted max-w-[180px]">
+                          {k.observed ? (
+                            <>
+                              <span className="block text-abys-ink">
+                                {formatMessage(locale, "discovery.observedLine", {
+                                  count: k.observed.observationCount,
+                                  value: k.observed.latestValue ?? "—",
+                                })}
+                              </span>
+                              <span className="block text-[10px]">
+                                {k.observed.sourceLabels.join(", ")}
+                              </span>
+                              {(k.observed.definitionSourceRef ||
+                                k.observed.definitionSource === "manual") && (
+                                <span className="block text-[10px] font-mono">
+                                  {k.observed.definitionSourceRef ??
+                                    t(locale, "discovery.observedManual")}
+                                </span>
+                              )}
+                              {k.observed.numericCount < k.observed.observationCount && (
+                                <span className="block text-[10px] text-abys-warning">
+                                  {formatMessage(locale, "discovery.observedInvalid", {
+                                    count: k.observed.observationCount - k.observed.numericCount,
+                                  })}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span>{t(locale, "discovery.observedNone")}</span>
+                          )}
+                        </td>
                         <td className="py-1 text-xs text-abys-muted">
                           {k.missingFields.length === 0 ? "—" : k.missingFields.join(", ")}
                         </td>

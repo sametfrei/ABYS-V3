@@ -16,6 +16,32 @@ import { buildDecisionCalibration, type DecisionCalibration } from "@/lib/decisi
  * sayısallaştırılmış ekonomik etkisi. Tüm sorgular org_id kapsamlıdır.
  */
 
+export interface LedgerMeasurement {
+  kpiLabel: string;
+  direction: "lower_is_better" | "higher_is_better";
+  before: { value: number; at: string; datasetId: string; sourceLabel: string };
+  after: { value: number; at: string; datasetId: string; sourceLabel: string };
+  delta: number;
+  pctChange: number | null;
+  result: "improved" | "unchanged" | "worsened";
+  actionStartedAt: string;
+  actionDoneAt: string;
+  measurementAt: string;
+  method: string;
+  definition: {
+    id: string;
+    name: string;
+    unit: string | null;
+    source: string;
+    sourceRef: string | null;
+    formulaHash: string | null;
+    versionKnown: boolean;
+    formulaText: string | null;
+    capturedAt: string;
+  } | null;
+  verified: true;
+}
+
 export interface LedgerEntry {
   decisionId: string;
   caseId: string;
@@ -40,6 +66,17 @@ export interface LedgerEntry {
   expectedImpact: ExpectedEconomicImpact | null;
   actualImpact: RealizedEconomicImpact | null;
   economicVariance: EconomicVariance | null;
+  /** İnsan onayı provenance'ı; eski/sistem kayıtlarında null. */
+  approval: {
+    decidedById: string;
+    decidedRole: string | null;
+    permission: string | null;
+    source: "human" | "system" | "unknown";
+    approvedAt: string | null;
+    auditId: string | null;
+  } | null;
+  /** KPI gözlemine dayanan doğrulanmış ölçüm; yoksa null. */
+  measurement: LedgerMeasurement | null;
   outcome: {
     result: "improved" | "unchanged" | "worsened";
     note: string;
@@ -52,6 +89,7 @@ export interface LedgerEntry {
 export interface LedgerSummary {
   totalDecisions: number;
   withOutcome: number;
+  withVerifiedMeasurement: number;
   improved: number;
   unchanged: number;
   worsened: number;
@@ -78,6 +116,12 @@ interface EntryDbRow {
   decided_by: string;
   decided_at: string | Date;
   decision_state: string;
+  decided_by_id: string | null;
+  decided_role: string | null;
+  approval_permission: string | null;
+  approval_source: string | null;
+  approved_at: string | Date | null;
+  approval_audit_id: string | null;
   expected_value: string | number | null;
   expected_value_low: string | number | null;
   expected_value_high: string | number | null;
@@ -102,6 +146,25 @@ interface EntryDbRow {
   action_progress_note: string | null;
   action_updated_at: string | Date | null;
   action_event_count: number | string | null;
+  measurement_id: string | null;
+  kpi_label: string | null;
+  kpi_direction: string | null;
+  kpi_before_value: string | number | null;
+  kpi_before_at: string | Date | null;
+  kpi_before_dataset_id: string | null;
+  kpi_before_source: string | null;
+  kpi_after_value: string | number | null;
+  kpi_after_at: string | Date | null;
+  kpi_after_dataset_id: string | null;
+  kpi_after_source: string | null;
+  kpi_delta: string | number | null;
+  kpi_pct_change: string | number | null;
+  kpi_result: string | null;
+  kpi_measurement_at: string | Date | null;
+  kpi_method: string | null;
+  kpi_action_started_at: string | null;
+  kpi_action_done_at: string | null;
+  kpi_definition: unknown;
 }
 
 interface EconomicsDbRow {
@@ -163,6 +226,88 @@ function actualImpact(row: EconomicsDbRow): RealizedEconomicImpact | null {
   };
 }
 
+function ledgerDefinition(value: unknown): LedgerMeasurement["definition"] {
+  if (typeof value !== "object" || value === null) return null;
+  const record = value as Record<string, unknown>;
+  if (
+    typeof record.id !== "string" ||
+    typeof record.name !== "string" ||
+    typeof record.source !== "string" ||
+    typeof record.capturedAt !== "string"
+  ) {
+    return null;
+  }
+  return {
+    id: record.id,
+    name: record.name,
+    unit: typeof record.unit === "string" ? record.unit : null,
+    source: record.source,
+    sourceRef: typeof record.sourceRef === "string" ? record.sourceRef : null,
+    formulaHash: typeof record.formulaHash === "string" ? record.formulaHash : null,
+    versionKnown: record.versionKnown === true,
+    formulaText: typeof record.formulaText === "string" ? record.formulaText : null,
+    capturedAt: record.capturedAt,
+  };
+}
+
+function ledgerMeasurement(row: EntryDbRow): LedgerMeasurement | null {
+  if (row.measurement_id === null || !row.kpi_label) return null;
+  const beforeValue = numeric(row.kpi_before_value);
+  const afterValue = numeric(row.kpi_after_value);
+  const delta = numeric(row.kpi_delta);
+  if (
+    beforeValue === null ||
+    afterValue === null ||
+    delta === null ||
+    !row.kpi_before_at ||
+    !row.kpi_after_at ||
+    !row.kpi_before_dataset_id ||
+    !row.kpi_after_dataset_id ||
+    !row.kpi_measurement_at ||
+    !row.kpi_method ||
+    !row.kpi_action_started_at ||
+    !row.kpi_action_done_at
+  ) {
+    return null;
+  }
+  const direction =
+    row.kpi_direction === "lower_is_better" || row.kpi_direction === "higher_is_better"
+      ? row.kpi_direction
+      : null;
+  const result =
+    row.kpi_result === "improved" ||
+    row.kpi_result === "unchanged" ||
+    row.kpi_result === "worsened"
+      ? row.kpi_result
+      : null;
+  if (!direction || !result) return null;
+  return {
+    kpiLabel: row.kpi_label,
+    direction,
+    before: {
+      value: beforeValue,
+      at: iso(row.kpi_before_at),
+      datasetId: row.kpi_before_dataset_id,
+      sourceLabel: row.kpi_before_source ?? "",
+    },
+    after: {
+      value: afterValue,
+      at: iso(row.kpi_after_at),
+      datasetId: row.kpi_after_dataset_id,
+      sourceLabel: row.kpi_after_source ?? "",
+    },
+    delta,
+    pctChange: numeric(row.kpi_pct_change),
+    result,
+    actionStartedAt: row.kpi_action_started_at,
+    actionDoneAt: row.kpi_action_done_at,
+    measurementAt: iso(row.kpi_measurement_at),
+    method: row.kpi_method,
+    definition: ledgerDefinition(row.kpi_definition),
+    verified: true,
+  };
+}
+
 export async function getLedgerEntries(
   orgId: string,
   limit = 50
@@ -172,6 +317,8 @@ export async function getLedgerEntries(
     `SELECT r.id AS decision_id, r.case_id, c.title, c.severity, c.confidence,
             (c.payload->>'businessImpact') AS business_impact,
             r.choice, r.decided_by, r.created_at AS decided_at, r.state AS decision_state,
+            r.decided_by_id, r.decided_role, r.approval_permission,
+            r.approval_source, r.approved_at, r.approval_audit_id,
             r.expected_value, r.expected_value_low, r.expected_value_high,
             r.value_currency, r.value_basis, r.value_assumptions,
             o.result, o.note, o.lesson, o.recorded_by, o.recorded_at,
@@ -180,9 +327,21 @@ export async function getLedgerEntries(
             a.status AS action_status, a.due_at AS action_due_at,
             a.progress_note AS action_progress_note, a.updated_at AS action_updated_at,
             (SELECT count(*)::int FROM action_events ae
-              WHERE ae.org_id = r.org_id AND ae.action_id = a.id) AS action_event_count
+              WHERE ae.org_id = r.org_id AND ae.action_id = a.id) AS action_event_count,
+            m.id AS measurement_id, m.kpi_label, m.direction AS kpi_direction,
+            m.before_value AS kpi_before_value, m.before_at AS kpi_before_at,
+            m.before_dataset_id AS kpi_before_dataset_id, m.before_source AS kpi_before_source,
+            m.after_value AS kpi_after_value, m.after_at AS kpi_after_at,
+            m.after_dataset_id AS kpi_after_dataset_id, m.after_source AS kpi_after_source,
+            m.delta AS kpi_delta, m.pct_change AS kpi_pct_change, m.result AS kpi_result,
+            m.measurement_at AS kpi_measurement_at, m.method AS kpi_method,
+            m.provenance->>'actionStartedAt' AS kpi_action_started_at,
+            m.provenance->>'actionDoneAt' AS kpi_action_done_at,
+            m.definition_snapshot AS kpi_definition
        FROM decision_records r
        JOIN decision_cases c ON c.id = r.case_id AND c.org_id = r.org_id
+       LEFT JOIN decision_kpi_measurements m
+         ON m.org_id = r.org_id AND m.decision_id = r.id
        LEFT JOIN LATERAL (
          SELECT result, note, lesson, recorded_by, created_at AS recorded_at,
                 actual_value, value_currency AS actual_currency,
@@ -235,6 +394,26 @@ export async function getLedgerEntries(
       expectedImpact: expected,
       actualImpact: actual,
       economicVariance: computeEconomicVariance(expected, actual),
+      approval:
+        row.decided_by_id === null &&
+        row.approval_source === null &&
+        row.approved_at === null &&
+        row.approval_audit_id === null
+          ? null
+          : {
+              decidedById: row.decided_by_id ?? "",
+              decidedRole: row.decided_role,
+              permission: row.approval_permission,
+              source:
+                row.approval_source === "system"
+                  ? "system"
+                  : row.approval_source === "human"
+                    ? "human"
+                    : "unknown",
+              approvedAt: row.approved_at ? iso(row.approved_at) : null,
+              auditId: row.approval_audit_id,
+            },
+      measurement: ledgerMeasurement(row),
       outcome:
         row.result === null
           ? null
@@ -288,15 +467,23 @@ export async function getConfidenceCalibration(orgId: string): Promise<DecisionC
 export async function getLedgerSummary(orgId: string): Promise<LedgerSummary> {
   await migrate();
   const r = await getDb().query<
-    EconomicsDbRow & { result: string | null; confidence: number; choice: string }
+    EconomicsDbRow & {
+      result: string | null;
+      confidence: number;
+      choice: string;
+      measurement_id: string | null;
+    }
   >(
     `SELECT r.expected_value, r.expected_value_low, r.expected_value_high,
             r.value_currency, r.value_basis, r.value_assumptions,
             r.choice, c.confidence,
             o.result, o.actual_value, o.value_currency AS actual_currency,
-            o.measurement_start, o.measurement_end, o.evidence
+            o.measurement_start, o.measurement_end, o.evidence,
+            m.id AS measurement_id
        FROM decision_records r
        JOIN decision_cases c ON c.id = r.case_id AND c.org_id = r.org_id
+       LEFT JOIN decision_kpi_measurements m
+         ON m.org_id = r.org_id AND m.decision_id = r.id
        LEFT JOIN LATERAL (
          SELECT result, actual_value, value_currency, measurement_start,
                 measurement_end, evidence
@@ -335,6 +522,7 @@ export async function getLedgerSummary(orgId: string): Promise<LedgerSummary> {
   return {
     totalDecisions: rows.length,
     withOutcome: rows.filter((row) => row.result !== null).length,
+    withVerifiedMeasurement: rows.filter((row) => row.measurement_id !== null).length,
     improved: rows.filter((row) => row.result === "improved").length,
     unchanged: rows.filter((row) => row.result === "unchanged").length,
     worsened: rows.filter((row) => row.result === "worsened").length,

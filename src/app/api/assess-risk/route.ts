@@ -8,7 +8,7 @@ import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { insertDataset, insertRiskSignals } from "@/lib/db/repos/data";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { localizedError } from "@/lib/api-i18n";
 
 export const maxDuration = 600;

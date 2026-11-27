@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { getLedgerEntries } from "@/lib/db/repos/decision-ledger";
 import { toLedgerCsv } from "@/lib/ledger-csv";
 import { recordAuditEvent } from "@/lib/db/repos/audit";

@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { verifyAuditChain } from "@/lib/db/repos/audit";
 import { parseAuditLimit } from "@/lib/data/route-schemas";
 import { localizedError } from "@/lib/api-i18n";

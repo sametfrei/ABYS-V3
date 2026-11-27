@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { getSession, hashPassword, verifyPassword } from "@/lib/auth/core";
-import { SESSION_COOKIE } from "../login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { parseBody } from "@/lib/validation";
 import { passwordSchema } from "@/lib/password-policy";
 import { setUserPassword } from "@/lib/db/repos/users";

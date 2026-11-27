@@ -8,7 +8,7 @@ import { getSector } from "@/lib/sectors";
 import { insertDataset } from "@/lib/db/repos/data";
 import { parseKpis } from "@/lib/kpi";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { toSqlResultCsv } from "@/lib/sql-result-csv";
 import { localizedError, localizedErrorWith } from "@/lib/api-i18n";

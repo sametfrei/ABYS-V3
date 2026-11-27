@@ -53,8 +53,15 @@ export async function insertCases(
   return out;
 }
 
-export async function listCasesForOrg(orgId: string, sectorId?: string): Promise<StoredCase[]> {
+export async function listCasesForOrg(
+  orgId: string,
+  sectorId?: string,
+  limit = 200
+): Promise<StoredCase[]> {
   await migrate();
+  // Vaka geçmişi sınırsız büyüyebilir; okuma üst sınırı bellek tüketimini
+  // kontrol altında tutar (dev sunucusunda OOM koruması).
+  const boundedLimit = Math.min(1000, Math.max(1, Math.round(limit)));
   const r = await getDb().query<{
     id: string;
     sector_id: string;
@@ -64,8 +71,9 @@ export async function listCasesForOrg(orgId: string, sectorId?: string): Promise
   }>(
     `SELECT id, sector_id, status, payload, created_at FROM decision_cases
      WHERE org_id = $1 ${sectorId ? "AND sector_id = $2" : ""}
-     ORDER BY created_at DESC`,
-    sectorId ? [orgId, sectorId] : [orgId]
+     ORDER BY created_at DESC
+     LIMIT $${sectorId ? 3 : 2}`,
+    sectorId ? [orgId, sectorId, boundedLimit] : [orgId, boundedLimit]
   );
   return r.rows.map((row) => ({
     id: row.id,
@@ -78,46 +86,200 @@ export async function listCasesForOrg(orgId: string, sectorId?: string): Promise
 }
 
 /**
- * Sunucu tarafı kurumsal hafıza özeti: kurumun geçmiş kararları ve
- * KAYDEDİLMİŞ SONUÇLARI, AI prompt'una beslenecek metne dönüştürülür.
- * Bu, master plandaki "öğrenme" halkasıdır — model geçmişte neyin işe
- * yaradığını/yaramadığını gerçek kayıtlardan görür. Sonucu olan kararlar
- * (kanıtlanmış ders) öne alınır.
+ * Sunucu tarafı kurumsal hafıza özeti.
+ *
+ * Üç güven sınıfı ASLA birbirine karıştırılmaz ve her satır sınıfıyla
+ * etiketlenir:
+ * - [VERIFIED]: eylem öncesi/sonrası gerçek KPI gözlemleriyle ölçülmüş
+ *   sonuç. Bu bile nedensel etki kanıtı değildir; gözlenen değişimdir.
+ * - [REPORTED]: yetkili kullanıcının bildirdiği, bağımsız veriyle
+ *   doğrulanmamış sonuç.
+ * - [INFERRED]: sistemin verilerden çıkardığı, insan doğrulaması olmayan
+ *   istatistiksel sinyal.
+ * Hiçbir sınıf diğerinin yerine "kesin ders" olarak sunulmaz. Tüm sorgular
+ * org_id ve sektör kapsamlıdır; listeler SQL'de sınırlıdır.
  */
 export async function buildServerMemory(orgId: string, sectorId: string, limit = 6): Promise<string> {
   await migrate();
-  const r = await getDb().query<{
+  const safeLimit = Math.max(1, Math.min(limit, 20));
+  const reportedLimit = Math.min(3, safeLimit);
+  const inferredLimit = 3;
+
+  const verified = await getDb().query<{
     choice: string;
     payload: { reason?: string; chosenAction?: string };
-    outcome: { result?: string; note?: string; lesson?: string } | null;
-    created_at: string;
+    result: string;
+    note: string;
+    lesson: string | null;
+    kpi_label: string;
+    before_value: string | number;
+    after_value: string | number;
+    delta: string | number;
+    pct_change: string | number | null;
+    decided_by: string;
+    decided_role: string | null;
+    measurement_at: string | Date;
+    before_source: string | null;
+    after_source: string | null;
+    definition_hash: string | null;
   }>(
-    `SELECT choice, payload, outcome, created_at FROM decision_records
-     WHERE org_id = $1 AND sector_id = $2
-     ORDER BY (outcome IS NOT NULL) DESC, created_at DESC
-     LIMIT $3`,
-    [orgId, sectorId, limit]
+    `SELECT r.choice, r.payload, r.decided_by, r.decided_role,
+            o.result, o.note, o.lesson,
+            m.kpi_label, m.before_value, m.after_value, m.delta, m.pct_change,
+            m.measurement_at, m.before_source, m.after_source, m.definition_hash
+       FROM decision_records r
+       JOIN decision_kpi_measurements m
+         ON m.org_id = r.org_id AND m.decision_id = r.id
+       JOIN outcomes o
+         ON o.id = m.outcome_id AND o.org_id = r.org_id
+      WHERE r.org_id = $1 AND r.sector_id = $2
+      ORDER BY r.created_at DESC
+      LIMIT $3`,
+    [orgId, sectorId, safeLimit]
   );
-  if (r.rows.length === 0) return "";
+
+  const reported = await getDb().query<{
+    choice: string;
+    payload: { reason?: string; chosenAction?: string };
+    result: string;
+    note: string;
+    lesson: string | null;
+    recorded_by: string;
+    recorded_at: string | Date;
+  }>(
+    `SELECT r.choice, r.payload, o.result, o.note, o.lesson, o.recorded_by,
+            o.created_at AS recorded_at
+       FROM outcomes o
+       JOIN decision_records r ON r.id = o.decision_id AND r.org_id = o.org_id
+      WHERE o.org_id = $1 AND r.sector_id = $2
+        AND NOT EXISTS (
+          SELECT 1 FROM decision_kpi_measurements m
+           WHERE m.org_id = o.org_id AND m.decision_id = o.decision_id
+        )
+      ORDER BY o.created_at DESC
+      LIMIT $3`,
+    [orgId, sectorId, reportedLimit]
+  );
+
+  const inferred = await getDb().query<{
+    category_id: string;
+    severity: string;
+    title: string;
+    payload: {
+      label?: unknown;
+      classification?: unknown;
+      metricValue?: unknown;
+      baseline?: unknown;
+      direction?: unknown;
+      score?: unknown;
+    };
+    created_at: string | Date;
+  }>(
+    `SELECT category_id, severity, title, payload, created_at
+       FROM signals
+      WHERE org_id = $1 AND sector_id = $2 AND status = 'open'
+        AND category_id IN ('kpi_anomaly', 'kpi_opportunity')
+      ORDER BY created_at DESC
+      LIMIT $3`,
+    [orgId, sectorId, inferredLimit]
+  );
+
+  if (verified.rows.length === 0 && reported.rows.length === 0 && inferred.rows.length === 0) {
+    return "";
+  }
 
   const label = (c: string) => (c === "accepted" ? "KABUL" : c === "rejected" ? "RED" : "DEĞİŞTİRİLDİ");
   const outcomeLabel = (o: string) =>
     o === "improved" ? "iyileşme sağlandı" : o === "worsened" ? "durum kötüleşti" : "değişim olmadı";
+  const number = (value: string | number) => Number(value);
+  const day = (value: string | Date) =>
+    (value instanceof Date ? value.toISOString() : String(value)).slice(0, 10);
 
-  const lines = r.rows.map((row) => {
-    const reason = row.payload?.reason ? ` (gerekçe: ${row.payload.reason})` : "";
-    const action = row.payload?.chosenAction ? ` Uygulanan: "${row.payload.chosenAction}".` : "";
-    let outcome = " Sonuç: henüz kaydedilmedi.";
-    if (row.outcome?.result) {
-      const lesson = row.outcome.lesson ? ` Ders: ${row.outcome.lesson}` : "";
-      outcome = ` Sonuç: ${outcomeLabel(row.outcome.result)}${row.outcome.note ? ` (${row.outcome.note})` : ""}.${lesson}`;
+  const sections: string[] = [
+    "Kurumsal hafıza güven sınıfları ayrıdır; hiçbir sınıf diğerinin yerine kullanılmaz.",
+  ];
+
+  if (verified.rows.length > 0) {
+    sections.push(
+      "",
+      "[VERIFIED] Gerçek KPI gözlemleriyle ölçülen sonuçlar (gözlenen değişim; nedensel etki iddiası değil):"
+    );
+    for (const row of verified.rows) {
+      const reason = row.payload?.reason ? ` (gerekçe: ${row.payload.reason})` : "";
+      const action = row.payload?.chosenAction ? ` Uygulanan: "${row.payload.chosenAction}".` : "";
+      const pct = row.pct_change === null ? "" : `, %${number(row.pct_change).toFixed(2)}`;
+      const lesson = row.lesson ? ` Ders: ${row.lesson}` : "";
+      sections.push(
+        `- [VERIFIED] Öneri ${label(row.choice)}${reason}.${action} ` +
+          `KPI "${row.kpi_label}": ${number(row.before_value)} → ${number(row.after_value)} ` +
+          `(fark ${number(row.delta)}${pct}); ${outcomeLabel(row.result)}. ` +
+          `Onaylayan: ${row.decided_by}${row.decided_role ? ` (${row.decided_role})` : ""}; ` +
+          `ölçüm: ${day(row.measurement_at)}; kaynak: ${row.before_source ?? "—"}; ` +
+          `tanım hash: ${row.definition_hash ?? "—"}.${lesson}`
+      );
     }
-    return `- Öneri ${label(row.choice)}${reason}.${action}${outcome}`;
-  });
+  }
 
-  const withOutcome = r.rows.filter((x) => x.outcome?.result).length;
-  const stat = withOutcome > 0 ? `\nİstatistik: ${r.rows.length} karar, ${withOutcome} tanesinin sonucu kayıtlı.` : "";
-  return lines.join("\n") + stat;
+  if (reported.rows.length > 0) {
+    sections.push(
+      "",
+      "[REPORTED] Yetkili kullanıcı bildirimleri (bağımsız veriyle doğrulanmadı):"
+    );
+    for (const row of reported.rows) {
+      const reason = row.payload?.reason ? ` (gerekçe: ${row.payload.reason})` : "";
+      const action = row.payload?.chosenAction ? ` Uygulanan: "${row.payload.chosenAction}".` : "";
+      const lesson = row.lesson ? ` Ders: ${row.lesson}` : "";
+      sections.push(
+        `- [REPORTED] Öneri ${label(row.choice)}${reason}.${action} ` +
+          `Sonuç: ${outcomeLabel(row.result)} (${row.note}). Bildiren: ${row.recorded_by}; ` +
+          `bildirim: ${day(row.recorded_at)}.${lesson} Bağımsız KPI doğrulaması yok.`
+      );
+    }
+  }
+
+  if (inferred.rows.length > 0) {
+    sections.push(
+      "",
+      "[INFERRED] Sistem çıkarımları (insan doğrulaması yok; istatistiksel sinyal, nedensellik değil):"
+    );
+    for (const row of inferred.rows) {
+      const payload = row.payload ?? {};
+      const kpi =
+        typeof payload.label === "string" && payload.label.trim()
+          ? payload.label
+          : row.title;
+      const value =
+        typeof payload.metricValue === "number" && Number.isFinite(payload.metricValue)
+          ? payload.metricValue
+          : null;
+      const baseline =
+        typeof payload.baseline === "number" && Number.isFinite(payload.baseline)
+          ? payload.baseline
+          : null;
+      const direction = payload.direction === "above" || payload.direction === "below"
+        ? payload.direction
+        : null;
+      const score =
+        typeof payload.score === "number" && Number.isFinite(payload.score)
+          ? payload.score
+          : null;
+      sections.push(
+        `- [INFERRED] KPI "${kpi}"` +
+          (value === null ? "" : ` değeri ${value}`) +
+          (baseline === null ? "" : `, baz çizgi ${baseline}`) +
+          (score === null ? "" : `, aykırılık skoru ${score}`) +
+          (direction === null ? "" : `, yön ${direction}`) +
+          ` (${row.severity}; ${row.category_id}; sinyal: ${day(row.created_at)}). ` +
+          "İnsan doğrulaması yok."
+      );
+    }
+  }
+
+  sections.push(
+    "",
+    `İstatistik: ${verified.rows.length} doğrulanmış, ${reported.rows.length} bildirilmiş, ${inferred.rows.length} çıkarımsal kayıt.`
+  );
+  return sections.join("\n");
 }
 
 export interface RecordDecisionParams {
@@ -128,20 +290,34 @@ export interface RecordDecisionParams {
   decidedBy: string;
   payload: unknown;
   expectedImpact?: ExpectedEconomicImpact | null;
+  /** Audit'in karara önceden atıf yapabilmesi için dışarıdan üretilebilir. */
+  id?: string;
+  decidedById?: string | null;
+  decidedRole?: string | null;
+  approvalPermission?: string | null;
+  approvalSource?: "human" | "system" | null;
+  approvedAt?: string | null;
+  approvalAuditId?: string | null;
 }
 
 export async function recordDecisionInTransaction(
   db: Transaction,
   params: RecordDecisionParams
 ): Promise<string> {
-  const id = randomBytes(8).toString("hex");
+  const id = params.id ?? randomBytes(8).toString("hex");
   const expected = params.expectedImpact ?? null;
+  const approvalSource =
+    params.approvalSource ??
+    (params.decidedBy.trim().toLocaleLowerCase("tr") === "sistem" ? "system" : null);
   await db.query(
     `INSERT INTO decision_records
        (id, org_id, case_id, sector_id, choice, decided_by, payload,
         expected_value, expected_value_low, expected_value_high,
-        value_currency, value_basis, value_assumptions)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+        value_currency, value_basis, value_assumptions,
+        decided_by_id, decided_role, approval_permission, approval_source,
+        approved_at, approval_audit_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+             $14, $15, $16, $17, $18, $19)`,
     [
       id,
       params.orgId,
@@ -156,6 +332,12 @@ export async function recordDecisionInTransaction(
       expected?.currency ?? null,
       expected?.basis ?? null,
       expected ? JSON.stringify(expected.assumptions) : null,
+      params.decidedById ?? null,
+      params.decidedRole ?? null,
+      params.approvalPermission ?? null,
+      approvalSource,
+      params.approvedAt ?? null,
+      params.approvalAuditId ?? null,
     ]
   );
   await db.query(

@@ -4,7 +4,7 @@ import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { listOutcomesForDecision } from "@/lib/db/repos/actions";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { loadTaisKpiInputs, computeTaisKpis } from "@/lib/demo/tais/kpi";
 import { loadTaisRiskInputs, computeTaisRisks } from "@/lib/demo/tais/risks";
 import { TAIS_REFERENCE_NOW } from "@/lib/demo/tais/seed";

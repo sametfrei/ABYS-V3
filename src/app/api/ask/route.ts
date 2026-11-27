@@ -5,7 +5,7 @@ import { parseBody } from "@/lib/validation";
 import { getDb, migrate } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { retrieveChunks } from "@/lib/db/repos/documents";
 import { loadTaisKpiInputs } from "@/lib/demo/tais/kpi";
 import { loadTaisRiskInputs } from "@/lib/demo/tais/risks";

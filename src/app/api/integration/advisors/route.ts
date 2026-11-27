@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { authenticateApiKey, hasScope } from "@/lib/integrations/api-key";
 import { metricsForOrg, timelineFor } from "@/lib/integrations/advisor-analytics";
 import { checkApiKeyRate } from "@/lib/rate-limit";

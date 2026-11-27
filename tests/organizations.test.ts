@@ -31,7 +31,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 };
 const { migrate, getDb, getPendingMigrationApprovals } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const {
   getOrganization,
   listOrganizationSubtree,

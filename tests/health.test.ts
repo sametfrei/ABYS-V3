@@ -35,4 +35,16 @@ describe("GET /api/health", () => {
     expect(body.build.commit.length).toBeGreaterThan(0);
     expect(typeof body.build?.builtAt).toBe("string");
   });
+
+  it("üretim dışında bellek ölçümü döner", async () => {
+    const res = await health();
+    const body = await res.json();
+    expect(body.memory).toMatchObject({
+      rss: expect.any(Number),
+      heapUsed: expect.any(Number),
+      heapTotal: expect.any(Number),
+      external: expect.any(Number),
+    });
+    expect(typeof body.memory.at).toBe("string");
+  });
 });

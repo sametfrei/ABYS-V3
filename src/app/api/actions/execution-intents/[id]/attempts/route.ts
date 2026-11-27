@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { getExecutionAttemptForIntent } from "@/lib/db/repos/execution-attempts";
-import { SESSION_COOKIE } from "../../../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { localizedError } from "@/lib/api-i18n";
 
 const MAX_INTENT_ID_LENGTH = 300;

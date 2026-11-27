@@ -5,7 +5,7 @@ import { getDb } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { recordOutcome, listLessons, listOutcomesForDecision } from "@/lib/db/repos/actions";
 import type { RealizedEconomicImpact } from "@/lib/decision-economics";
 import { localizedError } from "@/lib/api-i18n";
@@ -44,8 +44,7 @@ const postSchema = z.object({
  * Kurumsal dersler — hafıza görünümü.
  * `?decisionId=` verilirse yalnızca o kararın kurum kapsamlı ölçüm geçmişi döner.
  */
-export async function GET(req?: NextRequest) {
-  const request = req ?? new NextRequest("http://localhost/api/outcomes");
+export async function GET(request: NextRequest) {
   const store = await cookies();
   const session = await getSession(store.get(SESSION_COOKIE)?.value);
   if (!session) return localizedError(request, "api.auth.sessionRequired", 401);
@@ -115,6 +114,26 @@ export async function POST(req: NextRequest) {
   );
   if (owns.rows.length === 0) {
     return localizedError(req, "api.outcomes.decisionNotFound", 404);
+  }
+
+  // Doğrulanmış KPI ölçümü varsa insan beyanı onunla çelişemez. Aynı sonuçla
+  // ekonomik gerçekleşme eklenebilir; farklı bir sonuç 409 ile reddedilir ki
+  // ledger'daki kanıt zinciri sonradan ezilmesin.
+  const verified = await db.query<{ result: string }>(
+    `SELECT result FROM decision_kpi_measurements
+      WHERE org_id = $1 AND decision_id = $2`,
+    [session.orgId, body.decisionId]
+  );
+  const verifiedResult = verified.rows[0]?.result;
+  if (verifiedResult && verifiedResult !== body.result) {
+    return NextResponse.json(
+      {
+        error: `Bu karar için doğrulanmış KPI ölçümü "${verifiedResult}" sonucunu gösteriyor; çelişen sonuç kaydedilemez.`,
+        reason: "verified_result_mismatch",
+        verifiedResult,
+      },
+      { status: 409 }
+    );
   }
 
   const outcomeId = await recordOutcome({

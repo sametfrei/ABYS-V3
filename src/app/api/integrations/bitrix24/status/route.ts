@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { resolveBitrixConfig, getConnectorPublicStatus } from "@/lib/integrations/bitrix24/config";
 import { getLastBitrixSyncRun } from "@/lib/db/repos/bitrix24";
 import { buildDemoDataset } from "@/lib/integrations/bitrix24/demo-source";

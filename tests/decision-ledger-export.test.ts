@@ -33,7 +33,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { hasPermission, permissionError } = await import("../src/lib/auth/permissions");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET: exportLedger } = await import("../src/app/api/decision-ledger/export/route");
 const { insertCases, recordDecision } = await import("../src/lib/db/repos/decisions");
 
@@ -42,8 +42,8 @@ const ORG_B = "org-ledger-export-b";
 const ORG_EMPTY = "org-ledger-export-empty";
 const SECTOR = "aviation";
 
-const CSV_HEADER =
-  "decision_id,case_id,title,severity,confidence,business_impact,choice,decided_by,decided_at,decision_state,action_id,action_title,action_owner,action_status,action_due_at,expected_value,expected_currency,actual_value,actual_currency,variance_value,variance_pct,outcome,outcome_note,lesson,recorded_by,recorded_at";
+const { LEDGER_CSV_HEADER } = await import("../src/lib/ledger-csv");
+const CSV_HEADER = LEDGER_CSV_HEADER.join(",");
 
 function decisionCase(title: string, categoryId: string): AiDecisionCase {
   return {

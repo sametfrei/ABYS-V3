@@ -9,7 +9,7 @@ import { localizedError, localizedErrorWith } from "@/lib/api-i18n";
 import { checkAnonymousRate } from "@/lib/rate-limit";
 import { isPublicDemoEnabled } from "@/lib/public-demo";
 import { parseBody } from "@/lib/validation";
-import { SESSION_COOKIE } from "../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 
 const MAX_SCENARIO_LEN = 4000;
 

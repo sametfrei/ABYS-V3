@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { getSession } from "@/lib/auth/core";
 import { hasPermission, permissionError } from "@/lib/auth/permissions";
-import { SESSION_COOKIE } from "../../../auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { getDb } from "@/lib/db/client";
 import { resetTaisDemo, TAIS_ORG_CODE } from "@/lib/demo/tais/seed";
 import { localizedErrorFromCookies } from "@/lib/api-i18n";

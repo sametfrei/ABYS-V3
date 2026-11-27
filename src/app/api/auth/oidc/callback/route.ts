@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { getDb, migrate } from "@/lib/db/client";
 import { authCookieIsSecure, createSession } from "@/lib/auth/core";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
-import { SESSION_COOKIE } from "@/app/api/auth/login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import {
   getOidcConfig,
   getDiscoveryDocument,

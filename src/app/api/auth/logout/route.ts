@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { destroySession } from "@/lib/auth/core";
-import { SESSION_COOKIE } from "../login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 
 export async function POST() {
   const store = await cookies();

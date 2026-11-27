@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 import { getDb } from "@/lib/db/client";
 import { getSession } from "@/lib/auth/core";
-import { SESSION_COOKIE } from "../login/route";
+import { SESSION_COOKIE } from "@/lib/auth/core";
 import { parseBody } from "@/lib/validation";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
 import { localizedError } from "@/lib/api-i18n";
@@ -37,11 +37,10 @@ async function currentSession(): Promise<
   return { session, sessionId };
 }
 
-export async function GET(req?: NextRequest) {
-  const localeRequest = req ?? new NextRequest("http://localhost/api/auth/sessions");
+export async function GET(req: NextRequest) {
   const auth = await currentSession();
   if (!auth) {
-    return localizedError(localeRequest, "api.auth.sessionRequired", 401);
+    return localizedError(req, "api.auth.sessionRequired", 401);
   }
 
   const r = await getDb().query<{

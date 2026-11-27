@@ -31,7 +31,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 };
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET } = await import("../src/app/api/discovery/route");
 const { discoverBusiness } = await import("../src/lib/industry/classifier");
 const { INDUSTRY_PACKS } = await import("../src/lib/industry/packs");
@@ -278,6 +278,19 @@ describe("GET /api/discovery", () => {
       [ORG_D, JSON.stringify({ fields: { good_units: 90, total_units: "100" } })]
     );
 
+    // ORG_A için gerçek bir KPI gözlemi: "hesaplanabilir" ile "hesaplandı"
+    // ayrımını API'nin kanıtla gösterebilmesi için.
+    await db.query(
+      `INSERT INTO datasets (id, org_id, sector_id, source_label, raw_content, ingested_by)
+       VALUES ('ds-disc-a', $1, 'other', 'Konnektör: Keşif', '{}', 'test')`,
+      [ORG_A]
+    );
+    await db.query(
+      `INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at)
+       VALUES ('kv-disc-a', $1, 'ds-disc-a', 'İlk geçiş verimi', '95', '2026-01-01T00:00:00Z')`,
+      [ORG_A]
+    );
+
     ceoA = await createSession("disc-ceo-a", ORG_A);
     guestA = await createSession("disc-guest-a", ORG_A);
     ceoC = await createSession("disc-ceo-c", ORG_C);
@@ -303,7 +316,16 @@ describe("GET /api/discovery", () => {
     const body = (await res.json()) as {
       primary: { packId: string } | null;
       inputs: { fieldCount: number; entities: Record<string, number> };
-      kpis: { kpi: { id: string }; availability: string; missingFields: string[] }[];
+      kpis: {
+        kpi: { id: string };
+        availability: string;
+        missingFields: string[];
+        observed: {
+          observationCount: number;
+          latestValue: string | null;
+          sourceLabels: string[];
+        } | null;
+      }[];
       concepts: { id: string }[];
       businessModelHints: { id: string }[];
       catalog: unknown[];
@@ -314,8 +336,15 @@ describe("GET /api/discovery", () => {
     expect(body.catalog.length).toBeGreaterThanOrEqual(4);
     const fpy = body.kpis.find((k) => k.kpi.id === "first_pass_yield");
     expect(fpy?.availability).toBe("available");
+    // KPI yalnızca hesaplanabilir değil; gerçek bir gözlemi de var.
+    expect(fpy?.observed).toMatchObject({
+      observationCount: 1,
+      latestValue: "95",
+      sourceLabels: ["Konnektör: Keşif"],
+    });
     const oee = body.kpis.find((k) => k.kpi.id === "oee");
     expect(oee?.missingFields).toContain("planned_production_time");
+    expect(oee?.observed).toBeNull();
     // Paketten bağımsız kavramlar gerçek konnektör kayıtlarından gelir.
     expect(body.concepts.map((concept) => concept.id)).toContain("machine");
     // 'Üretim' kavramı kanıtlanmadığı için üretim iş modeli ipucu üretilmez;

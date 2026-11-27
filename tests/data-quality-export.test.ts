@@ -32,7 +32,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 };
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET: exportIssues } = await import("../src/app/api/data-quality/export/route");
 const { quarantineIssue } = await import("../src/lib/db/repos/data-quality");
 const { DATA_QUALITY_CSV_HEADER } = await import("../src/lib/data-quality-csv");

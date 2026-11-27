@@ -32,7 +32,7 @@ const nextHeaders = (await import("next/headers")) as unknown as {
 };
 const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
-const { SESSION_COOKIE } = await import("../src/app/api/auth/login/route");
+const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET: listCausal, POST: createCausal } = await import("../src/app/api/causal/route");
 const { insertCases } = await import("../src/lib/db/repos/decisions");
 const { assessCausalEvidence } = await import("../src/lib/causal-evidence");

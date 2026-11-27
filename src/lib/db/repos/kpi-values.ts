@@ -1,5 +1,6 @@
 import { randomBytes } from "crypto";
 import { getDb, migrate } from "../client";
+import { listKpiDefinitionSnapshots } from "./kpi-definition-provenance";
 
 /**
  * KPI zaman serisi girişi — kurumun kendi metrik geçmişini kaydetmesi için
@@ -22,6 +23,8 @@ export interface KpiEntryInput {
   label: string;
   value: number;
   observedAt: string;
+  /** Gözlem dönemi (ör. "2026-Q1"). Bilinmiyorsa null; raporlama sıklığı değildir. */
+  period?: string | null;
 }
 
 export async function getManualDatasetId(orgId: string): Promise<string> {
@@ -63,10 +66,14 @@ export async function recordKpiValues(
   if (entries.length === 0) return 0;
   const datasetId = await getManualDatasetId(orgId);
   const db = getDb();
+  const definitions = await listKpiDefinitionSnapshots(db, orgId);
   for (const entry of entries) {
+    const definition = definitions.get(entry.label);
     await db.query(
-      `INSERT INTO kpi_values (id, org_id, dataset_id, label, value, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+      `INSERT INTO kpi_values
+         (id, org_id, dataset_id, label, value, created_at,
+          definition_id, definition_hash, definition_version, period)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         randomBytes(8).toString("hex"),
         orgId,
@@ -74,6 +81,12 @@ export async function recordKpiValues(
         entry.label,
         String(entry.value),
         entry.observedAt,
+        definition?.id ?? null,
+        definition?.formulaHash ?? null,
+        definition?.sourceRef ?? null,
+        // Tanımın update_frequency değeri raporlama sıklığıdır; gözlem dönemi
+        // yalnızca çağıran açıkça verdiyse yazılır.
+        entry.period ?? null,
       ]
     );
   }
@@ -108,6 +121,128 @@ export async function deleteKpiPoint(orgId: string, id: string): Promise<boolean
   await migrate();
   const r = await getDb().query("DELETE FROM kpi_values WHERE id = $1 AND org_id = $2", [id, orgId]);
   return (r.affectedRows ?? 0) > 0;
+}
+
+export interface KpiObservationSummary {
+  label: string;
+  observationCount: number;
+  /** Sayısal olarak ayrıştırılabilen gözlem sayısı; geçersiz değerler de sayılır. */
+  numericCount: number;
+  latestValue: string | null;
+  latestObservedAt: string | null;
+  /** Gözlemlerin geldiği veri setleri (köken). */
+  sourceLabels: string[];
+  /** Tanımın kaynağı: 'manual' veya 'industry-pack'. */
+  definitionSource: string | null;
+  definitionSourceRef: string | null;
+  formulaText: string | null;
+}
+
+/**
+ * Org kapsamlı KPI gözlem özeti. "KPI hesaplanabilir" ile "KPI gerçekten
+ * hesaplandı" ayrımını kanıtla göstermek için kullanılır: etiket başına
+ * gözlem sayısı, son değer/zaman ve veri kökeni. Başka kurumun satırı sayılmaz.
+ */
+export async function listKpiObservationSummaries(
+  orgId: string
+): Promise<KpiObservationSummary[]> {
+  await migrate();
+  const r = await getDb().query<{
+    label: string;
+    observation_count: number;
+    numeric_count: number;
+    latest_value: string | null;
+    latest_observed_at: string | Date | null;
+    source_labels: string[] | null;
+    definition_source: string | null;
+    definition_source_ref: string | null;
+    formula_text: string | null;
+  }>(
+    `SELECT v.label,
+            count(*)::int AS observation_count,
+            count(*) FILTER (WHERE v.value ~ '^[+-]?[0-9]+(\\.[0-9]+)?$')::int AS numeric_count,
+            (array_agg(v.value ORDER BY v.created_at DESC, v.id DESC))[1] AS latest_value,
+            max(v.created_at) AS latest_observed_at,
+            array_agg(DISTINCT d.source_label)
+              FILTER (WHERE d.source_label IS NOT NULL) AS source_labels,
+            max(kd.source) AS definition_source,
+            max(kd.source_ref) AS definition_source_ref,
+            max(kd.formula_text) AS formula_text
+       FROM kpi_values v
+       LEFT JOIN datasets d ON d.id = v.dataset_id AND d.org_id = v.org_id
+       LEFT JOIN kpi_definitions kd ON kd.org_id = v.org_id AND kd.name = v.label
+      WHERE v.org_id = $1
+      GROUP BY v.label
+      ORDER BY v.label`,
+    [orgId]
+  );
+  return r.rows.map((row) => ({
+    label: row.label,
+    observationCount: Number(row.observation_count),
+    numericCount: Number(row.numeric_count),
+    latestValue: row.latest_value,
+    latestObservedAt:
+      row.latest_observed_at === null
+        ? null
+        : row.latest_observed_at instanceof Date
+          ? row.latest_observed_at.toISOString()
+          : String(row.latest_observed_at),
+    sourceLabels: row.source_labels ?? [],
+    definitionSource: row.definition_source,
+    definitionSourceRef: row.definition_source_ref,
+    formulaText: row.formula_text,
+  }));
+}
+
+export interface LatestNumericKpi {
+  label: string;
+  value: number;
+  observedAt: string;
+  numericPoints: number;
+  sourceLabels: string[];
+}
+
+/**
+ * Org kapsamlı, etiket başına en güncel SAYISAL KPI değeri. Senaryo
+ * değişkenlerini gerçek ölçümle beslemek için kullanılır; geçersiz değerler
+ * ve başka kurumun satırları dışlanır.
+ */
+export async function listLatestNumericKpis(orgId: string): Promise<LatestNumericKpi[]> {
+  await migrate();
+  const r = await getDb().query<{
+    label: string;
+    numeric_points: number;
+    latest_value: string;
+    latest_at: string | Date;
+    source_labels: string[] | null;
+  }>(
+    `SELECT v.label,
+            count(*)::int AS numeric_points,
+            (array_agg(v.value ORDER BY v.created_at DESC, v.id DESC))[1] AS latest_value,
+            max(v.created_at) AS latest_at,
+            array_agg(DISTINCT d.source_label)
+              FILTER (WHERE d.source_label IS NOT NULL) AS source_labels
+       FROM kpi_values v
+       LEFT JOIN datasets d ON d.id = v.dataset_id AND d.org_id = v.org_id
+      WHERE v.org_id = $1 AND v.value ~ '^[+-]?[0-9]+(\\.[0-9]+)?$'
+      GROUP BY v.label
+      ORDER BY v.label`,
+    [orgId]
+  );
+  const out: LatestNumericKpi[] = [];
+  for (const row of r.rows) {
+    const value = Number(row.latest_value);
+    if (!Number.isFinite(value)) continue;
+    out.push({
+      label: row.label,
+      value,
+      observedAt:
+        row.latest_at instanceof Date ? row.latest_at.toISOString() : String(row.latest_at),
+      numericPoints: Number(row.numeric_points),
+      sourceLabels: row.source_labels ?? [],
+    });
+  }
+  return out;
 }
 
 export interface KpiObservationRow {
