@@ -19,7 +19,7 @@ describe("GET /api/health", () => {
   });
 
   it("veritabanı erişilebilirse 200 ve db:up döner", async () => {
-    const res = await health();
+    const res = await health(new NextRequest("http://127.0.0.1/api/health"));
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).not.toHaveProperty("smokeDatabase");
@@ -33,7 +33,7 @@ describe("GET /api/health", () => {
   });
 
   it("dağıtım doğrulaması için derleme commit'ini döner", async () => {
-    const res = await health();
+    const res = await health(new NextRequest("http://127.0.0.1/api/health"));
     const body = await res.json();
     expect(typeof body.build?.commit).toBe("string");
     expect(body.build.commit.length).toBeGreaterThan(0);
@@ -91,7 +91,7 @@ describe("GET /api/health", () => {
   });
 
   it("üretim dışında bellek ölçümü döner", async () => {
-    const res = await health();
+    const res = await health(new NextRequest("http://127.0.0.1/api/health"));
     const body = await res.json();
     expect(body.memory).toMatchObject({
       rss: expect.any(Number),

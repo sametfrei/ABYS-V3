@@ -6,9 +6,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb, getPendingMigrationApprovals, migrate } from "@/lib/db/client";
 import { MIGRATIONS } from "@/lib/db/migrations";
 
-function smokeDatabaseIdentity(req?: NextRequest) {
+function smokeDatabaseIdentity(req: NextRequest) {
   const configuredToken = process.env.ABYS_SMOKE_DB_TOKEN;
-  const suppliedToken = req?.headers.get("x-abys-smoke-db-token");
+  const suppliedToken = req.headers.get("x-abys-smoke-db-token");
   if (!configuredToken || !suppliedToken) return undefined;
   const expected = Buffer.from(configuredToken);
   const received = Buffer.from(suppliedToken);
@@ -40,10 +40,10 @@ function smokeDatabaseIdentity(req?: NextRequest) {
  * `build.commit` derlenen commit SHA'sıdır: sunucunun gerçekten hangi sürümü
  * çalıştırdığı `curl .../api/health` ile kanıtlanır, tahmin edilmez.
  */
-export async function GET(req?: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const smokeDatabase = smokeDatabaseIdentity(req);
-    if (req?.headers.has("x-abys-smoke-db-token") && !smokeDatabase) {
+    if (req.headers.has("x-abys-smoke-db-token") && !smokeDatabase) {
       return NextResponse.json({ ok: false, error: "smoke_database_identity_unavailable" }, { status: 403 });
     }
     if (smokeDatabase && !smokeDatabase.disposable) {
