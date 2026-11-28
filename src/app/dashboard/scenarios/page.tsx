@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { loadProfile } from "@/lib/profile";
-import { useStored } from "@/lib/use-stored";
 import { useSession } from "@/lib/use-session";
 import {
   DEFAULT_LOCALE,
@@ -118,8 +116,7 @@ function currencyFromUnit(unit: string): string | null {
 export default function ScenariosPage() {
   const locale = useLocale();
   const session = useSession();
-  const [stored] = useStored(() => ({ profile: loadProfile() }));
-  const sectorId = session?.sectorId ?? (session ? null : stored?.profile?.sectorId ?? null);
+  const sectorId = session?.sectorId ?? null;
 
   const [templates, setTemplates] = useState<Template[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -273,6 +270,8 @@ export default function ScenariosPage() {
       setTwinBusy(false);
     }
   }
+
+  if (session === undefined || session === null) return null;
 
   return (
     <div>

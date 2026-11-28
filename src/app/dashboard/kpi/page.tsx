@@ -49,7 +49,7 @@ function todayLocal(): string {
 export default function KpiDataPage() {
   const locale = useLocale();
   const [labels, setLabels] = useState<LabelRow[] | null>(null);
-  const [definitions, setDefinitions] = useState<string[]>([]);
+  const [definitions, setDefinitions] = useState<{ id: string; name: string; source: string; governanceState: string; formulaText: string | null; unit: string | null; target: number | null; warnThreshold: number | null; criticalThreshold: number | null }[]>([]);
   const [metric, setMetric] = useState("");
   const [value, setValue] = useState("");
   const [observedAt, setObservedAt] = useState(todayLocal());
@@ -82,8 +82,8 @@ export default function KpiDataPage() {
         const labelsBody = (await labelsRes.json()) as { labels: LabelRow[] };
         if (!cancelled) setLabels(labelsBody.labels);
         if (defsRes.ok) {
-          const defsBody = (await defsRes.json()) as { definitions: { name: string }[] };
-          if (!cancelled) setDefinitions(defsBody.definitions.map((d) => d.name));
+          const defsBody = (await defsRes.json()) as { definitions: typeof definitions };
+          if (!cancelled) setDefinitions(defsBody.definitions);
         }
       } catch {
         if (!cancelled) setError(t(effectLocale, "kpi.loadFailed"));
@@ -178,6 +178,20 @@ export default function KpiDataPage() {
     }
   }
 
+  async function validateDefinition(id: string) {
+    const res = await fetch(`/api/kpi-definitions/${encodeURIComponent(id)}/validate`, { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(body.error ?? (locale === "tr" ? "KPI tanımı doğrulanamadı." : "KPI definition could not be validated.")); return; }
+    setDefinitions((current) => current.map((item) => item.id === id ? { ...item, governanceState: "validated" } : item));
+  }
+
+  async function approveDefinition(id: string) {
+    const res = await fetch(`/api/kpi-definitions/${encodeURIComponent(id)}/approve`, { method: "POST" });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) { setError(body.error ?? (locale === "tr" ? "KPI tanımı onaylanamadı." : "KPI definition could not be approved.")); return; }
+    setDefinitions((current) => current.map((item) => item.id === id ? { ...item, governanceState: "approved" } : item));
+  }
+
   return (
     <div>
       <PageHeader
@@ -198,6 +212,11 @@ export default function KpiDataPage() {
             {message}
           </p>
         )}
+        <section className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 space-y-3">
+          <h2 className="text-xs tracking-widest text-abys-muted font-semibold">{locale === "tr" ? "KPI TANIM YÖNETİŞİMİ" : "KPI DEFINITION GOVERNANCE"}</h2>
+          <p className="text-sm text-abys-muted">{locale === "tr" ? "Keşfedilen, eşlenen, hesaplanabilir, doğrulanmış ve onaylı durumlar ayrıdır. Yapısal doğrulama formülün çalıştırıldığını kanıtlamaz; yalnızca formül/birim/eşik/hedef tutarlılığını kontrol eder. Yalnızca insan onaylı tanımlar eşik sınıflandırmasına katılır." : "Discovered, mapped, calculable, validated and approved states are distinct. Structural validation does not execute the formula; it checks formula/unit/threshold/target consistency. Only human-approved definitions drive threshold classification."}</p>
+          {definitions.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 border-t border-abys-cream-border pt-3 text-sm"><div><strong>{item.name}</strong><div className="text-xs text-abys-muted">{item.source} · {item.governanceState} · {locale === "tr" ? "Formül" : "Formula"}: {item.formulaText ?? "—"} · {locale === "tr" ? "Birim" : "Unit"}: {item.unit ?? "—"} · {locale === "tr" ? "Hedef" : "Target"}: {item.target ?? "—"} · {locale === "tr" ? "Uyarı" : "Warning"}: {item.warnThreshold ?? "—"} · {locale === "tr" ? "Kritik" : "Critical"}: {item.criticalThreshold ?? "—"}</div></div>{item.governanceState === "calculable" && <button disabled={!item.formulaText} onClick={() => void validateDefinition(item.id)} className="rounded-full border px-3 py-1 text-xs disabled:opacity-40">{locale === "tr" ? "Yapısal doğrula" : "Validate structure"}</button>}{item.governanceState === "validated" && <button onClick={() => void approveDefinition(item.id)} className="rounded-full border px-3 py-1 text-xs">{locale === "tr" ? "İncele ve onayla" : "Review and approve"}</button>}</div>)}
+        </section>
 
         <div className="rounded-xl border border-abys-cream-border bg-abys-cream p-5 space-y-3">
           <p className="text-xs tracking-widest text-abys-muted font-semibold">{t(locale, "kpi.newValue")}</p>
@@ -213,7 +232,7 @@ export default function KpiDataPage() {
               className="flex-1 min-w-[220px] text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2"
             />
             <datalist id="kpi-names">
-              {[...new Set([...definitions, ...(labels ?? []).map((l) => l.label)])].map((name) => (
+              {[...new Set([...definitions.map((item) => item.name), ...(labels ?? []).map((l) => l.label)])].map((name) => (
                 <option key={name} value={name} />
               ))}
             </datalist>

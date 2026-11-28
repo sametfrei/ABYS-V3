@@ -107,9 +107,15 @@ export async function prepareExecutionIntent(params: {
     );
     if (existing.rows[0]) {
       const row = existing.rows[0];
-      if (row.action_id !== params.actionId || row.payload_hash !== payloadHash) {
+      if (
+        row.action_id !== params.actionId ||
+        row.mode !== params.mode ||
+        row.target_system !== targetSystem ||
+        row.summary !== summary ||
+        row.payload_hash !== payloadHash
+      ) {
         throw new ExecutionIntentError(
-          "Bu idempotency anahtarı farklı bir aksiyon veya içerikle daha önce kullanıldı.",
+          "Bu idempotency anahtarı farklı bir aksiyon veya yürütme içeriğiyle daha önce kullanıldı.",
           "conflict"
         );
       }

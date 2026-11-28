@@ -10,6 +10,7 @@ interface Queryable {
 interface DefinitionRow {
   id: string;
   name: string;
+  governance_state: KpiDefinitionSnapshot["governanceState"];
   unit: string | null;
   formula_text: string | null;
   source: string;
@@ -26,7 +27,7 @@ export async function listKpiDefinitionSnapshots(
   orgId: string
 ): Promise<Map<string, KpiDefinitionSnapshot>> {
   const result = await db.query<DefinitionRow>(
-    `SELECT id, name, unit, formula_text, source, source_ref,
+    `SELECT id, name, governance_state, unit, formula_text, source, source_ref,
             warn_threshold, critical_threshold, target, update_frequency
        FROM kpi_definitions
       WHERE org_id = $1`,
@@ -43,7 +44,7 @@ export async function getKpiDefinitionSnapshot(
   name: string
 ): Promise<KpiDefinitionSnapshot | null> {
   const result = await db.query<DefinitionRow>(
-    `SELECT id, name, unit, formula_text, source, source_ref,
+    `SELECT id, name, governance_state, unit, formula_text, source, source_ref,
             warn_threshold, critical_threshold, target, update_frequency
        FROM kpi_definitions
       WHERE org_id = $1 AND name = $2`,

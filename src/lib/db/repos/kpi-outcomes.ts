@@ -247,6 +247,13 @@ async function computeMeasurement(
       detail: `"${label}" için kayıtlı KPI tanımı yok; yön güvenilir biçimde belirlenemez.`,
     };
   }
+  if (definition.governanceState !== "approved") {
+    return {
+      status: "insufficient",
+      reason: "definition_not_approved",
+      detail: `"${label}" KPI tanımı güncel sürümünde insan onayı taşımıyor; doğrulanmış sonuç ölçümünde kullanılamaz.`,
+    };
+  }
   if (!definition.formulaHash) {
     return {
       status: "insufficient",

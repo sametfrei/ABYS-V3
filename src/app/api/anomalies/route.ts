@@ -8,12 +8,8 @@ import {
   ANOMALY_MIN_POINTS,
   detectAnomalies,
 } from "@/lib/anomaly";
-import {
-  generateKpiAnomalySignals,
-  loadKpiSeriesScopes,
-} from "@/lib/db/repos/kpi-signals";
-import { generateDecisionCasesFromKpiSignals } from "@/lib/db/repos/kpi-signal-cases";
-import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { loadKpiSeriesScopes } from "@/lib/db/repos/kpi-signals";
+import { runKpiIntelligencePipeline } from "@/lib/connectors/kpi-intelligence";
 import { localizedErrorFromCookies } from "@/lib/api-i18n";
 
 /**
@@ -137,27 +133,14 @@ export async function POST() {
     return NextResponse.json({ error: permissionError("run_analysis") }, { status: 403 });
   }
 
-  const result = await generateKpiAnomalySignals(session.orgId);
-  if (result.generated > 0) {
-    await recordAuditEvent({
-      orgId: session.orgId,
-      actor: session.displayName,
-      type: "kpi_anomaly_signals_generated",
-      summary: `${result.generated} KPI aykırılık sinyali üretildi (${result.scannedLabels} seri tarandı).`,
-      detail: JSON.stringify({
-        generated: result.generated,
-        existing: result.existing,
-        scannedLabels: result.scannedLabels,
-        signalIds: result.signals.map((signal) => signal.id),
-      }),
-    });
-  }
+  const { signals: result, decisionCases } = await runKpiIntelligencePipeline(
+    session.orgId,
+    session.displayName
+  );
 
   // Uygun sinyal (eşikle risk/fırsat sınıflandırılmış, KPI formülü ve veri
   // kökeni olan) otomatik olarak karar taslağına dönüşür. Kanıt yetersizse
   // üretim yapılmaz; aynı sinyal için mükerrer vaka oluşmaz.
-  const decisionCases = await generateDecisionCasesFromKpiSignals(session.orgId);
-
   return NextResponse.json({
     ...result,
     decisionCases,

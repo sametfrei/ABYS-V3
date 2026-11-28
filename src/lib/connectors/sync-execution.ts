@@ -15,6 +15,16 @@ import {
 } from "@/lib/db/repos/connectors";
 import { commitConnectorSync } from "@/lib/db/repos/connector-sync";
 import { recordAuditEvent } from "@/lib/db/repos/audit";
+import { runKpiIntelligencePipeline } from "./kpi-intelligence";
+
+export type ConnectorIntelligenceResult =
+  | {
+      status: "success";
+      signals: { generated: number; existing: number; scannedLabels: number };
+      decisionCases: { generated: number; existing: number; scannedSignals: number; skipped: number };
+    }
+  | { status: "skipped"; reason: "no_kpi_observations" }
+  | { status: "failed"; error: string };
 
 export interface ConnectorSyncExecutionResult {
   runId: string;
@@ -34,6 +44,7 @@ export interface ConnectorSyncExecutionResult {
   skippedCount: number;
   checkpoint: string | null;
   warnings: string[];
+  intelligence: ConnectorIntelligenceResult;
   sourceSchema: ObservedSourceField[];
   mappingSuggestions: MappingSuggestion[];
 }
@@ -111,6 +122,32 @@ export async function executeConnectorSync(params: {
     });
 
     const warnings = [...committed.warnings];
+    let intelligence: ConnectorIntelligenceResult;
+    if (committed.promotion.kpiObservationCount === 0) {
+      intelligence = { status: "skipped", reason: "no_kpi_observations" };
+    } else {
+      try {
+        const result = await runKpiIntelligencePipeline(configRow.orgId, actor);
+        intelligence = {
+          status: "success",
+          signals: {
+            generated: result.signals.generated,
+            existing: result.signals.existing,
+            scannedLabels: result.signals.scannedLabels,
+          },
+          decisionCases: {
+            generated: result.decisionCases.generated,
+            existing: result.decisionCases.existing,
+            scannedSignals: result.decisionCases.scannedSignals,
+            skipped: result.decisionCases.skipped,
+          },
+        };
+      } catch (intelligenceErr) {
+        const error = intelligenceErr instanceof Error ? intelligenceErr.message : "Bilinmeyen hata";
+        intelligence = { status: "failed", error };
+        warnings.push(`Kaynak senkronu tamamlandı ancak KPI zekâ hattı başarısız: ${error}`);
+      }
+    }
     try {
       await recordAuditEvent({
         orgId: configRow.orgId,
@@ -153,6 +190,7 @@ export async function executeConnectorSync(params: {
       skippedCount: outcome.skipped,
       checkpoint: outcome.checkpoint,
       warnings: warnings.slice(0, 50),
+      intelligence,
       sourceSchema: outcome.sourceSchema,
       mappingSuggestions,
     };

@@ -2,6 +2,11 @@ import { createHash } from "node:crypto";
 import { getDb, migrate } from "../client";
 import type { AiDecisionCase, AssessedSeverity } from "@/lib/ai/provider";
 import { computeKpiDefinitionHash } from "@/lib/kpi-definition-provenance";
+import {
+  ANOMALY_DEFAULT_THRESHOLD,
+  ANOMALY_DEFAULT_WINDOW,
+  detectAnomalies,
+} from "@/lib/anomaly";
 import { classifyKpiAnomaly } from "./kpi-signals";
 import { recordAuditEventInTransaction } from "./audit";
 
@@ -45,6 +50,9 @@ interface SignalRow {
     score?: number;
     direction?: string;
     timestamp?: string | null;
+    observationId?: string;
+    scale?: number;
+    analysisWindow?: number;
     sampleSize?: number;
     seriesPoints?: number;
     classificationReason?: string;
@@ -79,6 +87,7 @@ interface SignalRow {
   warn_threshold: string | number | null;
   critical_threshold: string | number | null;
   target: string | number | null;
+  update_frequency?: string | null;
 }
 
 function stableCaseId(orgId: string, signalId: string): string {
@@ -113,7 +122,169 @@ type SignalEligibility =
  * `kpi_definitions` satırından yeniden doğrulanır; sınıflandırma güncel
  * eşiklerle yeniden hesaplanır. Uyuşmazlıkta vaka üretilmez.
  */
-function verifySignalProvenance(signal: SignalRow): SignalEligibility {
+type Queryable = Pick<ReturnType<typeof getDb>, "query">;
+
+interface SourceObservationRow {
+  id: string;
+  dataset_id: string;
+  label: string;
+  value: string;
+  created_at: string | Date;
+  entity: string | null;
+  external_id: string | null;
+  period: string | null;
+  definition_id: string | null;
+  definition_hash: string | null;
+  definition_version: string | null;
+  dataset_sector_id: string;
+  dataset_source_label: string;
+}
+
+interface HistoricalObservationRow {
+  id: string;
+  value: string;
+  created_at: string | Date;
+}
+
+function sameNumber(left: unknown, right: number): boolean {
+  return typeof left === "number" && Number.isFinite(left) && left === right;
+}
+
+/**
+ * Sinyalin yalnızca kendi payload'ına değil, kaynak KPI gözlemine ve aynı
+ * kapsamın geçmiş serisine dayandığını yeniden doğrular. Kaynak kayıt veya
+ * hesaplanan anomali değişmişse eski sinyalden karar vakası üretilmez.
+ */
+async function verifySignalObservation(
+  db: Queryable,
+  orgId: string,
+  signal: SignalRow
+): Promise<string | null> {
+  const payload = signal.payload ?? {};
+  const series = payload.series;
+  const observationId = payload.observationId;
+  if (!observationId || typeof observationId !== "string") {
+    return "missing_observation_reference";
+  }
+
+  const observationResult = await db.query<SourceObservationRow>(
+    `SELECT v.id, v.dataset_id, v.label, v.value, v.created_at,
+            v.entity, v.external_id, v.period,
+            v.definition_id, v.definition_hash, v.definition_version,
+            d.sector_id AS dataset_sector_id, d.source_label AS dataset_source_label
+       FROM kpi_values v
+       JOIN datasets d ON d.id = v.dataset_id AND d.org_id = v.org_id
+      WHERE v.org_id = $1 AND v.id = $2`,
+    [orgId, observationId]
+  );
+  const observation = observationResult.rows[0];
+  if (observationResult.rows.length !== 1 || !observation) {
+    return "source_observation_missing";
+  }
+
+  const observedValue = Number(observation.value);
+  const observedAt = iso(observation.created_at);
+  if (
+    observation.dataset_id !== signal.dataset_id ||
+    observation.dataset_source_label !== signal.dataset_label ||
+    observation.dataset_sector_id !== signal.sector_id ||
+    observation.dataset_id !== series?.datasetId ||
+    observation.dataset_source_label !== series?.datasetLabel ||
+    observation.dataset_sector_id !== series?.sectorId ||
+    observation.label !== payload.label ||
+    observation.entity !== (series?.entity ?? null) ||
+    observation.external_id !== (series?.externalId ?? null) ||
+    observation.period !== (series?.period ?? null) ||
+    observation.definition_id !== (series?.definitionId ?? null) ||
+    observation.definition_hash !== (series?.definitionHash ?? null) ||
+    observation.definition_version !== (series?.definitionVersion ?? null) ||
+    !Number.isFinite(observedValue) ||
+    !sameNumber(payload.metricValue, observedValue) ||
+    payload.timestamp !== observedAt
+  ) {
+    return "source_observation_mismatch";
+  }
+
+  const window = payload.method?.window;
+  const threshold = payload.method?.threshold;
+  if (
+    !Number.isInteger(window) ||
+    (window as number) < 3 ||
+    (window as number) !== ANOMALY_DEFAULT_WINDOW ||
+    typeof threshold !== "number" ||
+    threshold !== ANOMALY_DEFAULT_THRESHOLD ||
+    payload.analysisWindow !== window
+  ) {
+    return "invalid_anomaly_parameters";
+  }
+
+  // Sinyal üreticisi en fazla 500 aynı kapsam gözlemi kullanır. Aynı zaman
+  // damgasındaki sıralama da dahil olmak üzere hedef gözlemde biten pencereyi
+  // yeniden kur; böylece payload'daki baseline/score/direction doğrulanır.
+  const historyResult = await db.query<HistoricalObservationRow>(
+    `SELECT id, value, created_at
+       FROM kpi_values
+      WHERE org_id = $1
+        AND dataset_id = $2
+        AND label = $3
+        AND entity IS NOT DISTINCT FROM $4
+        AND external_id IS NOT DISTINCT FROM $5
+        AND period IS NOT DISTINCT FROM $6
+        AND definition_id IS NOT DISTINCT FROM $7
+        AND definition_hash IS NOT DISTINCT FROM $8
+        AND definition_version IS NOT DISTINCT FROM $9
+        AND (created_at < $10 OR (created_at = $10 AND id <= $11))
+        AND value ~ $12
+      ORDER BY created_at DESC, id DESC
+      LIMIT 500`,
+    [
+      orgId,
+      observation.dataset_id,
+      observation.label,
+      observation.entity,
+      observation.external_id,
+      observation.period,
+      observation.definition_id,
+      observation.definition_hash,
+      observation.definition_version,
+      observation.created_at,
+      observation.id,
+      "^[+-]?[0-9]+(\\.[0-9]+)?$",
+    ]
+  );
+  const history = historyResult.rows.reverse();
+  const values = history.map((row) => Number(row.value));
+  const timestamps = history.map((row) => iso(row.created_at));
+  const anomalies = detectAnomalies(values, {
+    window: window as number,
+    threshold,
+    timestamps,
+    maxResults: 1,
+  });
+  const latest = anomalies[0];
+  if (!latest || latest.index !== values.length - 1) {
+    return "anomaly_recalculation_mismatch";
+  }
+
+  if (
+    history.length !== payload.seriesPoints ||
+    payload.sampleSize !== Math.min(window as number, latest.index) ||
+    !sameNumber(payload.baseline, latest.baseline) ||
+    !sameNumber(payload.scale, latest.scale) ||
+    !sameNumber(payload.score, latest.score) ||
+    payload.direction !== latest.direction ||
+    payload.timestamp !== latest.timestamp
+  ) {
+    return "anomaly_recalculation_mismatch";
+  }
+  return null;
+}
+
+async function verifySignalProvenance(
+  db: Queryable,
+  orgId: string,
+  signal: SignalRow
+): Promise<SignalEligibility> {
   const payload = signal.payload ?? {};
   const classification = payload.classification;
   if (classification !== "risk" && classification !== "opportunity") {
@@ -131,6 +302,13 @@ function verifySignalProvenance(signal: SignalRow): SignalEligibility {
     ((series?.entity ?? null) !== null && (series?.externalId ?? null) !== null);
   if (!scopeVerified || series?.scopeVerified !== true) {
     return { ok: false, reason: "scope_unverified" };
+  }
+  if (
+    series?.datasetId !== signal.dataset_id ||
+    series.datasetLabel !== signal.dataset_label ||
+    series.sectorId !== signal.sector_id
+  ) {
+    return { ok: false, reason: "source_observation_mismatch" };
   }
   if (series?.definitionVerified !== true) {
     return { ok: false, reason: "definition_unverified" };
@@ -154,7 +332,8 @@ function verifySignalProvenance(signal: SignalRow): SignalEligibility {
   if (
     !currentHash ||
     series.definitionId !== signal.definition_id ||
-    series.definitionHash !== currentHash
+    series.definitionHash !== currentHash ||
+    series.definitionUnit !== signal.definition_unit
   ) {
     return { ok: false, reason: "definition_mismatch" };
   }
@@ -177,9 +356,19 @@ function verifySignalProvenance(signal: SignalRow): SignalEligibility {
     target,
     definitionVerified: true,
   });
-  if (recomputed.classification !== classification) {
+  const expectedCategory =
+    recomputed.classification === "opportunity" ? "kpi_opportunity" : "kpi_anomaly";
+  if (
+    recomputed.classification !== classification ||
+    signal.category_id !== expectedCategory ||
+    signal.severity !== recomputed.severity ||
+    payload.classificationReason !== recomputed.reason
+  ) {
     return { ok: false, reason: "classification_mismatch" };
   }
+
+  const observationError = await verifySignalObservation(db, orgId, signal);
+  if (observationError) return { ok: false, reason: observationError };
 
   return { ok: true, classification, warn, critical, target };
 }
@@ -325,6 +514,7 @@ function buildCase(signal: SignalRow): AiDecisionCase | null {
         source: `Veri seti: ${signal.dataset_label}`,
         fact:
           `${label} = ${metricValue}; gözlem zamanı ${observedAt}; veri seti ${signal.dataset_id}; ` +
+          `kaynak gözlem ${payload.observationId ?? "—"}; ` +
           `entity ${signal.payload.series?.entity ?? "—"}; dış kimlik ${signal.payload.series?.externalId ?? "—"}; ` +
           `gözlem dönemi ${signal.payload.series?.period ?? "bilinmiyor"}; ` +
           `raporlama sıklığı ${signal.payload.series?.reportingFrequency ?? "—"}; ` +
@@ -421,7 +611,7 @@ export async function generateDecisionCasesFromKpiSignals(
         continue;
       }
 
-      const eligibility = verifySignalProvenance(signal);
+      const eligibility = await verifySignalProvenance(tx, orgId, signal);
       if (!eligibility.ok) {
         skip(eligibility.reason);
         continue;
@@ -453,6 +643,7 @@ export async function generateDecisionCasesFromKpiSignals(
             origin: {
               kind: "kpi_signal",
               signalId: signal.id,
+              observationId: signal.payload.observationId ?? null,
               label: signal.payload.label,
               datasetId: signal.dataset_id,
               datasetLabel: signal.dataset_label,

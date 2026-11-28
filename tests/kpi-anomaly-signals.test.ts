@@ -92,8 +92,8 @@ async function insertDefinition(
   await getDb().query(
     `INSERT INTO kpi_definitions
        (id, org_id, name, unit, formula_text, source, source_ref,
-        warn_threshold, critical_threshold, target, update_frequency)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+        warn_threshold, critical_threshold, target, update_frequency, governance_state)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'approved')`,
     [
       id,
       orgId,

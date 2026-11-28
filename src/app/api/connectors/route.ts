@@ -67,10 +67,32 @@ const restConfigSchema = z.object({
   pageSize: z.number().int().positive().max(10_000).optional(),
 });
 
+const sqlConfigSchema = z.object({
+  kind: z.literal("sql"),
+  driver: z.enum(["postgres", "mssql", "mysql"]),
+  connectionStringEnvVar: z.string().trim().min(1).max(200),
+  query: z.string().trim().min(1).max(20_000),
+  checkpointParam: z.boolean().optional(),
+  entity: z.enum([
+    "customer", "supplier", "employee", "product", "order", "invoice",
+    "payment", "account", "project", "inventory", "event",
+  ]),
+  idField: z.string().trim().min(1).max(300),
+  updatedAtField: z.string().trim().max(300).optional(),
+  fieldMap: z.record(z.string().max(100), z.string().max(300)),
+  kpiFieldMap: z.record(z.string().max(100), z.string().trim().min(1).max(100)).optional(),
+  computedKpiMap: z.record(z.string().max(120), z.string().trim().min(1).max(100)).optional(),
+  kpiObservedAtField: z.string().trim().max(100).optional(),
+  eventTypeField: z.string().trim().max(100).optional(),
+  eventSubjectField: z.string().trim().max(100).optional(),
+  eventTimeField: z.string().trim().max(100).optional(),
+  maxRows: z.number().int().positive().max(5000).optional(),
+});
+
 const postSchema = z.object({
   connectorId: z.string().trim().min(1).max(100),
   name: z.string().trim().min(1).max(200),
-  config: restConfigSchema,
+  config: z.union([restConfigSchema, sqlConfigSchema]),
   scheduleIntervalMinutes: z.number().int().min(5).max(525_600).nullable().optional(),
 });
 

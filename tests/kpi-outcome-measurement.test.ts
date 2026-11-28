@@ -251,6 +251,19 @@ describe("KPI yönü ve değişim sınıflandırması (saf)", () => {
 describe("KPI tabanlı gerçekleşen sonuç ölçümü", () => {
   beforeAll(async () => {
     await migrate();
+    // This suite tests outcome measurement, not the approval UI. Its KPI fixtures
+    // represent pre-approved definitions; the dedicated governance suite tests
+    // the actual approval transaction, role check and immutable audit trail.
+    await getDb().exec(`
+      CREATE OR REPLACE FUNCTION test_mark_kpi_definition_approved()
+      RETURNS trigger AS $$ BEGIN
+        NEW.governance_state := 'approved';
+        NEW.approved_revision := 1;
+        RETURN NEW;
+      END; $$ LANGUAGE plpgsql;
+      CREATE TRIGGER test_kpi_definition_approved BEFORE INSERT ON kpi_definitions
+        FOR EACH ROW EXECUTE FUNCTION test_mark_kpi_definition_approved();
+    `);
     await seedOrg(ORG_A, "KPI Outcome A");
     await seedOrg(ORG_B, "KPI Outcome B");
     await seedSeries();
@@ -669,7 +682,7 @@ describe("KPI tabanlı gerçekleşen sonuç ölçümü", () => {
     });
     expect(preview).toMatchObject({
       status: "insufficient",
-      reason: "definition_changed_since_observation",
+      reason: "definition_not_approved",
     });
   });
 

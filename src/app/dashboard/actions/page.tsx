@@ -588,6 +588,7 @@ function ExecutionIntentPanel({ actionId }: { actionId: string }) {
         throw new Error(payload?.error ?? t(locale, "actions.prepCreateFailed"));
       }
       setSummary("");
+      setIdempotencyKey(newIntentKey());
       await load();
     } catch (err) {
       setError({

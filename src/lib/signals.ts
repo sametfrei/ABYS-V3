@@ -1,11 +1,12 @@
 import type { Sector } from "./sectors";
 import { listEntities } from "./entities";
-import type { AssessedRisk } from "./entities";
+import type { AssessedRisk, SignalStatus } from "./entities";
 
 export type Severity = "critical" | "warning" | "info" | "healthy";
 
 export interface Signal {
   id: string;
+  status?: SignalStatus;
   categoryId: string;
   categoryLabel: string;
   severity: Severity;

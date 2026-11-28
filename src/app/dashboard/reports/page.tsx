@@ -3,11 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { getRole } from "@/lib/roles";
-import { loadProfile } from "@/lib/profile";
-import { useStored } from "@/lib/use-stored";
 import { useSession } from "@/lib/use-session";
-import { listEntities, deleteEntity } from "@/lib/entities";
-import type { SavedReport, ImportedDataset, CounselorStat } from "@/lib/entities";
 import {
   DEFAULT_LOCALE,
   readLocale,
@@ -47,6 +43,16 @@ function percentText(locale: Locale, value: number, digits = 0): string {
   });
 }
 
+interface SavedReportView {
+  id: string;
+  title: string;
+  reportType: string;
+  roleId: string;
+  content: string;
+  createdAt: string;
+  createdByName: string;
+}
+
 function formatDate(value: string, locale: Locale): string {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString(locale);
@@ -56,13 +62,18 @@ export default function ReportsPage() {
   const locale = useLocale();
   const session = useSession();
   const isTais = session?.orgCode === "tais-ikf-demo";
-  const [stored, refreshReports] = useStored(() => ({
-    reports: [...listEntities<SavedReport>("saved-reports")].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt)
-    ),
-  }));
-  const reports = session ? [] : stored?.reports ?? [];
-  const [printTarget, setPrintTarget] = useState<SavedReport | null>(null);
+  const [reports, setReports] = useState<SavedReportView[]>([]);
+  const [printTarget, setPrintTarget] = useState<SavedReportView | null>(null);
+
+  useEffect(() => {
+    if (!session?.orgId) return;
+    let cancelled = false;
+    fetch("/api/reports", { cache: "no-store" })
+      .then(async (response) => response.ok ? await response.json() as { reports: SavedReportView[] } : { reports: [] })
+      .then((body) => { if (!cancelled) setReports(body.reports); })
+      .catch(() => { if (!cancelled) setReports([]); });
+    return () => { cancelled = true; };
+  }, [session?.orgId]);
 
   useEffect(() => {
     if (!printTarget) return;
@@ -75,11 +86,11 @@ export default function ReportsPage() {
     };
   }, [printTarget]);
 
-  if (session === undefined) return null;
+  if (session === undefined || session === null) return null;
 
-  function remove(id: string) {
-    deleteEntity<SavedReport>("saved-reports", id);
-    refreshReports();
+  async function remove(id: string) {
+    const response = await fetch(`/api/reports/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (response.ok) setReports((current) => current.filter((report) => report.id !== id));
   }
 
   return (
@@ -96,10 +107,7 @@ export default function ReportsPage() {
            {isTais ? (
              <TaisReportSection />
            ) : (
-             <>
-               <KpiHistorySection />
-               <CounselorSection />
-             </>
+             <p className="text-sm text-abys-muted">{t(locale, "reports.kpi.serverSourceHint")}</p>
            )}
 
            {!isTais && <div>
@@ -122,7 +130,7 @@ export default function ReportsPage() {
                     <div>
                       <p className="text-sm font-medium text-abys-ink">{r.title}</p>
                       <p className="text-xs text-abys-muted mt-0.5">
-                        {role?.label ?? "—"} ·{" "}
+                        {role?.label ?? r.createdByName} ·{" "}
                         {new Date(r.createdAt).toLocaleDateString(locale, {
                           day: "numeric",
                           month: "long",
@@ -138,7 +146,7 @@ export default function ReportsPage() {
                         {t(locale, "reports.downloadPdf")}
                       </button>
                       <button
-                        onClick={() => remove(r.id)}
+                        onClick={() => void remove(r.id)}
                         className="text-xs rounded-full border border-abys-ink/15 px-3 py-1.5 text-abys-critical hover:bg-white/60 transition-colors"
                       >
                         {t(locale, "reports.delete")}
@@ -405,167 +413,4 @@ function ReportTable({ headers, children }: { headers: string[]; children: React
 
 function ReportRow({ cells }: { cells: string[] }) {
   return <div className="grid grid-cols-4 gap-3 px-4 py-2.5 text-sm border-b border-abys-ink/5 last:border-0">{cells.map((cell, index) => <span key={`${index}-${cell}`} className={index === 0 ? "text-abys-ink font-medium" : "font-mono text-abys-navy"}>{cell}</span>)}</div>;
-}
-
-function useDatasets(): ImportedDataset[] {
-  const [stored] = useStored(() => {
-    const profile = loadProfile();
-    if (!profile) return { list: [] as ImportedDataset[] };
-    return {
-      list: listEntities<ImportedDataset>("imported-datasets")
-        .filter((d) => d.sectorId === profile.sectorId)
-        .sort((a, b) => (b.periodEnd ?? "").localeCompare(a.periodEnd ?? "")),
-    };
-  });
-  return stored?.list ?? [];
-}
-
-function KpiHistorySection() {
-  const locale = useLocale();
-  const datasets = useDatasets();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  if (datasets.length === 0) return null;
-  // Seçim yapılmadıysa ilk dönem gösterilir — ayrıca effect gerekmez.
-  const selected = datasets.find((d) => d.id === selectedId) ?? datasets[0];
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <p className="text-xs tracking-widest text-abys-muted font-semibold">
-          {t(locale, "reports.kpi.heading")}
-        </p>
-        <select
-          value={selected.id}
-          onChange={(e) => setSelectedId(e.target.value)}
-          className="text-xs rounded-full border border-abys-ink/15 bg-white/70 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-abys-accent"
-        >
-          {datasets.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.periodLabel}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {selected.kpis.map((k) => (
-          <div key={k.label} className="rounded-xl border border-abys-cream-border bg-abys-cream px-4 py-3">
-            <p className="text-[10px] tracking-wide text-abys-muted uppercase truncate" title={k.label}>
-              {k.label}
-            </p>
-            <p className="font-mono text-lg text-abys-navy truncate" title={k.value}>
-              {k.value}
-            </p>
-          </div>
-        ))}
-      </div>
-      <p className="text-[10px] text-abys-muted mt-2">
-        {formatMessage(locale, "reports.kpi.source", {
-          file: selected.fileName,
-          start: formatDate(selected.periodStart, locale),
-          end: formatDate(selected.periodEnd, locale),
-        })}
-      </p>
-    </div>
-  );
-}
-
-function CounselorSection() {
-  const locale = useLocale();
-  const datasets = useDatasets();
-  const withCounselors = datasets.filter((d) => d.counselors && d.counselors.length > 0);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<string | null>(null);
-
-  if (withCounselors.length === 0) return null;
-  const selected = withCounselors.find((d) => d.id === selectedId) ?? withCounselors[0];
-  const counselors = [...(selected.counselors ?? [])].sort((a, b) => b.revenue - a.revenue);
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
-        <p className="text-xs tracking-widest text-abys-muted font-semibold">
-          {formatMessage(locale, "reports.counselor.heading", {
-            count: counselors.length.toLocaleString(locale),
-          })}
-        </p>
-        {withCounselors.length > 1 && (
-          <select
-            value={selected.id}
-            onChange={(e) => setSelectedId(e.target.value)}
-            className="text-xs rounded-full border border-abys-ink/15 bg-white/70 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-abys-accent"
-          >
-            {withCounselors.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.periodLabel}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-      <div className="rounded-xl border border-abys-cream-border bg-abys-cream overflow-hidden">
-        <div className="grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2.5 text-[10px] tracking-wide text-abys-muted font-semibold border-b border-abys-ink/10">
-          <span>{t(locale, "reports.counselor.colName")}</span>
-          <span>{t(locale, "reports.counselor.colAssigned")}</span>
-          <span>{t(locale, "reports.counselor.colSales")}</span>
-          <span>{t(locale, "reports.counselor.colAmount")}</span>
-        </div>
-        {counselors.map((c) => (
-          <CounselorRow
-            key={c.name}
-            counselor={c}
-            expanded={expanded === c.name}
-            onToggle={() => setExpanded(expanded === c.name ? null : c.name)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CounselorRow({
-  counselor,
-  expanded,
-  onToggle,
-}: {
-  counselor: CounselorStat;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  const locale = useLocale();
-  return (
-    <div className="border-b border-abys-ink/5 last:border-0">
-      <button
-        onClick={onToggle}
-        className="w-full grid grid-cols-[1fr_auto_auto_auto] gap-3 px-4 py-2.5 text-sm text-left hover:bg-white/40 transition-colors"
-      >
-        <span className="text-abys-ink font-medium truncate">{counselor.name}</span>
-        <span className="text-abys-muted font-mono">{counselor.assigned}</span>
-        <span className="text-abys-muted font-mono">{counselor.sales}</span>
-        <span className="text-abys-navy font-mono">{counselor.revenue.toLocaleString(locale)} ₺</span>
-      </button>
-      {expanded && (
-        <div className="px-4 pb-3 grid grid-cols-2 gap-3 text-xs">
-          <div>
-            <p className="text-abys-muted">{t(locale, "reports.counselor.assignedLabel")}</p>
-            <p className="font-mono text-abys-navy">{counselor.assigned}</p>
-          </div>
-          <div>
-            <p className="text-abys-muted">{t(locale, "reports.counselor.salesLabel")}</p>
-            <p className="font-mono text-abys-navy">{counselor.sales}</p>
-          </div>
-          <div>
-            <p className="text-abys-muted">{t(locale, "reports.counselor.amountLabel")}</p>
-            <p className="font-mono text-abys-navy">{counselor.revenue.toLocaleString(locale)} ₺</p>
-          </div>
-          <div>
-            <p className="text-abys-muted">{t(locale, "reports.counselor.conversionLabel")}</p>
-            <p className="font-mono text-abys-navy">
-              {percentText(locale, counselor.conversionPct, 1)}
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
 }

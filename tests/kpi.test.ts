@@ -15,7 +15,7 @@ process.env.ABYS_DB_DIR = path.join(
 );
 
 const { migrate, getDb } = await import("../src/lib/db/client");
-const { upsertDefinition, evaluateAgainstThresholds } = await import(
+const { upsertDefinition, evaluateAgainstThresholds, approveDefinition, validateDefinition, listDefinitions } = await import(
   "../src/lib/db/repos/kpi-registry"
 );
 const { parseKpis } = await import("../src/lib/kpi");
@@ -35,6 +35,8 @@ describe("evaluateAgainstThresholds (deterministik eşik karşılaştırması)",
     await upsertDefinition({
       orgId,
       name: "Zamanında Teslimat Oranı",
+      formulaText: "teslim_edilen / toplam_teslimat",
+      unit: "percent",
       target: 99,
       warnThreshold: 95,
       criticalThreshold: 90,
@@ -44,6 +46,8 @@ describe("evaluateAgainstThresholds (deterministik eşik karşılaştırması)",
     await upsertDefinition({
       orgId,
       name: "Şikayet Oranı",
+      formulaText: "sikayet / siparis",
+      unit: "percent",
       target: 10,
       warnThreshold: 20,
       criticalThreshold: 30,
@@ -53,6 +57,8 @@ describe("evaluateAgainstThresholds (deterministik eşik karşılaştırması)",
     await upsertDefinition({
       orgId,
       name: "Sadece Kritik Eşik",
+      formulaText: "kritik_deger",
+      unit: "percent",
       target: 99,
       criticalThreshold: 90,
     });
@@ -61,8 +67,15 @@ describe("evaluateAgainstThresholds (deterministik eşik karşılaştırması)",
     await upsertDefinition({
       orgId,
       name: "Eşiksiz KPI",
+      formulaText: "olcum_degeri",
       target: 50,
     });
+    const definitions = await listDefinitions(orgId);
+    for (const definition of definitions) {
+      if (definition.warnThreshold === null && definition.criticalThreshold === null) continue;
+      await validateDefinition({ orgId, id: definition.id, userId: "kpi-test-validator", displayName: "KPI Test Validator", role: "analyst" });
+      await approveDefinition({ orgId, id: definition.id, userId: "kpi-test-approver", displayName: "KPI Test Approver", role: "ceo" });
+    }
   });
 
   afterAll(async () => {

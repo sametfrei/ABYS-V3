@@ -53,6 +53,7 @@ export interface KpiSignalScope {
 
 export interface KpiAnomalySignal {
   id: string;
+  observationId: string;
   label: string;
   severity: KpiSignalSeverity;
   title: string;
@@ -98,6 +99,7 @@ export interface KpiAnomalyGenerationResult extends KpiSeriesCounts {
 }
 
 export interface KpiSeriesPoint {
+  id: string;
   value: number;
   timestamp: string;
 }
@@ -165,6 +167,7 @@ interface DefinitionRow {
   critical_threshold: string | number | null;
   target: string | number | null;
   update_frequency: string | null;
+  governance_state?: string;
 }
 
 function iso(value: string | Date): string {
@@ -336,7 +339,7 @@ async function loadDefinitions(orgId: string): Promise<Map<string, KpiDefinition
     `SELECT id, name, unit, formula_text, source, source_ref,
             warn_threshold, critical_threshold, target, update_frequency
        FROM kpi_definitions
-      WHERE org_id = $1`,
+      WHERE org_id = $1 AND governance_state = 'approved'`,
     [orgId]
   );
   return new Map(
@@ -468,6 +471,7 @@ export async function loadKpiSeriesScopes(
     };
     bucket.scopeVerified = bucket.scopeVerified && scopeVerified;
     bucket.points.push({
+      id: row.id,
       value,
       timestamp: iso(row.created_at),
     });
@@ -556,6 +560,7 @@ export async function generateKpiAnomalySignals(
     const sampleSize = Math.min(window, latest.index);
     const payload = {
       kind: categoryId,
+      observationId: point.id,
       classification: classified.classification,
       classificationReason: classified.reason,
       label: scope.label,
@@ -618,6 +623,7 @@ export async function generateKpiAnomalySignals(
     );
     const signal: KpiAnomalySignal = {
       id,
+      observationId: point.id,
       label: scope.label,
       severity: classified.severity,
       title,

@@ -61,6 +61,7 @@ const runsRoute = await import("../src/app/api/connectors/[id]/runs/route");
 const schedulerRoute = await import("../src/app/api/connectors/scheduler/run/route");
 const testRoute = await import("../src/app/api/connectors/[id]/test/route");
 const { runDueConnectorSyncs } = await import("../src/lib/connectors/scheduler");
+const kpiIntelligence = await import("../src/lib/connectors/kpi-intelligence");
 const forecastRoute = await import("../src/app/api/forecast/route");
 const anomalyRoute = await import("../src/app/api/anomalies/route");
 const { getProcessEvents } = await import("../src/lib/db/repos/process-events");
@@ -499,10 +500,15 @@ describe("Konnektör API'si", () => {
     const res = await syncRoute.POST(new Request("http://localhost", { method: "POST" }), {
       params: Promise.resolve({ id: configId }),
     });
-    const body = (await res.json()) as { status: string; writtenCount: number };
+    const body = (await res.json()) as {
+      status: string;
+      writtenCount: number;
+      intelligence: { status: string; reason?: string };
+    };
     expect(res.status).toBe(200);
     expect(body.status).toBe("success");
     expect(body.writtenCount).toBe(1);
+    expect(body.intelligence).toEqual({ status: "skipped", reason: "no_kpi_observations" });
 
     // İkinci çalıştırma aynı kaydı çoğaltmaz.
     const again = await syncRoute.POST(new Request("http://localhost", { method: "POST" }), {
@@ -907,7 +913,11 @@ describe("Konnektör API'si", () => {
     });
     const ok = summary.outcomes.find((outcome) => outcome.configId === okId);
     const failed = summary.outcomes.find((outcome) => outcome.configId === failId);
-    expect(ok).toMatchObject({ status: "success", writtenCount: 1 });
+    expect(ok).toMatchObject({
+      status: "success",
+      writtenCount: 1,
+      intelligence: { status: "skipped", reason: "no_kpi_observations" },
+    });
     expect(failed).toMatchObject({ status: "failed" });
     expect(failed?.error).toContain("400");
 
@@ -1100,6 +1110,11 @@ describe("Konnektör API'si", () => {
       canonicalizedCount: number;
       kpiObservationCount: number;
       processEventCount: number;
+      intelligence: {
+        status: string;
+        signals: { generated: number; existing: number; scannedLabels: number };
+        decisionCases: { generated: number; existing: number; scannedSignals: number; skipped: number };
+      };
     };
     expect(synced.status).toBe(200);
     expect(body).toMatchObject({
@@ -1108,12 +1123,39 @@ describe("Konnektör API'si", () => {
       canonicalizedCount: 11,
       kpiObservationCount: 11,
       processEventCount: 11,
+      intelligence: {
+        status: "success",
+        signals: expect.objectContaining({ generated: expect.any(Number) }),
+        decisionCases: expect.objectContaining({ generated: expect.any(Number) }),
+      },
     });
 
     const repeated = await syncRoute.POST(new Request("http://localhost", { method: "POST" }), {
       params: Promise.resolve({ id: promotedConfigId }),
     });
-    expect(((await repeated.json()) as { processEventCount: number }).processEventCount).toBe(0);
+    const repeatedBody = (await repeated.json()) as {
+      processEventCount: number;
+      intelligence: { status: string; decisionCases: { generated: number; existing: number } };
+    };
+    expect(repeatedBody.processEventCount).toBe(0);
+    expect(repeatedBody.intelligence.status).toBe("success");
+    expect(repeatedBody.intelligence.decisionCases.generated).toBe(0);
+
+    const pipeline = vi.spyOn(kpiIntelligence, "runKpiIntelligencePipeline");
+    pipeline.mockRejectedValueOnce(new Error("pipeline unavailable"));
+    const degraded = await syncRoute.POST(new Request("http://localhost", { method: "POST" }), {
+      params: Promise.resolve({ id: promotedConfigId }),
+    });
+    const degradedBody = (await degraded.json()) as {
+      status: string;
+      intelligence: { status: string; error: string };
+      warnings: string[];
+    };
+    expect(degraded.status).toBe(200);
+    expect(degradedBody.status).toBe("success");
+    expect(degradedBody.intelligence).toEqual({ status: "failed", error: "pipeline unavailable" });
+    expect(degradedBody.warnings.join(" ")).toContain("pipeline unavailable");
+    pipeline.mockRestore();
 
     const runs = await runsRoute.GET(new Request("http://localhost"), {
       params: Promise.resolve({ id: promotedConfigId }),

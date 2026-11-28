@@ -79,6 +79,22 @@ export interface BriefOutcome {
   lesson: string | null;
 }
 
+export interface BriefExternalContext {
+  provider: string;
+  sourceName: string;
+  topic: string;
+  geography: string;
+  summary: string;
+  publishedAt: string;
+  observedAt: string;
+  retrievedAt: string;
+  relevanceScore: number;
+  confidence: number;
+  licenseId: string;
+  attributionText: string;
+  sourceUri: string;
+}
+
 export interface BriefInput {
   case: BriefCase;
   caseSignals: BriefSignal[];
@@ -87,10 +103,11 @@ export interface BriefInput {
   anomalies: BriefAnomaly[];
   causal: BriefCausalLink[];
   outcomes: BriefOutcome[];
+  externalContext: BriefExternalContext[];
 }
 
 export interface BriefEvidence {
-  source: "vaka" | "sinyal" | "bağlam" | "tahmin" | "anomali" | "nedensel" | "sonuç";
+  source: "vaka" | "sinyal" | "bağlam" | "tahmin" | "anomali" | "nedensel" | "sonuç" | "external_context";
   summary: string;
   reliability: EvidenceReliability;
 }
@@ -121,7 +138,7 @@ function clampConfidence(v: number): number {
 }
 
 export function buildDecisionBrief(input: BriefInput): DecisionBrief {
-  const { case: c, caseSignals, contextSignals, forecast, anomalies, causal, outcomes } = input;
+  const { case: c, caseSignals, contextSignals, forecast, anomalies, causal, outcomes, externalContext } = input;
 
   const evidence: BriefEvidence[] = [];
   for (const item of c.evidence ?? []) {
@@ -181,6 +198,19 @@ export function buildDecisionBrief(input: BriefInput): DecisionBrief {
     });
   }
 
+  for (const item of externalContext) {
+    const reliability: EvidenceReliability = item.relevanceScore >= 0.8 && item.confidence >= 0.8
+      ? "high"
+      : item.relevanceScore >= 0.5 && item.confidence >= 0.5
+        ? "medium"
+        : "low";
+    evidence.push({
+      source: "external_context",
+      summary: `${item.sourceName} (${item.provider}) · ${item.topic} / ${item.geography}: ${item.summary} · yayımlanma ${item.publishedAt} · gözlem ${item.observedAt} · alınma ${item.retrievedAt} · lisans ${item.licenseId} · ${item.attributionText} · ${item.sourceUri}`,
+      reliability,
+    });
+  }
+
   const causalAssessments = causal.map((link) => ({ link, assessment: assessCausalEvidence(link) }));
   for (const { link, assessment } of causalAssessments) {
     const sample = assessment.sampleSize === null ? "n bilinmiyor" : `n=${assessment.sampleSize}`;
@@ -217,19 +247,23 @@ export function buildDecisionBrief(input: BriefInput): DecisionBrief {
     anomalies.length > 0,
     causal.length > 0,
     outcomes.length > 0,
+    externalContext.some((item) => item.relevanceScore >= 0.5 && item.confidence >= 0.5),
   ];
   const coverageScore = (coverage.filter(Boolean).length / coverage.length) * 100;
   const confidence = clampConfidence(c.confidence * 0.5 + coverageScore * 0.5);
 
   const confidenceRationale = [
     `Vaka güveni %${c.confidence}${c.confidenceRationale ? ` (${c.confidenceRationale})` : ""}.`,
-    `Vaka kanıtı kapsamı: ${coverage.filter(Boolean).length}/5 kaynak türü mevcut.`,
+    `Vaka kanıtı kapsamı: ${coverage.filter(Boolean).length}/6 kaynak türü mevcut.`,
     forecast
       ? `Tahmin kanıt düzeyi: ${forecast.evidence}.`
       : "Bu vaka için bağlı KPI tahmini yok; gelecek projeksiyonu sınırlı.",
   ];
 
   const caveats: string[] = [];
+  if (externalContext.length > 0) {
+    caveats.push("Dış bağlam ayrı kaynak/lisans/zaman metaverisiyle saklanır; kabul edilmiş olması tek başına doğruluğunu veya nedenselliğini garanti etmez.");
+  }
   if (!forecast) {
     caveats.push("Sayısal gelecek projeksiyonu yok: vaka verisine `metricLabel` bağlanmadığı için tahmin üretilmedi.");
   }

@@ -60,6 +60,7 @@ describe("Karar brifingi motoru", () => {
       anomalies: [{ score: 4.2, direction: "below", timestamp: "2026-01-01T00:00:00Z" }],
       causal: [{ fromLabel: "Tahsilat süresi", toLabel: "Nakit", relationStatus: "observed_correlation", confidence: 60 }],
       outcomes: [{ result: "improved", lesson: "Erken arama işe yaradı" }],
+      externalContext: [{ provider: "test-feed", sourceName: "Test feed", topic: "Weather", geography: "Ankara", summary: "Rainfall above seasonal range", publishedAt: "2026-11-01T00:00:00.000Z", observedAt: "2026-11-01T00:00:00.000Z", retrievedAt: "2026-11-02T00:00:00.000Z", relevanceScore: 0.9, confidence: 0.9, licenseId: "TEST-LICENSE", attributionText: "Test attribution", sourceUri: "https://example.com/source/1" }],
     });
     const sources = brief.evidence.map((e) => e.source);
     expect(sources).toContain("vaka");
@@ -68,6 +69,8 @@ describe("Karar brifingi motoru", () => {
     expect(sources).toContain("anomali");
     expect(sources).toContain("nedensel");
     expect(sources).toContain("sonuç");
+    expect(sources).toContain("external_context");
+    expect(brief.evidence.find((e) => e.source === "external_context")?.summary).toContain("TEST-LICENSE");
     const correlationEvidence = brief.evidence.find((e) => e.source === "nedensel");
     expect(correlationEvidence?.reliability).toBe("low");
     expect(correlationEvidence?.summary).toContain("gözlemlenen korelasyon");
@@ -90,6 +93,7 @@ describe("Karar brifingi motoru", () => {
       anomalies: [],
       causal: [],
       outcomes: [],
+      externalContext: [],
     });
     const rich = buildDecisionBrief({
       case: BASE_CASE,
@@ -110,6 +114,7 @@ describe("Karar brifingi motoru", () => {
         },
       ],
       outcomes: [{ result: "improved", lesson: null }],
+      externalContext: [],
     });
     expect(sparse.confidence).toBeLessThan(rich.confidence);
     expect(sparse.caveats.some((c) => c.includes("tahmin"))).toBe(true);
@@ -126,6 +131,7 @@ describe("Karar brifingi motoru", () => {
       anomalies: [],
       causal: [],
       outcomes: [],
+      externalContext: [],
     });
     expect(brief.recommendation).toBeNull();
   });
@@ -150,6 +156,7 @@ describe("Karar brifingi motoru", () => {
         },
       ],
       outcomes: [],
+      externalContext: [],
     });
     const causalEvidence = brief.evidence.find((e) => e.source === "nedensel");
     expect(causalEvidence?.reliability).toBe("low");

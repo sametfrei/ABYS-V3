@@ -47,6 +47,7 @@ const ORG_NO_FORMULA = "org-case-noformula";
 const ORG_UNCLASSIFIED = "org-case-unclassified";
 const ORG_API = "org-case-api";
 const ORG_TAMPERED = "org-case-tampered";
+const ORG_CONCURRENT = "org-case-concurrent";
 
 const SPIKE = [90, 91, 90, 92, 89, 91, 90, 90, 91, 90, 150];
 const FIRE_SPIKE = [5, 5.2, 4.9, 5.1, 5, 5.2, 5, 5.1, 5, 5, 15];
@@ -120,8 +121,8 @@ async function insertDefinition(
   await getDb().query(
     `INSERT INTO kpi_definitions
        (id, org_id, name, unit, formula_text, source, source_ref,
-        warn_threshold, critical_threshold, target, update_frequency)
-     VALUES ($1, $2, $3, 'ratio', $4, $5, $6, $7, $8, $9, $10)`,
+        warn_threshold, critical_threshold, target, update_frequency, governance_state)
+     VALUES ($1, $2, $3, 'ratio', $4, $5, $6, $7, $8, $9, $10, 'approved')`,
     [
       id,
       orgId,
@@ -151,7 +152,14 @@ async function insertDefinition(
 
 beforeAll(async () => {
   await migrate();
-  for (const org of [ORG, ORG_NO_FORMULA, ORG_UNCLASSIFIED, ORG_API, ORG_TAMPERED]) {
+  for (const org of [
+    ORG,
+    ORG_NO_FORMULA,
+    ORG_UNCLASSIFIED,
+    ORG_API,
+    ORG_TAMPERED,
+    ORG_CONCURRENT,
+  ]) {
     await insertOrg(org);
   }
 
@@ -237,6 +245,25 @@ beforeAll(async () => {
   );
   expect((await generateKpiAnomalySignals(ORG_TAMPERED)).generated).toBe(1);
 
+  const concurrentDataset = await insertDataset(ORG_CONCURRENT);
+  const concurrentDefinition = await insertDefinition(ORG_CONCURRENT, "İlk geçiş verimi", {
+    formula: "ilk seferde hatasız birim / toplam birim",
+    source: "industry-pack",
+    sourceRef: "manufacturing@2",
+    warn: 95,
+    critical: 90,
+    target: 100,
+  });
+  await insertSeries(
+    ORG_CONCURRENT,
+    concurrentDataset,
+    "İlk geçiş verimi",
+    SPIKE,
+    7,
+    concurrentDefinition
+  );
+  expect((await generateKpiAnomalySignals(ORG_CONCURRENT)).generated).toBe(1);
+
   const password = hashPassword("mevcut-parola-123");
   for (const [id, org, role] of [
     ["case-ceo", ORG_API, "ceo"],
@@ -276,6 +303,7 @@ describe("KPI sinyalinden karar vakası", () => {
         origin: {
           kind: string;
           signalId: string;
+          observationId: string;
           label: string;
           datasetId: string;
           classification: string;
@@ -294,6 +322,7 @@ describe("KPI sinyalinden karar vakası", () => {
     expect(opportunity?.confidence).toBeLessThanOrEqual(80);
     expect(opportunity?.payload.origin).toMatchObject({
       kind: "kpi_signal",
+      observationId: expect.any(String),
       label: "İlk geçiş verimi",
       classification: "opportunity",
       formulaVersion: "manufacturing@2",
@@ -418,9 +447,46 @@ describe("KPI sinyalinden karar vakası", () => {
   });
 });
 
+describe("eşzamanlı KPI karar vakası üretimi", () => {
+  it("aynı organizasyondaki eşzamanlı istekler tek vaka, tek bağlantı ve tek audit üretir", async () => {
+    const results = await Promise.all([
+      generateDecisionCasesFromKpiSignals(ORG_CONCURRENT),
+      generateDecisionCasesFromKpiSignals(ORG_CONCURRENT),
+    ]);
+    expect(results.reduce((sum, result) => sum + result.generated, 0)).toBe(1);
+    expect(results.reduce((sum, result) => sum + result.existing, 0)).toBe(1);
+
+    const cases = await getDb().query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM decision_cases WHERE org_id = $1",
+      [ORG_CONCURRENT]
+    );
+    const links = await getDb().query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM decision_case_signals WHERE org_id = $1",
+      [ORG_CONCURRENT]
+    );
+    const audits = await getDb().query<{ n: number }>(
+      "SELECT count(*)::int AS n FROM audit_events WHERE org_id = $1 AND type = 'decision_case_generated_from_signal'",
+      [ORG_CONCURRENT]
+    );
+    expect(cases.rows[0].n).toBe(1);
+    expect(links.rows[0].n).toBe(1);
+    expect(audits.rows[0].n).toBe(1);
+  });
+});
+
 describe("vaka üretiminde savunma katmanı", () => {
   type SignalPayload = {
     classification: string;
+    observationId: string;
+    metricValue: number;
+    baseline: number;
+    scale: number;
+    score: number;
+    timestamp: string;
+    sampleSize: number;
+    seriesPoints: number;
+    analysisWindow: number;
+    method: { window: number; threshold: number };
     series: {
       entity: string | null;
       externalId: string | null;
@@ -486,6 +552,50 @@ describe("vaka üretiminde savunma katmanı", () => {
     const scopeData = await generateDecisionCasesFromKpiSignals(ORG_TAMPERED);
     expect(scopeData).toMatchObject({ generated: 0, skipped: 1 });
     expect(scopeData.skippedReasons.scope_unverified).toBe(1);
+
+    await writePayload((payload) => {
+      payload.observationId = `kv-${ORG_TAMPERED}-6-0`;
+    });
+    const observationTamper = await generateDecisionCasesFromKpiSignals(ORG_TAMPERED);
+    expect(observationTamper).toMatchObject({ generated: 0, skipped: 1 });
+    expect(observationTamper.skippedReasons.source_observation_mismatch).toBe(1);
+
+    await writePayload((payload) => {
+      payload.metricValue += 1;
+    });
+    const metricTamper = await generateDecisionCasesFromKpiSignals(ORG_TAMPERED);
+    expect(metricTamper).toMatchObject({ generated: 0, skipped: 1 });
+    expect(metricTamper.skippedReasons.source_observation_mismatch).toBe(1);
+
+    await writePayload((payload) => {
+      payload.score += 100;
+    });
+    const scoreTamper = await generateDecisionCasesFromKpiSignals(ORG_TAMPERED);
+    expect(scoreTamper).toMatchObject({ generated: 0, skipped: 1 });
+    expect(scoreTamper.skippedReasons.anomaly_recalculation_mismatch).toBe(1);
+
+    await writePayload((payload) => {
+      payload.baseline += 100;
+    });
+    const baselineTamper = await generateDecisionCasesFromKpiSignals(ORG_TAMPERED);
+    expect(baselineTamper).toMatchObject({ generated: 0, skipped: 1 });
+    expect(baselineTamper.skippedReasons.anomaly_recalculation_mismatch).toBe(1);
+
+    await writePayload((payload) => {
+      payload.method.threshold = 2;
+    });
+    const methodTamper = await generateDecisionCasesFromKpiSignals(ORG_TAMPERED);
+    expect(methodTamper).toMatchObject({ generated: 0, skipped: 1 });
+    expect(methodTamper.skippedReasons.invalid_anomaly_parameters).toBe(1);
+
+    await writePayload(() => {});
+    await getDb().query(
+      "UPDATE signals SET category_id = 'kpi_anomaly' WHERE org_id = $1",
+      [ORG_TAMPERED]
+    );
+    const categoryTamper = await generateDecisionCasesFromKpiSignals(ORG_TAMPERED);
+    expect(categoryTamper).toMatchObject({ generated: 0, skipped: 1 });
+    expect(categoryTamper.skippedReasons.classification_mismatch).toBe(1);
 
     const cases = await getDb().query<{ n: number }>(
       "SELECT count(*)::int AS n FROM decision_cases WHERE org_id = $1",

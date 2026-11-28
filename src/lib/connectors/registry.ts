@@ -1,5 +1,6 @@
 import type { ConnectorAdapter, ConnectorDefinition } from "./types";
 import { restAdapter } from "./rest-adapter";
+import { mysqlAdapter, sqlAdapter, sqlServerAdapter } from "./sql-adapter";
 
 /**
  * Konnektör kayıt defteri.
@@ -35,6 +36,42 @@ export const CONNECTOR_DEFINITIONS: ConnectorDefinition[] = [
     authType: "bearer_token",
     entities: [...VENDOR_ENTITIES, "account", "event"],
     note: "Sayfalama, alan eşlemesi, artımlı checkpoint ve yeniden deneme desteklenir.",
+  },
+  {
+    id: "postgresql",
+    label: "PostgreSQL (salt-okunur SQL)",
+    category: "generic",
+    status: "ready",
+    authType: "none",
+    entities: [...VENDOR_ENTITIES, "account", "event"],
+    note: "Ortam değişkenindeki bağlantı adresiyle SQL sorgusu çalıştırır; salt-okunur transaction ve satır sınırı uygular.",
+  },
+  {
+    id: "sqlserver",
+    label: "Microsoft SQL Server (salt-okunur SQL)",
+    category: "generic",
+    status: "ready",
+    authType: "none",
+    entities: [...VENDOR_ENTITIES, "account", "event"],
+    note: "Ayrıcalığı yalnızca SELECT olan SQL Server kullanıcısıyla sorgu, eşleme ve zamanlanmış senkron.",
+  },
+  {
+    id: "mysql",
+    label: "MySQL / MariaDB (salt-okunur SQL)",
+    category: "generic",
+    status: "ready",
+    authType: "none",
+    entities: [...VENDOR_ENTITIES, "account", "event"],
+    note: "Salt-okunur transaction, parametreli checkpoint ve kanonik veri senkronu.",
+  },
+  {
+    id: "erp12",
+    label: "ERP12",
+    category: "erp",
+    status: "planned",
+    authType: "none",
+    entities: [...VENDOR_ENTITIES, "account"],
+    note: "ERP12 yerel kurulumdur. Üreticiden API/veritabanı erişim yöntemi ve şema doğrulanmadan canlı adaptör etkinleştirilmez.",
   },
   {
     id: "sap",
@@ -135,6 +172,9 @@ export const CONNECTOR_DEFINITIONS: ConnectorDefinition[] = [
 
 const ADAPTERS: Record<string, ConnectorAdapter> = {
   "rest-generic": restAdapter,
+  postgresql: sqlAdapter,
+  sqlserver: sqlServerAdapter,
+  mysql: mysqlAdapter,
   // Vendor tanımları aynı adaptörü kullanır; canlı kimlik bilgisi olmadan
   // "ready" sayılmazlar (definition.status ile ayrışır).
   sap: restAdapter,

@@ -3,11 +3,8 @@
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { DecisionIntelligencePanel } from "@/components/DecisionIntelligencePanel";
-import { loadProfile } from "@/lib/profile";
-import { useStored } from "@/lib/use-stored";
 import { useSession } from "@/lib/use-session";
 import { getSector, type Sector } from "@/lib/sectors";
-import { getRole } from "@/lib/roles";
 import { SEVERITY_META } from "@/lib/signals";
 import { newId } from "@/lib/entities";
 import { parseExpectedImpact } from "@/lib/expected-impact";
@@ -15,15 +12,9 @@ import {
   type DecisionCase,
   type ActionOption,
   type DecisionChoice,
-  listCases,
-  saveCase,
-  replaceCasesForSector,
-  saveDecision,
-  logAudit,
-  decisionMemorySummary,
   RELIABILITY_META,
 } from "@/lib/decisions";
-import { getConstraints, saveConstraints, constraintsToPrompt, type Constraint } from "@/lib/constraints";
+import { constraintsToPrompt, type Constraint } from "@/lib/constraints";
 import { getScenarios } from "@/lib/scenarios";
 import type { AiDecisionCase } from "@/lib/ai/provider";
 import { postJsonStreamed } from "@/lib/ndjson-client";
@@ -102,22 +93,16 @@ interface CalibrationSummary {
 
 export default function DecisionsPage() {
   const locale = useLocale();
-  const [stored, refresh] = useStored(() => {
-    const p = loadProfile();
-    const s = p ? getSector(p.sectorId) ?? null : null;
-    return { profile: p, sector: s, cases: s ? listCases(s.id) : [] };
-  });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [analyzerOverride, setAnalyzerOverride] = useState<boolean | null>(null);
-
-  const localProfile = stored?.profile ?? null;
-
-  // Kurumsal oturum varsa vakalar SUNUCUDAN okunur (org izolasyonlu);
-  // oturum yoksa prototip localStorage akışı sürer.
+  // Decision records are always server-owned and tenant-scoped. No localStorage fallback.
   const session = useSession();
   const isTais = session?.orgCode === "tais-ikf-demo";
-  const profile = session ? null : localProfile;
-  const sector = session ? null : stored?.sector ?? null;
+  const sector = session ? getSector(session.sectorId) ?? getSector("other") ?? null : null;
+  const sessionSector = session
+    ? getSector(session.sectorId) ?? getSector("other") ?? null
+    : null;
+  const [showTaisAnalyzer, setShowTaisAnalyzer] = useState(false);
   const [serverCases, setServerCases] = useState<DecisionCase[] | null>(null);
   const [calibration, setCalibration] = useState<CalibrationSummary | null>(null);
   useEffect(() => {
@@ -156,7 +141,7 @@ export default function DecisionsPage() {
     };
   }, [session, sector, serverReloadKey]);
 
-  const cases = session ? serverCases ?? [] : stored?.cases ?? [];
+  const cases = session ? serverCases ?? [] : [];
   const showAnalyzer = analyzerOverride ?? cases.length === 0;
   const setShowAnalyzer = (v: boolean) => setAnalyzerOverride(v);
 
@@ -186,9 +171,9 @@ export default function DecisionsPage() {
     return () => {
       cancelled = true;
     };
-  }, [isTais, session]);
+  }, [isTais, session, serverReloadKey]);
 
-  if (session === undefined) return null;
+  if (session === undefined || session === null) return null;
 
   if (isTais) {
     return (
@@ -200,6 +185,25 @@ export default function DecisionsPage() {
           desc={t(locale, "decisions.taisSubtitle")}
         />
         <div className="px-4 sm:px-6 lg:px-10 pb-16 space-y-3 max-w-4xl">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowTaisAnalyzer((value) => !value)}
+              className="text-sm rounded-lg bg-abys-navy text-white px-4 py-2.5 hover:opacity-90 transition-opacity"
+            >
+              {showTaisAnalyzer
+                ? t(locale, "decisions.closeAnalyzer")
+                : t(locale, "decisions.openAnalyzer")}
+            </button>
+          </div>
+          {showTaisAnalyzer && sessionSector && (
+            <Analyzer
+              sector={sessionSector}
+              onDone={() => {
+                setShowTaisAnalyzer(false);
+                setServerReloadKey((key) => key + 1);
+              }}
+            />
+          )}
           {taisCases === null && (
             <p className="text-sm text-abys-muted">{t(locale, "decisions.loading")}</p>
           )}
@@ -219,9 +223,9 @@ export default function DecisionsPage() {
     );
   }
 
-  if (!profile || !sector) return null;
+  if (!sector) return null;
 
-  const role = getRole(profile.roleId);
+  const roleId = session?.role ?? "ceo";
   const openCases = cases.filter((c) => c.status === "open");
   const decidedCases = cases.filter((c) => c.status === "decided");
 
@@ -255,10 +259,10 @@ export default function DecisionsPage() {
         {showAnalyzer && (
           <Analyzer
             sector={sector}
-            onDone={(fresh) => {
+            onDone={() => {
               setShowAnalyzer(false);
-              refresh();
-              setSelectedId(fresh.find((c) => c.status === "open")?.id ?? null);
+              setServerReloadKey((key) => key + 1);
+              setSelectedId(null);
             }}
           />
         )}
@@ -275,14 +279,12 @@ export default function DecisionsPage() {
               key={c.id}
               c={c}
               expanded={selectedId === c.id}
-              roleId={profile.roleId}
+              roleId={roleId}
               onToggle={() => setSelectedId(selectedId === c.id ? null : c.id)}
               onDecided={() => {
-                refresh();
                 setServerReloadKey((k) => k + 1);
                 setSelectedId(null);
               }}
-              decidedBy={role?.label ?? t(locale, "decisions.defaultUser")}
               serverMode={!!session}
               calibration={calibration}
             />
@@ -325,20 +327,11 @@ export default function DecisionsPage() {
 
 /* ---------------- Analiz paneli ---------------- */
 
-function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: DecisionCase[]) => void }) {
+function Analyzer({ sector, onDone }: { sector: Sector; onDone: () => void }) {
   const locale = useLocale();
   const scenarios = useMemo(() => getScenarios(sector.id), [sector.id]);
   const [data, setData] = useState("");
-  const [storedConstraints] = useStored(() => ({ list: getConstraints(sector.id) }));
-  const [constraintDraft, setConstraintDraft] = useState<Constraint[] | null>(null);
-  const constraints = constraintDraft ?? storedConstraints?.list ?? [];
-  const setConstraints = (
-    next: Constraint[] | ((cs: Constraint[]) => Constraint[])
-  ) =>
-    setConstraintDraft((prev) => {
-      const base = prev ?? storedConstraints?.list ?? [];
-      return typeof next === "function" ? next(base) : next;
-    });
+  const [constraints, setConstraints] = useState<Constraint[]>([]);
   const [showConstraints, setShowConstraints] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -351,9 +344,6 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
     }
     setBusy(true);
     setError(null);
-    saveConstraints(sector.id, constraints);
-    logAudit("analysis_run", "Siz", `${sector.label} için analiz başlatıldı`, `${trimmed.length} karakter veri, ${constraints.length} kısıt`);
-
     try {
       const json = await postJsonStreamed<{ cases?: AiDecisionCase[]; providerId?: string }>(
         "/api/decision-cases",
@@ -361,23 +351,11 @@ function Analyzer({ sector, onDone }: { sector: Sector; onDone: (cases: Decision
           sectorId: sector.id,
           data: trimmed,
           constraints: constraintsToPrompt(constraints),
-          decisionMemory: decisionMemorySummary(sector.id, trimmed),
         }
       );
-      const aiCases = json.cases ?? [];
-      const providerId = json.providerId ?? "ai";
-      const converted = aiCases.map((c) => toDecisionCase(sector.id, c));
-
-      replaceCasesForSector(sector.id, converted);
-      for (const c of converted) {
-        logAudit(
-          "case_generated",
-          `ABYS (${providerId === "ollama" ? "yerel model" : providerId})`,
-          `Vaka üretildi: ${c.title}`,
-          `Güven: %${c.confidence} · ${c.evidence.length} kanıt · ${c.options.length} seçenek`
-        );
-      }
-      onDone(listCases(sector.id));
+      if (!Array.isArray(json.cases)) throw new Error(t(readLocale(), "decisions.unknownError"));
+      // The API persists cases and audit events within the authenticated tenant.
+      onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : t(readLocale(), "decisions.unknownError"));
     } finally {
@@ -643,7 +621,6 @@ function CaseCard({
   roleId,
   onToggle,
   onDecided,
-  decidedBy,
   serverMode,
   calibration,
 }: {
@@ -652,7 +629,6 @@ function CaseCard({
   roleId: string;
   onToggle: () => void;
   onDecided: () => void;
-  decidedBy: string;
   serverMode: boolean;
   calibration: CalibrationSummary | null;
 }) {
@@ -705,7 +681,7 @@ function CaseCard({
           <CounterfactualPanel c={c} />
           {serverMode && <DecisionIntelligencePanel caseId={c.id} />}
           <CausalPanel c={c} serverMode={serverMode} />
-          <OptionsPanel c={c} onDecided={onDecided} decidedBy={decidedBy} serverMode={serverMode} />
+          <OptionsPanel c={c} onDecided={onDecided} />
         </div>
       )}
     </div>
@@ -903,6 +879,18 @@ const CAUSAL_METHOD_LABELS: Record<string, string> = {
   expert_judgment: "Uzman görüşü",
 };
 
+interface CausalCandidate {
+  fromLabel: string;
+  toLabel: string;
+  associationRatePct: number;
+  sampleSize: number;
+  matchedEffects: number;
+  averageLagDays: number;
+  dataQuality: "high" | "medium" | "low";
+  uncertainty: "medium" | "high";
+  note: string;
+}
+
 interface CausalLink {
   id: string;
   fromLabel: string;
@@ -920,6 +908,7 @@ interface CausalLink {
 function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }) {
   const locale = useLocale();
   const [links, setLinks] = useState<CausalLink[] | null>(null);
+  const [candidates, setCandidates] = useState<CausalCandidate[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [from, setFrom] = useState("");
@@ -934,19 +923,20 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
   const [busy, setBusy] = useState(false);
 
   function load() {
-    fetch(`/api/causal?caseId=${c.id}`)
-      .then(async (r) => {
-        if (!r.ok)
-          throw new Error(
-            (await r.json().catch(() => null))?.error ??
-              t(readLocale(), "decisions.causal.loadFailed")
-          );
-        return (await r.json()).links as CausalLink[];
+    Promise.all([
+      fetch(`/api/causal?caseId=${c.id}`),
+      fetch(`/api/causal/suggestions?caseId=${c.id}`),
+    ])
+      .then(async ([linksResponse, suggestionsResponse]) => {
+        if (!linksResponse.ok || !suggestionsResponse.ok) {
+          const failed = !linksResponse.ok ? linksResponse : suggestionsResponse;
+          throw new Error((await failed.json().catch(() => null))?.error ?? t(readLocale(), "decisions.causal.loadFailed"));
+        }
+        const [linksBody, suggestionsBody] = await Promise.all([linksResponse.json(), suggestionsResponse.json()]);
+        setLinks(linksBody.links as CausalLink[]);
+        setCandidates(suggestionsBody.candidates as CausalCandidate[]);
       })
-      .then((rows) => setLinks(rows))
-      .catch((err) =>
-      setError(err instanceof Error ? err.message : t(readLocale(), "decisions.causal.loadFailed"))
-    );
+      .catch((err) => setError(err instanceof Error ? err.message : t(readLocale(), "decisions.causal.loadFailed")));
   }
 
   useEffect(() => {
@@ -1000,6 +990,36 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
     }
   }
 
+  async function addSuggestion(candidate: CausalCandidate) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/causal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: c.id,
+          fromLabel: candidate.fromLabel,
+          toLabel: candidate.toLabel,
+          relationStatus: "observed_correlation",
+          confidence: candidate.associationRatePct,
+          note: candidate.note,
+          method: "observational",
+          sampleSize: candidate.sampleSize,
+          dataQuality: candidate.dataQuality,
+          uncertainty: candidate.uncertainty,
+        }),
+      });
+      if (!response.ok) throw new Error((await response.json().catch(() => null))?.error ?? t(readLocale(), "decisions.causal.addFailed"));
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t(readLocale(), "decisions.causal.addFailed"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function changeStatus(linkId: string, next: RelationStatus) {
     setError(null);
     try {
@@ -1031,6 +1051,24 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
       </div>
 
       {error && <p className="text-xs mb-2" style={{ color: "var(--abys-critical)" }}>{error}</p>}
+
+      {candidates.length > 0 && (
+        <div className="rounded-lg border border-abys-accent/30 bg-abys-accent-soft/30 p-3 mb-3 space-y-2">
+          <div>
+            <p className="text-xs font-semibold text-abys-navy">{t(locale, "decisions.causal.suggestionsHeading")}</p>
+            <p className="text-[11px] text-abys-muted">{t(locale, "decisions.causal.suggestionsDisclaimer")}</p>
+          </div>
+          {candidates.map((candidate) => (
+            <div key={`${candidate.fromLabel}:${candidate.toLabel}`} className="flex items-start gap-2 border-t border-abys-ink/10 pt-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-abys-ink">{candidate.fromLabel} <span className="text-abys-muted">→</span> {candidate.toLabel}</p>
+                <p className="text-[11px] text-abys-muted">{candidate.matchedEffects}/{candidate.sampleSize} · {formatMessage(locale, "decisions.causal.associationRate", { rate: candidate.associationRatePct })} · {formatMessage(locale, "decisions.causal.lagDays", { days: candidate.averageLagDays })} · {formatMessage(locale, "decisions.causal.dataQuality", { level: levelText(locale, candidate.dataQuality) })}</p>
+              </div>
+              <button disabled={busy} onClick={() => void addSuggestion(candidate)} className="shrink-0 text-[11px] rounded-full border border-abys-ink/20 px-2.5 py-1 disabled:opacity-40">{t(locale, "decisions.causal.addSuggestion")}</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-1.5 mb-3">
         {links && links.length === 0 && !showForm && (
@@ -1066,7 +1104,7 @@ function CausalPanel({ c, serverMode }: { c: DecisionCase; serverMode: boolean }
                   {relationText(locale, l.relationStatus)}
                 </span>
                 <span className="text-xs text-abys-muted">
-                  {formatMessage(locale, "decisions.percent", { value: l.confidence })}
+                  {formatMessage(locale, l.relationStatus === "observed_correlation" ? "decisions.causal.associationRate" : "decisions.percent", { rate: l.confidence, value: l.confidence })}
                 </span>
                 <select
                   value={l.relationStatus}
@@ -1462,13 +1500,9 @@ function TraceSection({ title, children }: { title: string; children: ReactNode 
 function OptionsPanel({
   c,
   onDecided,
-  decidedBy,
-  serverMode,
 }: {
   c: DecisionCase;
   onDecided: () => void;
-  decidedBy: string;
-  serverMode: boolean;
 }) {
   const locale = useLocale();
   const [choosing, setChoosing] = useState<{ mode: DecisionChoice; option?: ActionOption } | null>(null);
@@ -1520,7 +1554,7 @@ function OptionsPanel({
 
     // Sunucu modunda karar SUNUCUYA yazılır: /api/decisions kararı kaydeder,
     // kabul/değiştir kararında hesap verebilir aksiyonu yaratır ve denetime
-    // işler (org daima oturumdan). Oturum yoksa prototip localStorage akışı.
+    // işler; organizasyon kapsamı daima sunucu oturumundan alınır.
     let expectedImpact: ReturnType<typeof buildExpectedImpact> = null;
     if (choosing.mode !== "rejected") {
       try {
@@ -1530,56 +1564,26 @@ function OptionsPanel({
       }
     }
 
-    if (serverMode) {
-      setBusy(true);
-      try {
-        const res = await fetch("/api/decisions", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            caseId: c.id,
-            sectorId: c.sectorId,
-            choice: choosing.mode,
-            reason: reason.trim(),
-            chosenAction,
-            ...(expectedImpact ? { expectedImpact } : {}),
-          }),
-        });
-        if (!res.ok)
-          throw new Error(
-            (await res.json().catch(() => null))?.error ?? t(readLocale(), "decisions.options.saveFailed")
-          );
-      } catch {
-        setBusy(false);
-        return;
-      }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/decisions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          caseId: c.id,
+          sectorId: c.sectorId,
+          choice: choosing.mode,
+          reason: reason.trim(),
+          chosenAction,
+          ...(expectedImpact ? { expectedImpact } : {}),
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? t(readLocale(), "decisions.options.saveFailed"));
+    } catch {
       setBusy(false);
-      onDecided();
       return;
     }
-
-    saveDecision({
-      id: newId(),
-      createdAt: new Date().toISOString(),
-      caseId: c.id,
-      caseTitle: c.title,
-      sectorId: c.sectorId,
-      categoryLabel: c.categoryLabel,
-      severity: c.severity,
-      recommendedAction: recommended?.title ?? "",
-      choice: choosing.mode,
-      chosenAction,
-      reason: reason.trim(),
-      decidedBy,
-      confidence: c.confidence,
-    });
-    saveCase({ ...c, status: "decided" });
-    logAudit(
-      "decision_made",
-      decidedBy,
-      `Karar: ${c.title}`,
-      `${t(readLocale(), `decisions.choice.${choosing.mode}` as ShellKey)}: "${chosenAction}"${reason.trim() ? ` — ${reason.trim()}` : ""}`
-    );
+    setBusy(false);
     onDecided();
   }
 

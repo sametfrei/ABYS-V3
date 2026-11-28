@@ -1,6 +1,7 @@
 import { randomBytes } from "crypto";
 import { getDb, migrate } from "../client";
 import type { RiskAssessment } from "@/lib/ai/provider";
+import { recordAuditEventInTransaction } from "./audit";
 import { listKpiDefinitionSnapshots } from "./kpi-definition-provenance";
 
 /**
@@ -103,4 +104,67 @@ export async function listSignals(orgId: string, sectorId?: string, limit = 200)
     sectorId ? [orgId, sectorId, boundedLimit] : [orgId, boundedLimit]
   );
   return r.rows;
+}
+
+
+export type SignalTriageStatus = "open" | "handled" | "snoozed" | "escalated";
+const SIGNAL_TRIAGE_STATUSES: SignalTriageStatus[] = ["open", "handled", "snoozed", "escalated"];
+
+export async function updateSignalStatus(params: {
+  orgId: string; signalId: string; status: SignalTriageStatus; actorId: string; actorName: string;
+}): Promise<boolean> {
+  await migrate();
+  if (!SIGNAL_TRIAGE_STATUSES.includes(params.status)) throw new Error("Invalid signal triage status.");
+  return getDb().transaction(async (tx) => {
+    const current = await tx.query<{ status: string }>(
+      "SELECT status FROM signals WHERE org_id=$1 AND id=$2 FOR UPDATE",
+      [params.orgId, params.signalId]
+    );
+    if (!current.rows[0]) return false;
+    const previous = current.rows[0].status;
+    if (previous === params.status) return true;
+    await tx.query("UPDATE signals SET status=$3 WHERE org_id=$1 AND id=$2", [params.orgId, params.signalId, params.status]);
+    await recordAuditEventInTransaction(tx, {
+      orgId: params.orgId, actor: params.actorName, type: "signal_triage_updated",
+      summary: `Signal triage: ${previous} → ${params.status}`,
+      detail: JSON.stringify({ signalId: params.signalId, from: previous, to: params.status, actorId: params.actorId }),
+    });
+    return true;
+  });
+}
+
+export interface SignalNoteRow {
+  id: string; signal_id: string; author_id: string; author_name: string; note: string; created_at: string | Date;
+}
+
+export async function listSignalNotes(orgId: string, signalId: string): Promise<SignalNoteRow[]> {
+  await migrate();
+  const result = await getDb().query<SignalNoteRow>(
+    "SELECT id,signal_id,author_id,author_name,note,created_at FROM signal_notes WHERE org_id=$1 AND signal_id=$2 ORDER BY created_at ASC,id ASC LIMIT 200",
+    [orgId, signalId]
+  );
+  return result.rows;
+}
+
+export async function addSignalNote(params: {
+  orgId: string; signalId: string; authorId: string; authorName: string; note: string;
+}): Promise<string | null> {
+  await migrate();
+  const note = params.note.trim();
+  if (!note || note.length > 2000) throw new Error("Note must be between 1 and 2000 characters.");
+  return getDb().transaction(async (tx) => {
+    const signal = await tx.query<{ id: string }>("SELECT id FROM signals WHERE org_id=$1 AND id=$2", [params.orgId, params.signalId]);
+    if (!signal.rows[0]) return null;
+    const id = randomBytes(8).toString("hex");
+    await tx.query(
+      "INSERT INTO signal_notes (id,org_id,signal_id,author_id,author_name,note) VALUES ($1,$2,$3,$4,$5,$6)",
+      [id, params.orgId, params.signalId, params.authorId, params.authorName, note]
+    );
+    await recordAuditEventInTransaction(tx, {
+      orgId: params.orgId, actor: params.authorName, type: "signal_war_room_note_added",
+      summary: "Signal war-room note added",
+      detail: JSON.stringify({ signalId: params.signalId, noteId: id, authorId: params.authorId }),
+    });
+    return id;
+  });
 }

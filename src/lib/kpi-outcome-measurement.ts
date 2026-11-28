@@ -22,6 +22,7 @@ export type KpiMeasurementInsufficientReason =
   | "action_not_done"
   | "no_kpi_origin"
   | "no_definition"
+  | "definition_not_approved"
   | "direction_unknown"
   | "unknown_definition_version"
   | "definition_version_mismatch"

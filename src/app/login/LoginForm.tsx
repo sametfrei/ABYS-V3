@@ -252,16 +252,6 @@ export function LoginForm({
             </a>
           )}
 
-          <div className="mt-6 rounded-xl border border-abys-cream-border bg-white/55 px-4 py-3">
-            <p className="text-[10px] font-semibold tracking-[0.18em] text-abys-muted">
-              {t(locale, "login.demoTitle")}
-            </p>
-            <p className="mt-1 font-mono text-xs text-abys-ink">ceo@tais.demo</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-abys-muted">
-              {t(locale, "login.demoHint")}
-            </p>
-          </div>
-
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
             <p className="max-w-[16rem] text-[11px] leading-relaxed text-abys-muted">
               {t(locale, "login.forgot")}

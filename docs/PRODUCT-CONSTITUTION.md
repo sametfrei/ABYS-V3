@@ -129,3 +129,13 @@ The long-term vision must not expand Sprint 1 beyond these fundamentals. Semanti
 - The semantic graph supports bounded, tenant-scoped multi-hop traversal and neighborhood queries, but it remains a projection rather than a formal ontology service.
 - Identity-conflict review, scheduled synchronization with health telemetry, current/historical digital-twin projections, deterministic scenario comparison, constrained optimization, governed decision lifecycle and economic outcome measurement are implemented and covered by local integration tests.
 - Live vendor validation, external governed write execution and browser end-to-end proof remain open; they are not implied by passing local tests.
+
+
+### Dış bağlam ve lisanslı gözlemler
+
+External observations remain separate from internal KPI/accounting facts. Every accepted observation carries provider/source URI, license and attribution, publication time, observation time, retrieval time, validity window, geography, relevance and confidence. Ingestion does not make an observation decision evidence: a permitted human must accept it, and a decision owner must explicitly link it to a case. Only then can it appear in the deterministic decision brief. Provider fetchers and automated license-compliance checks remain future work.
+
+
+### Tenant-owned operational state
+
+Decision records, signal triage, war-room notes, saved analysis reports and external-context evidence are server-owned and tenant-scoped. Dashboard business screens no longer fall back to browser localStorage. Signal notes and evidence/review histories are append-only; saved reports use audited soft deletion. The retired local integration prototype redirects to the tenant connector registry.

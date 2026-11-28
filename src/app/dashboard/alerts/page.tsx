@@ -3,13 +3,9 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/PageHeader";
-import { loadProfile } from "@/lib/profile";
-import { useStored } from "@/lib/use-stored";
 import { useSession } from "@/lib/use-session";
-import { getSector } from "@/lib/sectors";
-import { getActiveSignals, SEVERITY_META, type Signal } from "@/lib/signals";
-import { listEntities, upsertEntity, newId } from "@/lib/entities";
-import type { HandledSignal, SignalStatus, WarRoomNote } from "@/lib/entities";
+import { SEVERITY_META, type Signal } from "@/lib/signals";
+import type { SignalStatus } from "@/lib/entities";
 import type { TaisRisk } from "@/lib/demo/tais/risks";
 import {
   DEFAULT_LOCALE,
@@ -57,6 +53,7 @@ interface DbSignalRow {
   category_id: string;
   severity: string;
   title: string;
+  status: string;
   payload: Record<string, unknown>;
   created_at: string;
 }
@@ -113,6 +110,7 @@ function dbSignalToSignal(row: DbSignalRow): Signal {
     : [payload.note ?? row.category_id];
   return {
     id: row.id,
+    status: (["open", "handled", "snoozed", "escalated"] as string[]).includes(row.status) ? row.status as SignalStatus : "open",
     categoryId: row.category_id,
     categoryLabel: isKpiSignal ? "KPI" : row.category_id,
     severity: DB_SEVERITIES.includes(row.severity as Signal["severity"])
@@ -155,27 +153,9 @@ function taisRiskToSignal(r: TaisRisk, locale: Locale): Signal {
 
 export default function AlertsPage() {
   const locale = useLocale();
-  const [stored] = useStored(() => {
-    const p = loadProfile();
-    const sector = p ? getSector(p.sectorId) : null;
-    const catalog = sector ? getActiveSignals(sector) : [];
-    const handled = listEntities<HandledSignal>("handled-signals");
-    const map: Record<string, SignalStatus> = {};
-    for (const s of catalog) {
-      const h = handled.find((x) => x.signalId === s.id);
-      map[s.id] = h?.status ?? "open";
-    }
-    return { profile: p, signals: catalog, statuses: map };
-  });
-  const localProfile = stored?.profile ?? null;
-  const sectorSignals = stored?.signals ?? [];
-
-  // Kurumsal oturum var ama yerel onboarding profili yok (ör. TAIS demo girişi):
-  // sektör kataloğu yerine TAIS risk motorunun ürettiği riskler gösterilir
-  // (bkz. src/lib/demo/tais/risks.ts — 12 deterministik kural, kanıt kayıtlı).
+  // Signal inventory and triage state are always read from the authenticated tenant.
   const session = useSession();
   const isTais = session?.orgCode === "tais-ikf-demo";
-  const profile = session ? null : localProfile;
   const [taisRisks, setTaisRisks] = useState<TaisRisk[] | null>(null);
   const [dbSignals, setDbSignals] = useState<Signal[] | null>(null);
   useEffect(() => {
@@ -212,30 +192,27 @@ export default function AlertsPage() {
 
   const signals = isTais
     ? (taisRisks ?? []).map((risk) => taisRiskToSignal(risk, locale))
-    : session
-      ? (dbSignals ?? [])
-      : profile
-        ? sectorSignals
-        : [];
+    : (dbSignals ?? []);
   const [caseBusy, setCaseBusy] = useState(false);
   const [caseMessage, setCaseMessage] = useState("");
   const [caseError, setCaseError] = useState("");
   const [statusOverrides, setStatusOverrides] = useState<Record<string, SignalStatus>>({});
   const taisStatuses = Object.fromEntries((taisRisks ?? []).map((risk) => [risk.id, risk.status]));
-  const statuses = isTais ? taisStatuses : { ...(stored?.statuses ?? {}), ...statusOverrides };
+  const dbStatuses = Object.fromEntries((dbSignals ?? []).map((signal) => [signal.id, signal.status ?? "open"]));
+  const statuses = isTais ? taisStatuses : { ...dbStatuses, ...statusOverrides };
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  if (session === undefined) return null;
+  if (session === undefined || session === null) return null;
 
-  function setStatus(signalId: string, status: SignalStatus) {
-    if (isTais || session) return;
-    upsertEntity<HandledSignal>("handled-signals", {
-      id: signalId,
-      createdAt: new Date().toISOString(),
-      signalId,
-      status,
+  async function setStatus(signalId: string, status: SignalStatus) {
+    if (isTais) return;
+    const response = await fetch(`/api/signals/${encodeURIComponent(signalId)}/triage`, {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
     });
-    setStatusOverrides((s) => ({ ...s, [signalId]: status }));
+    if (!response.ok) return;
+    setStatusOverrides((current) => ({ ...current, [signalId]: status }));
+    setDbSignals((current) => current?.map((signal) => signal.id === signalId ? { ...signal, status } : signal) ?? []);
   }
 
   async function generateCaseDrafts() {
@@ -385,22 +362,18 @@ export default function AlertsPage() {
                     <p className="text-xs text-abys-muted mb-5">
                       {t(locale, "alerts.taisStatusNote")}
                     </p>
-                  ) : session ? (
-                    <p className="text-xs text-abys-muted mb-5">
-                      {t(locale, "alerts.dbSignalNote")}
-                    </p>
                   ) : (
                     <div className="flex gap-2 mb-5">
-                      <StatusButton current={status} target="handled" onClick={() => setStatus(s.id, "handled")} />
-                      <StatusButton current={status} target="snoozed" onClick={() => setStatus(s.id, "snoozed")} />
-                      <StatusButton current={status} target="escalated" onClick={() => setStatus(s.id, "escalated")} />
+                      <StatusButton current={status} target="handled" onClick={() => void setStatus(s.id, "handled")} />
+                      <StatusButton current={status} target="snoozed" onClick={() => void setStatus(s.id, "snoozed")} />
+                      <StatusButton current={status} target="escalated" onClick={() => void setStatus(s.id, "escalated")} />
                       {status !== "open" && (
-                        <StatusButton current={status} target="open" onClick={() => setStatus(s.id, "open")} />
+                        <StatusButton current={status} target="open" onClick={() => void setStatus(s.id, "open")} />
                       )}
                     </div>
                   )}
 
-                   {!isTais && !session && <WarRoom signalId={s.id} />}
+                   {!isTais && <WarRoom signalId={s.id} />}
                 </div>
               )}
             </div>
@@ -438,29 +411,42 @@ function StatusButton({
 
 function WarRoom({ signalId }: { signalId: string }) {
   const locale = useLocale();
-  const [stored, refreshNotes] = useStored(() => ({
-    notes: listEntities<WarRoomNote>("war-room-notes").filter((n) => n.signalId === signalId),
-  }));
-  const notes = stored?.notes ?? [];
+  const [notes, setNotes] = useState<{ id: string; author: string; text: string; createdAt: string }[]>([]);
   const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
-  // Farklı sinyale geçilirse notları yeniden oku
+  async function loadNotes() {
+    const response = await fetch(`/api/signals/${encodeURIComponent(signalId)}/notes`, { cache: "no-store" });
+    if (!response.ok) return;
+    const body = await response.json() as { notes: { id: string; author_name: string; note: string; created_at: string }[] };
+    setNotes(body.notes.map((note) => ({ id: note.id, author: note.author_name, text: note.note, createdAt: note.created_at })));
+  }
+
   useEffect(() => {
-    refreshNotes();
-  }, [signalId, refreshNotes]);
+    let cancelled = false;
+    fetch(`/api/signals/${encodeURIComponent(signalId)}/notes`, { cache: "no-store" })
+      .then(async (response) => response.ok ? await response.json() as { notes: { id: string; author_name: string; note: string; created_at: string }[] } : { notes: [] })
+      .then((body) => {
+        if (!cancelled) setNotes(body.notes.map((note) => ({ id: note.id, author: note.author_name, text: note.note, createdAt: note.created_at })));
+      })
+      .catch(() => { if (!cancelled) setNotes([]); });
+    return () => { cancelled = true; };
+  }, [signalId]);
 
-  function add() {
+  async function add() {
     if (!text.trim()) return;
-    const note: WarRoomNote = {
-      id: newId(),
-      createdAt: new Date().toISOString(),
-      signalId,
-      author: t(locale, "alerts.you"),
-      text: text.trim(),
-    };
-    upsertEntity("war-room-notes", note);
-    refreshNotes();
+    setError(null);
+    const response = await fetch(`/api/signals/${encodeURIComponent(signalId)}/notes`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ note: text.trim() }),
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      setError(body.error ?? t(locale, "alerts.noteSaveFailed"));
+      return;
+    }
     setText("");
+    await loadNotes();
   }
 
   return (
@@ -468,26 +454,18 @@ function WarRoom({ signalId }: { signalId: string }) {
       <p className="text-xs tracking-widest text-abys-muted font-semibold mb-2">{t(locale, "alerts.warRoom")}</p>
       {notes.length === 0 && <p className="text-xs text-abys-muted mb-3">{t(locale, "alerts.noNotes")}</p>}
       <div className="space-y-2 mb-3">
-        {notes.map((n) => (
-          <div key={n.id} className="text-sm bg-white/60 rounded-lg px-3 py-2">
-            <span className="font-medium text-abys-navy">
-              {n.author === "Siz" || n.author === "You" ? t(locale, "alerts.you") : n.author}:{" "}
-            </span>
-            <span className="text-abys-ink">{n.text}</span>
+        {notes.map((note) => (
+          <div key={note.id} className="text-sm bg-white/60 rounded-lg px-3 py-2">
+            <span className="font-medium text-abys-navy">{note.author}: </span>
+            <span className="text-abys-ink">{note.text}</span>
+            <p className="text-[10px] text-abys-muted mt-1">{new Date(note.createdAt).toLocaleString(locale)}</p>
           </div>
         ))}
       </div>
+      {error && <p role="alert" className="text-xs text-abys-critical mb-2">{error}</p>}
       <div className="flex gap-2">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder={t(locale, "alerts.notePlaceholder")}
-          className="flex-1 text-sm rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent"
-        />
-        <button onClick={add} className="text-sm rounded-lg bg-abys-navy text-white px-3 py-2">
-          {t(locale, "alerts.send")}
-        </button>
+        <input value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => event.key === "Enter" && void add()} placeholder={t(locale, "alerts.notePlaceholder")} className="flex-1 text-sm rounded-lg border border-abys-cream-border bg-white/60 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-abys-accent" />
+        <button onClick={() => void add()} className="text-sm rounded-lg bg-abys-navy text-white px-3 py-2">{t(locale, "alerts.send")}</button>
       </div>
     </div>
   );

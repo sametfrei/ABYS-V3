@@ -2,14 +2,13 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { loadProfile, type AbysProfile } from "@/lib/profile";
-import { useStored } from "@/lib/use-stored";
+import type { AbysProfile } from "@/lib/profile";
+import type { RoleId } from "@/lib/roles";
+import type { SectorId } from "@/lib/sectors";
 import { useSession } from "@/lib/use-session";
 import { getRole } from "@/lib/roles";
 import { getSector } from "@/lib/sectors";
 import { SECTOR_CALCULATORS, type CalculatorDef } from "@/lib/calculators";
-import { upsertEntity, newId } from "@/lib/entities";
-import type { SavedReport } from "@/lib/entities";
 import type { CommercialKpis, ManagementKpis } from "@/lib/demo/tais/kpi";
 import {
   DEFAULT_LOCALE,
@@ -52,15 +51,18 @@ interface TaisAnalysis {
 export default function AnalysisPage() {
   const locale = useLocale();
   const [tab, setTab] = useState<Tab>("ai");
-  const [stored] = useStored(() => ({ profile: loadProfile() }));
-  const localProfile = stored?.profile ?? null;
-
-  // Kurumsal oturum var ama yerel onboarding profili yok (ör. TAIS demo
-  // girişi) — AI/Hesaplayıcı sekmeleri profile bağımlı olduğundan bunlar
-  // yerine hizmet türü/ekip/lokasyon kırılımları gösterilir.
   const session = useSession();
   const isTais = session?.orgCode === "tais-ikf-demo";
-  const profile = session ? null : localProfile;
+  // Sunucu oturumu, local onboarding profilinden önce gelir. AI analiz
+  // sekmesi için session'dan güvenli bir görünüm profili türetilir.
+  const sessionProfile: AbysProfile | null = session
+    ? {
+        companyName: session.orgName,
+        sectorId: (getSector(session.sectorId)?.id ?? "other") as SectorId,
+        roleId: (getRole(session.role)?.id ?? "ceo") as RoleId,
+      }
+    : null;
+  const effectiveProfile = sessionProfile;
   const [taisAnalysis, setTaisAnalysis] = useState<TaisAnalysis | null>(null);
   useEffect(() => {
     if (!isTais) return;
@@ -78,7 +80,7 @@ export default function AnalysisPage() {
     };
   }, [isTais]);
 
-  if (session === undefined) return null;
+  if (session === undefined || session === null) return null;
 
   if (isTais) {
     return (
@@ -89,7 +91,15 @@ export default function AnalysisPage() {
           accent={t(locale, "analysis.tais.titleAccent")}
           desc={t(locale, "analysis.tais.subtitle")}
         />
-        <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl">
+        <div className="px-4 sm:px-6 lg:px-10 pb-16 max-w-2xl space-y-10">
+          {effectiveProfile && (
+            <section>
+              <p className="text-xs tracking-widest text-abys-muted font-semibold mb-3">
+                {t(locale, "analysis.tab.ai")}
+              </p>
+              <AiAnalysisTab profile={effectiveProfile} />
+            </section>
+          )}
           {taisAnalysis === null ? (
             <p className="text-sm text-abys-muted">{t(locale, "analysis.loading")}</p>
           ) : (
@@ -100,7 +110,7 @@ export default function AnalysisPage() {
     );
   }
 
-  if (session && !profile) {
+  if (!effectiveProfile) {
     return <p className="px-4 sm:px-6 lg:px-10 py-10 text-sm text-abys-muted">
         {t(locale, "analysis.tais.noData")}
       </p>;
@@ -127,8 +137,8 @@ export default function AnalysisPage() {
         </div>
 
         <div className="pb-16 max-w-2xl">
-          {tab === "ai" && <AiAnalysisTab profile={profile} />}
-          {tab === "calculator" && <CalculatorTab profile={profile} />}
+          {tab === "ai" && <AiAnalysisTab profile={effectiveProfile} />}
+          {tab === "calculator" && <CalculatorTab profile={effectiveProfile} />}
         </div>
       </div>
     </div>
@@ -298,17 +308,18 @@ function AiAnalysisTab({ profile }: { profile: AbysProfile | null }) {
     }
   }
 
-  function saveAsReport() {
+  async function saveAsReport() {
     if (!result || !profile) return;
-    const report: SavedReport = {
-      id: newId(),
-      createdAt: new Date().toISOString(),
-      title: result.status,
-      roleId: profile.roleId,
-      content: `Durum: ${result.status}\nNeden: ${result.problem}\nAksiyon: ${result.action}`,
-    };
-    upsertEntity("saved-reports", report);
-    setSaved(true);
+    const response = await fetch("/api/reports", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: result.status,
+        reportType: "analysis",
+        content: `Durum: ${result.status}\nNeden: ${result.problem}\nAksiyon: ${result.action}`,
+      }),
+    });
+    if (response.ok) setSaved(true);
   }
 
   if (!role) return null;
@@ -348,7 +359,7 @@ function AiAnalysisTab({ profile }: { profile: AbysProfile | null }) {
           <ResultRow label={t(locale, "analysis.result.action")} value={result.action} accent />
 
           <button
-            onClick={saveAsReport}
+            onClick={() => void saveAsReport()}
             disabled={saved}
             className="text-sm rounded-full border border-abys-ink/15 px-4 py-2 hover:bg-white/60 transition-colors disabled:opacity-50"
           >

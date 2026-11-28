@@ -59,6 +59,8 @@ export async function POST(req: NextRequest) {
     warnThreshold: body.warnThreshold,
     criticalThreshold: body.criticalThreshold,
     updateFrequency: body.updateFrequency,
+    actorId: session.userId,
+    actorName: session.displayName,
   });
 
   return NextResponse.json({ id });

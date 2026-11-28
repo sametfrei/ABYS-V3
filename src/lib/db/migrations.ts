@@ -1248,4 +1248,209 @@ export const MIGRATIONS: Migration[] = [
         ON kpi_values(org_id, label, dataset_id, entity, external_id, period, created_at DESC);
     `,
   },
+  {
+    id: 41,
+    name: "KPI tanim yonetisimi: surum gecmisi ve insan onayi",
+    sql: `
+      ALTER TABLE kpi_definitions
+        ADD COLUMN governance_state TEXT NOT NULL DEFAULT 'calculable'
+          CHECK (governance_state IN ('discovered','mapped','calculable','validated','approved')),
+        ADD COLUMN approved_revision INTEGER;
+      CREATE TABLE kpi_definition_revisions (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        definition_id TEXT NOT NULL, revision INTEGER NOT NULL,
+        snapshot JSONB NOT NULL, actor_id TEXT NOT NULL, actor_name TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, definition_id, revision)
+      );
+      CREATE INDEX kpi_definition_revisions_org ON kpi_definition_revisions(org_id, definition_id, revision DESC);
+      -- Migration öncesi tanımların mevcut içeriği ilk, incelenebilir revision olarak arşivlenir.
+      -- Bu kayıtlar otomatik onay anlamına gelmez; hepsi calculable durumunda kalır.
+      INSERT INTO kpi_definition_revisions (id, org_id, definition_id, revision, snapshot, actor_id, actor_name)
+      SELECT md5(org_id || ':' || id || ':migration-41'), org_id, id, 1, to_jsonb(kpi_definitions),
+             'migration-41', 'Migration 41 baseline'
+        FROM kpi_definitions
+      ON CONFLICT (org_id, definition_id, revision) DO NOTHING;
+      CREATE TABLE kpi_definition_approvals (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        definition_id TEXT NOT NULL, revision INTEGER NOT NULL, definition_hash TEXT NOT NULL,
+        approved_by_id TEXT NOT NULL, approved_by_name TEXT NOT NULL, approved_role TEXT NOT NULL,
+        permission TEXT NOT NULL CHECK (permission = 'approve_kpi_definition'),
+        approved_at TIMESTAMPTZ NOT NULL DEFAULT now(), audit_event_id TEXT NOT NULL,
+        UNIQUE (org_id, definition_id, revision)
+      );
+      CREATE INDEX kpi_definition_approvals_org ON kpi_definition_approvals(org_id, definition_id, approved_at DESC);
+      CREATE OR REPLACE FUNCTION prevent_kpi_definition_history_mutation()
+      RETURNS trigger AS $$ BEGIN RAISE EXCEPTION 'KPI definition history is append-only'; END; $$ LANGUAGE plpgsql;
+      CREATE TRIGGER kpi_definition_revisions_append_only BEFORE UPDATE OR DELETE ON kpi_definition_revisions
+        FOR EACH ROW EXECUTE FUNCTION prevent_kpi_definition_history_mutation();
+      CREATE TRIGGER kpi_definition_approvals_append_only BEFORE UPDATE OR DELETE ON kpi_definition_approvals
+        FOR EACH ROW EXECUTE FUNCTION prevent_kpi_definition_history_mutation();
+      CREATE OR REPLACE FUNCTION reset_kpi_definition_approval_on_change()
+      RETURNS trigger AS $$
+      BEGIN
+        IF (to_jsonb(OLD) - 'governance_state' - 'approved_revision' - 'created_at') <>
+           (to_jsonb(NEW) - 'governance_state' - 'approved_revision' - 'created_at') THEN
+          NEW.governance_state := 'calculable';
+          NEW.approved_revision := NULL;
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+      CREATE TRIGGER kpi_definition_approval_reset BEFORE UPDATE ON kpi_definitions
+        FOR EACH ROW EXECUTE FUNCTION reset_kpi_definition_approval_on_change();
+      CREATE OR REPLACE FUNCTION record_kpi_definition_revision()
+      RETURNS trigger AS $$
+      DECLARE next_revision INTEGER;
+      BEGIN
+        IF TG_OP = 'UPDATE' AND
+          (to_jsonb(OLD) - 'governance_state' - 'approved_revision' - 'created_at') =
+          (to_jsonb(NEW) - 'governance_state' - 'approved_revision' - 'created_at') THEN
+          RETURN NEW;
+        END IF;
+        SELECT COALESCE(max(revision), 0) + 1 INTO next_revision
+          FROM kpi_definition_revisions WHERE org_id = NEW.org_id AND definition_id = NEW.id;
+        INSERT INTO kpi_definition_revisions (id, org_id, definition_id, revision, snapshot, actor_id, actor_name)
+          VALUES (md5(random()::text || clock_timestamp()::text), NEW.org_id, NEW.id, next_revision, to_jsonb(NEW), 'system', 'Definition writer');
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+      CREATE TRIGGER kpi_definition_revision_capture AFTER INSERT OR UPDATE ON kpi_definitions
+        FOR EACH ROW EXECUTE FUNCTION record_kpi_definition_revision();
+    `,
+  },
+  {
+    id: 42,
+    name: "KPI tanim yapisal dogrulamasi ve revizyon baglantilari",
+    sql: `
+      ALTER TABLE kpi_definition_approvals
+        ADD CONSTRAINT kpi_definition_approvals_revision_fk
+        FOREIGN KEY (org_id, definition_id, revision)
+        REFERENCES kpi_definition_revisions(org_id, definition_id, revision);
+      CREATE TABLE kpi_definition_validations (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        definition_id TEXT NOT NULL, revision INTEGER NOT NULL, definition_hash TEXT NOT NULL,
+        validated_by_id TEXT NOT NULL, validated_by_name TEXT NOT NULL, validated_role TEXT NOT NULL,
+        permission TEXT NOT NULL CHECK (permission = 'validate_kpi_definition'),
+        checks JSONB NOT NULL, validated_at TIMESTAMPTZ NOT NULL DEFAULT now(), audit_event_id TEXT NOT NULL,
+        UNIQUE (org_id, definition_id, revision),
+        FOREIGN KEY (org_id, definition_id, revision)
+          REFERENCES kpi_definition_revisions(org_id, definition_id, revision)
+      );
+      CREATE INDEX kpi_definition_validations_org ON kpi_definition_validations(org_id, definition_id, validated_at DESC);
+      CREATE TRIGGER kpi_definition_validations_append_only BEFORE UPDATE OR DELETE ON kpi_definition_validations
+        FOR EACH ROW EXECUTE FUNCTION prevent_kpi_definition_history_mutation();
+      CREATE OR REPLACE FUNCTION record_kpi_definition_revision()
+      RETURNS trigger AS $$
+      DECLARE next_revision INTEGER;
+      DECLARE actor_id TEXT;
+      DECLARE actor_name TEXT;
+      BEGIN
+        IF TG_OP = 'UPDATE' AND
+          (to_jsonb(OLD) - 'governance_state' - 'approved_revision' - 'created_at') =
+          (to_jsonb(NEW) - 'governance_state' - 'approved_revision' - 'created_at') THEN
+          RETURN NEW;
+        END IF;
+        SELECT COALESCE(max(revision), 0) + 1 INTO next_revision
+          FROM kpi_definition_revisions WHERE org_id = NEW.org_id AND definition_id = NEW.id;
+        actor_id := COALESCE(NULLIF(current_setting('abys.actor_id', true), ''), 'system');
+        actor_name := COALESCE(NULLIF(current_setting('abys.actor_name', true), ''), 'System / import');
+        INSERT INTO kpi_definition_revisions (id, org_id, definition_id, revision, snapshot, actor_id, actor_name)
+          VALUES (md5(random()::text || clock_timestamp()::text), NEW.org_id, NEW.id, next_revision, to_jsonb(NEW), actor_id, actor_name);
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+    `,
+  },
+  {
+    id: 43,
+    name: "Dis baglam kaynaklari, gozetimler ve vaka baglantilari",
+    sql: `
+      CREATE TABLE external_context_sources (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        provider TEXT NOT NULL, category TEXT NOT NULL, name TEXT NOT NULL,
+        source_uri TEXT NOT NULL, license_id TEXT NOT NULL, license_url TEXT,
+        terms_url TEXT, attribution_text TEXT NOT NULL,
+        access_mode TEXT NOT NULL CHECK (access_mode IN ('api','manual','connector')),
+        created_by_id TEXT NOT NULL, created_by_name TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, provider, source_uri, license_id)
+      );
+      CREATE TABLE external_context_observations (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        source_id TEXT NOT NULL REFERENCES external_context_sources(id), external_id TEXT NOT NULL,
+        topic TEXT NOT NULL, geography TEXT NOT NULL, summary TEXT NOT NULL,
+        published_at TIMESTAMPTZ NOT NULL, observed_at TIMESTAMPTZ NOT NULL,
+        retrieved_at TIMESTAMPTZ NOT NULL DEFAULT now(), valid_from TIMESTAMPTZ, valid_to TIMESTAMPTZ,
+        relevance_score REAL NOT NULL CHECK (relevance_score >= 0 AND relevance_score <= 1),
+        confidence REAL NOT NULL CHECK (confidence >= 0 AND confidence <= 1),
+        source_uri TEXT NOT NULL, attribution_text TEXT NOT NULL, license_id TEXT NOT NULL,
+        payload JSONB NOT NULL DEFAULT '{}'::jsonb, content_hash TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, source_id, external_id),
+        CHECK (valid_to IS NULL OR valid_from IS NULL OR valid_to >= valid_from)
+      );
+      CREATE INDEX external_context_observations_org_time ON external_context_observations(org_id, observed_at DESC);
+      CREATE INDEX external_context_observations_topic ON external_context_observations(org_id, topic, geography, observed_at DESC);
+      CREATE TABLE external_context_reviews (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        observation_id TEXT NOT NULL REFERENCES external_context_observations(id),
+        decision TEXT NOT NULL CHECK (decision IN ('accepted','rejected')),
+        reviewer_id TEXT NOT NULL, reviewer_name TEXT NOT NULL, reviewer_role TEXT NOT NULL,
+        permission TEXT NOT NULL CHECK (permission = 'approve_external_context'),
+        note TEXT, audit_event_id TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX external_context_reviews_latest ON external_context_reviews(org_id, observation_id, created_at DESC);
+      CREATE TABLE decision_case_external_context (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        case_id TEXT NOT NULL REFERENCES decision_cases(id),
+        observation_id TEXT NOT NULL REFERENCES external_context_observations(id),
+        linked_by_id TEXT NOT NULL, linked_by_name TEXT NOT NULL, link_reason TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (org_id, case_id, observation_id)
+      );
+      CREATE INDEX decision_case_external_context_case ON decision_case_external_context(org_id, case_id, created_at DESC);
+      CREATE TRIGGER external_context_sources_append_only BEFORE UPDATE OR DELETE ON external_context_sources
+        FOR EACH ROW EXECUTE FUNCTION prevent_kpi_definition_history_mutation();
+      CREATE TRIGGER external_context_observations_append_only BEFORE UPDATE OR DELETE ON external_context_observations
+        FOR EACH ROW EXECUTE FUNCTION prevent_kpi_definition_history_mutation();
+      CREATE TRIGGER external_context_reviews_append_only BEFORE UPDATE OR DELETE ON external_context_reviews
+        FOR EACH ROW EXECUTE FUNCTION prevent_kpi_definition_history_mutation();
+      CREATE TRIGGER decision_case_external_context_append_only BEFORE UPDATE OR DELETE ON decision_case_external_context
+        FOR EACH ROW EXECUTE FUNCTION prevent_kpi_definition_history_mutation();
+    `,
+  },
+  {
+    id: 44,
+    name: "Sinyal war-room notlari",
+    sql: `
+      CREATE TABLE signal_notes (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        signal_id TEXT NOT NULL REFERENCES signals(id),
+        author_id TEXT NOT NULL, author_name TEXT NOT NULL,
+        note TEXT NOT NULL CHECK (length(trim(note)) BETWEEN 1 AND 2000),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX signal_notes_org_signal ON signal_notes(org_id, signal_id, created_at DESC);
+      CREATE TRIGGER signal_notes_append_only BEFORE UPDATE OR DELETE ON signal_notes
+        FOR EACH ROW EXECUTE FUNCTION prevent_kpi_definition_history_mutation();
+    `,
+  },
+  {
+    id: 45,
+    name: "Tenant kapsamli kaydedilmis raporlar",
+    sql: `
+      CREATE TABLE saved_reports (
+        id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+        title TEXT NOT NULL CHECK (length(trim(title)) BETWEEN 1 AND 200),
+        report_type TEXT NOT NULL, role_id TEXT NOT NULL,
+        content TEXT NOT NULL CHECK (length(content) <= 20000),
+        created_by_id TEXT NOT NULL, created_by_name TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        deleted_at TIMESTAMPTZ, deleted_by_id TEXT,
+        CHECK ((deleted_at IS NULL) = (deleted_by_id IS NULL))
+      );
+      CREATE INDEX saved_reports_org_created ON saved_reports(org_id, created_at DESC) WHERE deleted_at IS NULL;
+    `,
+  },
 ];

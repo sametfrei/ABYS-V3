@@ -216,6 +216,28 @@ describe("idempotent yürütme hazırlığı", () => {
     expect(await response.json()).toMatchObject({ reason: "conflict" });
   });
 
+  it("aynı anahtar farklı mod, hedef sistem veya özetle tekrar kullanılamaz", async () => {
+    nextHeaders.__setTestCookie(SESSION_COOKIE, sessionA);
+    const variants = [
+      { mode: "system", targetSystem: "ERP", summary: "Satın alma talebini hazırla" },
+      { mode: "manual", targetSystem: "CRM", summary: "Satın alma talebini hazırla" },
+      { mode: "manual", targetSystem: "ERP", summary: "Farklı işlem açıklaması" },
+    ] as const;
+
+    for (const variant of variants) {
+      const response = await prepareRoute(
+        request("POST", {
+          actionId: actionA,
+          idempotencyKey,
+          ...variant,
+          payload: { a: 1, b: 2 },
+        })
+      );
+      expect(response.status).toBe(409);
+      expect(await response.json()).toMatchObject({ reason: "conflict" });
+    }
+  });
+
   it("hazırlık insan tarafından onaylanır ve ikinci onay reddedilir", async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, sessionA);
     const approved = await approveRoute(request("PATCH", { intentId }));

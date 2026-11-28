@@ -32,9 +32,9 @@ import type { AiDiagnosis, AiOptionsResult } from "../decision-prompt";
 const DEFAULT_BASE_URL = "https://evren-llmapi.ssyz.org.tr/v1";
 const DEFAULT_MODEL = "deepseek-v4.1-flash";
 const DEFAULT_MAX_TOKENS = 8192;
-const REQUEST_TIMEOUT_MS = 180_000;
-const OPTIONS_TIMEOUT_MS = 120_000;
-const OPTIONS_RETRY_TIMEOUT_MS = 60_000;
+const REQUEST_TIMEOUT_MS = 300_000;
+const OPTIONS_TIMEOUT_MS = 210_000;
+const OPTIONS_RETRY_TIMEOUT_MS = 90_000;
 
 const ABYS_SYSTEM_PROMPT = `Sen ABYS Intelligence'ın kurumsal karar zekâsısın.
 
@@ -292,7 +292,16 @@ async function complete({
     if (buffer.trim()) consumeFrame(buffer);
   } catch (err) {
     if (err instanceof Error && err.message.startsWith("EVREN")) throw err;
-    throw new Error(`EVREN yanıt akışı okunamadı: ${err instanceof Error ? err.message : String(err)}`);
+    const message = err instanceof Error ? err.message : String(err);
+    if (
+      (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) ||
+      /timeout|aborted/i.test(message)
+    ) {
+      throw new Error(
+        "EVREN yanıt akışı zaman aşımına uğradı. İsteği daha küçük bir analiz dilimine bölerek tekrar deneyin."
+      );
+    }
+    throw new Error(`EVREN yanıt akışı okunamadı: ${message}`);
   } finally {
     reader.releaseLock();
   }
@@ -577,8 +586,22 @@ async function analyzeDecisionCases(params: AnalyzeCasesParams): Promise<AiDecis
   );
 
   const options = await generateDecisionOptions(params, diagnosis);
+  const normalizedInput = params.data.toLocaleLowerCase("tr-TR");
+  const syntheticInput = /sentetik|test verisi|senaryo verisi/.test(normalizedInput);
+  const assumptions = [...(diagnosis.assumptions ?? [])];
+  if (
+    syntheticInput &&
+    !assumptions.some((item) =>
+      /sentetik|test verisi|senaryo verisi/.test(item.toLocaleLowerCase("tr-TR"))
+    )
+  ) {
+    assumptions.push(
+      "Girdi sentetik test verisidir; gerçek şirket verisi veya doğrulanmış bulgu değildir."
+    );
+  }
   const merged: AiDecisionCase = {
     ...diagnosis,
+    assumptions,
     options: options.options,
     recommendedOptionRank: options.recommendedOptionRank,
   };

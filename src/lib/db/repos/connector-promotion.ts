@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Transaction } from "@electric-sql/pglite";
 import { getDb, migrate } from "../client";
-import type { CanonicalRecord, RestConnectorConfig } from "@/lib/connectors/types";
+import type { CanonicalRecord, ConnectorConfig } from "@/lib/connectors/types";
 import { canonicalFieldName } from "@/lib/connectors/contracts";
 import { calculateKpiSpec, hasKpiCalculator } from "@/lib/industry/kpi-calculators";
 import { getPack, listKpiSpecCandidates, resolveKpiSpec } from "@/lib/industry/packs";
@@ -63,7 +63,7 @@ export async function promoteConnectorRecords(params: {
   orgId: string;
   configId: string;
   configName: string;
-  config: RestConnectorConfig;
+  config: ConnectorConfig;
   records: CanonicalRecord[];
   runId: string;
   tx?: Transaction;

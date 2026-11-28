@@ -111,7 +111,28 @@ export interface RestConnectorConfig {
   pageSize?: number;
 }
 
-export type ConnectorConfig = RestConnectorConfig;
+export interface SqlConnectorConfig {
+  kind: "sql";
+  driver: "postgres" | "mssql" | "mysql";
+  /** Sır değerinin kendisi değil, bağlantı bilgisini taşıyan ortam değişkeni adı. */
+  connectionStringEnvVar: string;
+  /** Tek bir salt-okunur SELECT sorgusu. Checkpoint parametresi sürücüye göre $1, @p1 veya ? olur. */
+  query: string;
+  checkpointParam?: boolean;
+  entity: CanonicalEntity;
+  idField: string;
+  updatedAtField?: string;
+  fieldMap: FieldMapping;
+  kpiFieldMap?: Record<string, string>;
+  computedKpiMap?: Record<string, string>;
+  kpiObservedAtField?: string;
+  eventTypeField?: string;
+  eventSubjectField?: string;
+  eventTimeField?: string;
+  maxRows?: number;
+}
+
+export type ConnectorConfig = RestConnectorConfig | SqlConnectorConfig;
 
 export interface SyncContext {
   orgId: string;

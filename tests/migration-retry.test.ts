@@ -23,6 +23,10 @@ vi.mock("@electric-sql/pglite", () => ({
       return { rows: [] };
     }
 
+    async transaction<T>(callback: (tx: { exec: (sql: string) => Promise<void>; query: <R>() => Promise<{ rows: R[] }> }) => Promise<T>): Promise<T> {
+      return callback({ exec: this.exec.bind(this), query: this.query.bind(this) });
+    }
+
     async close(): Promise<void> {}
   },
 }));

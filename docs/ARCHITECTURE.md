@@ -14,7 +14,7 @@ ABYS mevcut ERP/CRM/muhasebe sistemlerinin yerine geçmez; üzerlerine zekâ kat
 - Next.js 16.2.11 + React 19.2.4 + TypeScript (strict), App Router (`package.json`, `tsconfig.json`).
 - **Next.js sürümü eğitim verisinden farklı olabilir.** Next.js kodu yazmadan önce `node_modules/next/dist/docs/`
   altındaki ilgili rehber okunur (`AGENTS.md`). Bu dizin `npm ci` sonrası oluşur.
-- Gömülü Postgres: PGlite, `src/lib/db/client.ts`. `DATABASE_URL` verilirse `pg` adaptörüne geçer.
+- Gömülü Postgres: PGlite varsayılandır. `ABYS_DB_BACKEND=postgres` veya `ABYS_DATABASE_URL`/`DATABASE_URL` ile `pg` Pool adaptörü seçilir. Her transaction tek PoolClient üzerinde yürür; migration runner session advisory lock ile çoklu uygulama sürecinde migration yarışını engeller. Gerçek managed PostgreSQL bağlantı/performans testi dağıtım kabul adımında yapılmalıdır.
 - Test: Vitest (`tests/`, 50 dosya), `fileParallelism: false` (PGlite bellek ağırlığı nedeniyle sıralı).
 - Masaüstü: Electron paketleme (`desktop/main.cjs`, `scripts/build-desktop.mjs`), Lead sorumluluğunda.
 
@@ -34,6 +34,22 @@ Route handlers (src/app/api/**)  ← ince adaptör; oturum + izin + zod doğrula
         ▼
       PGlite / PostgreSQL
 ```
+
+### Sinyal triyajı ve rapor kalıcılığı (migration 44–45)
+
+Signal status updates are tenant-scoped and audited through `PATCH /api/signals/[id]/triage`. War-room notes are append-only in `signal_notes`, exposed by GET/POST `/api/signals/[id]/notes`. Saved analysis reports are tenant-scoped in `saved_reports`; delete is soft-delete with audit. Dashboard decision/alert/report flows use server APIs; the legacy localStorage integration screen redirects to the connector registry.
+
+### Dış bağlam (migration 43)
+
+Dış gözlem verisi `external_context_sources` ve `external_context_observations` içinde iç KPI/muhasebe tablolarından ayrı tutulur. Kaynak URI, lisans/atıf, yayın zamanı, gözlem zamanı, sistemin aldığı zaman, geçerlilik aralığı, coğrafya, ilgililik ve kaynak güveni zorunlu/ayrı alanlardır. Gözlemler değiştirilemez; kabul/red incelemeleri append-only kaydedilir. Yalnızca insan tarafından kabul edilmiş ve açıkça karar vakasına bağlanmış gözlem `DecisionBrief` kanıtına girer. `GET/POST /api/external-context`, `/review` ve `/api/decision-cases/[id]/external-context` uçları tenant ve rol kapsamlıdır. Bu sürümde genel ingestion/review/link altyapısı var; gerçek dış sağlayıcı fetcher'ları ve otomatik lisans kontrolü yoktur.
+
+### Otomatik gözlemsel kök neden adayları
+
+`GET /api/causal/suggestions?caseId=...` yalnızca aynı tenant, dataset ve entity kapsamındaki, kapsamı ve KPI tanımı doğrulanmış sinyalleri tarar. Son 180 günlük hedef KPI sinyallerine bakar; 30 gün içinde önce gelen sinyallerden en az 3 hedef gözlemi ve en az 2 eşleşme, %50 öncül eşleşme oranı şartıyla en çok 8 aday üretir. Çıktı yalnızca `observed_correlation` olarak elle eklenebilir; sistem `inferred`, `expert_confirmed` veya `data_confirmed` statüsüne otomatik geçmez. Eşleşme oranı nedensel güven olasılığı değildir. Çok değişkenli kontrol/karıştırıcı analizi ve gerçek deneysel nedensellik bu sürümde yoktur.
+
+### KPI tanım yönetişimi (migration 41–42)
+
+`/api/kpi-definitions` tenant oturumuyla tanımları listeler/yazar; `/validate` `validate_kpi_definition` izniyle formül/birim/eşik/hedef yapısal tutarlılığını kontrol eder; `/approve` yalnızca `approve_kpi_definition` izniyle doğrulanmış revision için insan onayı alır. Migration 41 eski tanımları revision 1 olarak arşivler. Tanım revizyonları DB trigger'ıyla append-only kaydedilir; onay, en son revision hash/revision, aktör, rol, izin ve audit-event kimliğine aynı transaction içinde bağlanır. İçerik alanlarından biri değişince BEFORE UPDATE trigger onay/doğrulama durumunu `calculable` durumuna çeker; AFTER UPDATE trigger yeni revision yazar. Yapısal doğrulama formülü çalıştırmaz; çalıştırılabilirlik/gerçek veri doğrulaması ayrı kalır. `evaluateAgainstThresholds`, anomaly classification ve KPI outcome evidence yalnızca `approved` tanımları kullanır. Düzenleme onay durumunu `calculable`'a çeker.
 
 ## Kimlik, oturum ve güvenlik
 

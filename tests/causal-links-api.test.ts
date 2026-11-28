@@ -34,6 +34,7 @@ const { migrate, getDb } = await import("../src/lib/db/client");
 const { createSession, hashPassword } = await import("../src/lib/auth/core");
 const { SESSION_COOKIE } = await import("../src/lib/auth/core");
 const { GET: listCausal, POST: createCausal } = await import("../src/app/api/causal/route");
+const { GET: listCausalSuggestions } = await import("../src/app/api/causal/suggestions/route");
 const { insertCases } = await import("../src/lib/db/repos/decisions");
 const { assessCausalEvidence } = await import("../src/lib/causal-evidence");
 
@@ -103,6 +104,14 @@ describe("Kök neden bağlantısı kanıt üst verisi", () => {
   afterAll(async () => {
     nextHeaders.__setTestCookie(SESSION_COOKIE, undefined);
     await getDb().close();
+  });
+
+  it("gözlemsel aday uç noktası oturum ve vaka kapsamını zorunlu tutar", async () => {
+    const missingCase = await listCausalSuggestions(new NextRequest("http://localhost/api/causal/suggestions"));
+    expect(missingCase.status).toBe(400);
+    const listed = await listCausalSuggestions(new NextRequest(`http://localhost/api/causal/suggestions?caseId=${CASE_ID}`));
+    expect(listed.status).toBe(200);
+    expect((await listed.json()).candidates).toEqual([]);
   });
 
   it("yöntem, örneklem, veri kalitesi ve belirsizliği kaydeder ve geri okur", async () => {

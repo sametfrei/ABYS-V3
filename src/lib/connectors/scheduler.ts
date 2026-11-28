@@ -3,7 +3,7 @@ import {
   listDueConnectorConfigs,
   type ConnectorSyncTrigger,
 } from "@/lib/db/repos/connectors";
-import { executeConnectorSync } from "@/lib/connectors/sync-execution";
+import { executeConnectorSync, type ConnectorIntelligenceResult } from "@/lib/connectors/sync-execution";
 
 export type ScheduledSyncOutcomeStatus = "success" | "failed" | "busy" | "not_due";
 
@@ -17,6 +17,7 @@ export interface ScheduledSyncOutcome {
   nextRunAt: string | null;
   writtenCount: number;
   error: string | null;
+  intelligence?: ConnectorIntelligenceResult;
 }
 
 export interface SchedulerRunSummary {
@@ -105,6 +106,7 @@ export async function runDueConnectorSyncs(params: {
         nextRunAt: claim.nextRunAt,
         writtenCount: result.writtenCount,
         error: null,
+        intelligence: result.intelligence,
       });
     } catch (err) {
       outcomes.push({

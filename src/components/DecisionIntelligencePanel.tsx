@@ -30,6 +30,7 @@ interface Payload {
     anomalyCount: number;
     causalCount: number;
     outcomeCount: number;
+    externalContextCount: number;
     caseSignalCount: number;
     openSignalCount: number;
     openSignalScope?: "organization";
@@ -42,6 +43,24 @@ interface SignalOption {
   id: string;
   title: string;
   severity: string;
+}
+
+interface ExternalContextOption {
+  id: string;
+  provider: string;
+  sourceName: string;
+  topic: string;
+  geography: string;
+  summary: string;
+  publishedAt: string;
+  observedAt: string;
+  retrievedAt: string;
+  relevanceScore: number;
+  confidence: number;
+  licenseId: string;
+  attributionText: string;
+  sourceObservationUri: string;
+  reviewStatus: "candidate" | "accepted" | "rejected";
 }
 
 const RELIABILITY_LABEL: Record<string, string> = {
@@ -58,6 +77,7 @@ const SOURCE_LABEL: Record<string, string> = {
   anomali: "Anomali",
   nedensel: "Nedensel bağ",
   sonuç: "Geçmiş sonuç",
+  external_context: "Dış bağlam",
 };
 
 /**
@@ -69,6 +89,10 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [signals, setSignals] = useState<SignalOption[]>([]);
+  const [acceptedExternal, setAcceptedExternal] = useState<ExternalContextOption[]>([]);
+  const [candidateExternal, setCandidateExternal] = useState<ExternalContextOption[]>([]);
+  const [linkedExternalIds, setLinkedExternalIds] = useState<string[]>([]);
+  const [externalActionError, setExternalActionError] = useState<string | null>(null);
   const [selectedSignal, setSelectedSignal] = useState("");
   const [reason, setReason] = useState("");
   const [linkError, setLinkError] = useState<string | null>(null);
@@ -79,9 +103,12 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
     let cancelled = false;
     (async () => {
       try {
-        const [res, signalRes] = await Promise.all([
+        const [res, signalRes, acceptedRes, candidateRes, linkedRes] = await Promise.all([
           fetch(`/api/decision-cases/${caseId}/intelligence`, { cache: "no-store" }),
           fetch("/api/signals", { cache: "no-store" }),
+          fetch("/api/external-context?status=accepted&limit=20", { cache: "no-store" }),
+          fetch("/api/external-context?status=candidate&limit=20", { cache: "no-store" }),
+          fetch(`/api/decision-cases/${caseId}/external-context`, { cache: "no-store" }),
         ]);
         const body = await res.json();
         if (!res.ok) throw new Error(body.error ?? `Karar zekâsı yüklenemedi (HTTP ${res.status}).`);
@@ -91,6 +118,18 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
           if (signalRes.ok) {
             const signalBody = (await signalRes.json()) as { signals?: SignalOption[] };
             setSignals(Array.isArray(signalBody.signals) ? signalBody.signals : []);
+          }
+          if (acceptedRes.ok) {
+            const externalBody = (await acceptedRes.json()) as { observations?: ExternalContextOption[] };
+            setAcceptedExternal(Array.isArray(externalBody.observations) ? externalBody.observations : []);
+          }
+          if (candidateRes.ok) {
+            const candidateBody = (await candidateRes.json()) as { observations?: ExternalContextOption[] };
+            setCandidateExternal(Array.isArray(candidateBody.observations) ? candidateBody.observations : []);
+          }
+          if (linkedRes.ok) {
+            const linkedBody = (await linkedRes.json()) as { observations?: ExternalContextOption[] };
+            setLinkedExternalIds((linkedBody.observations ?? []).map((item) => item.id));
           }
         }
       } catch (err) {
@@ -127,6 +166,36 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
     }
   }
 
+  async function reviewExternalContext(observationId: string, decision: "accepted" | "rejected") {
+    setExternalActionError(null);
+    try {
+      const response = await fetch(`/api/external-context/${observationId}/review`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? "Dış bağlam incelemesi başarısız.");
+      setReloadKey((key) => key + 1);
+    } catch (err) {
+      setExternalActionError(err instanceof Error ? err.message : "Dış bağlam incelemesi başarısız.");
+    }
+  }
+
+  async function linkExternalContext(observationId: string) {
+    setExternalActionError(null);
+    try {
+      const response = await fetch(`/api/decision-cases/${caseId}/external-context`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ observationId, reason: "İnsan tarafından kabul edilmiş dış bağlam gözlemi; karar vakasına açıkça bağlandı." }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? "Dış bağlam vakaya bağlanamadı.");
+      setReloadKey((key) => key + 1);
+    } catch (err) {
+      setExternalActionError(err instanceof Error ? err.message : "Dış bağlam vakaya bağlanamadı.");
+    }
+  }
+
   if (error) {
     return (
       <p role="alert" className="text-xs" style={{ color: "var(--abys-critical)" }}>
@@ -140,6 +209,8 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
 
   const { brief, sources } = data;
   const canLinkSignal = session ? hasPermission(session.role, "record_decision") : false;
+  const canReviewExternal = session ? hasPermission(session.role, "approve_external_context") : false;
+  const unlinkedAcceptedExternal = acceptedExternal.filter((item) => !linkedExternalIds.includes(item.id));
   const confidenceColor =
     brief.confidence >= 75
       ? "var(--abys-healthy)"
@@ -205,6 +276,37 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
         </>
       )}
 
+      {(canReviewExternal && candidateExternal.length > 0 || canLinkSignal && unlinkedAcceptedExternal.length > 0) && (
+        <div className="mt-4 rounded-lg border border-abys-cream-border bg-abys-cream/70 px-3 py-2 space-y-3">
+          <div>
+            <p className="text-[11px] tracking-widest text-abys-muted font-semibold">DIŞ BAĞLAM — KAYNAK VE LİSANS İZİ</p>
+            <p className="text-[11px] text-abys-muted">Dış gözlemler iç KPI/muhasebe verisinden ayrı tutulur. Önce insan incelemesi, sonra vakaya açık bağlantı gerekir.</p>
+          </div>
+          {externalActionError && <p role="alert" className="text-[11px]" style={{ color: "var(--abys-critical)" }}>{externalActionError}</p>}
+          {canReviewExternal && candidateExternal.map((item) => (
+            <div key={item.id} className="border-t border-abys-ink/10 pt-2">
+              <p className="text-xs font-medium text-abys-ink">{item.sourceName} · {item.topic} / {item.geography}</p>
+              <p className="text-xs text-abys-muted">{item.summary}</p>
+              <p className="text-[10px] text-abys-muted">Yayın: {new Date(item.publishedAt).toLocaleString("tr-TR")} · Gözlem: {new Date(item.observedAt).toLocaleString("tr-TR")} · Lisans: {item.licenseId} · İlgi: {Math.round(item.relevanceScore * 100)}%</p>
+              <p className="text-[10px] text-abys-muted">{item.attributionText} · <a href={item.sourceObservationUri} target="_blank" rel="noreferrer" className="underline">Kaynak</a></p>
+              <div className="flex gap-2 mt-1">
+                <button type="button" onClick={() => void reviewExternalContext(item.id, "accepted")} className="text-[10px] rounded-full border px-2 py-0.5">Kabul et</button>
+                <button type="button" onClick={() => void reviewExternalContext(item.id, "rejected")} className="text-[10px] rounded-full border px-2 py-0.5">Reddet</button>
+              </div>
+            </div>
+          ))}
+          {canLinkSignal && unlinkedAcceptedExternal.map((item) => (
+            <div key={item.id} className="border-t border-abys-ink/10 pt-2">
+              <p className="text-xs font-medium text-abys-ink">{item.sourceName} · {item.topic} / {item.geography}</p>
+              <p className="text-xs text-abys-muted">{item.summary}</p>
+              <p className="text-[10px] text-abys-muted">Yayın: {new Date(item.publishedAt).toLocaleString("tr-TR")} · Gözlem: {new Date(item.observedAt).toLocaleString("tr-TR")} · Alınma: {new Date(item.retrievedAt).toLocaleString("tr-TR")}</p>
+              <p className="text-[10px] text-abys-muted">Lisans: {item.licenseId} · {item.attributionText} · <a href={item.sourceObservationUri} target="_blank" rel="noreferrer" className="underline">Kaynak</a></p>
+              <button type="button" onClick={() => void linkExternalContext(item.id)} className="mt-1 text-[10px] rounded-full border border-abys-accent/40 text-abys-accent px-2.5 py-0.5">Bu vakaya bağla</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {canLinkSignal && signals.length > 0 && (
         <div className="mt-4 rounded-lg border border-abys-cream-border bg-abys-cream/70 px-3 py-2">
           <p className="text-[11px] tracking-widest text-abys-muted font-semibold">KANIT SİNYALİ BAĞLA</p>
@@ -266,7 +368,7 @@ export function DecisionIntelligencePanel({ caseId }: { caseId: string }) {
       <p className="text-[11px] text-abys-muted mt-3">
         Kaynaklar: {sources.caseSignalCount} vakaya bağlı sinyal · {sources.openSignalCount} kurum bağlamı sinyali ·{" "}
         {sources.forecastUsed ? "tahmin var" : "tahmin yok"} · {sources.anomalyCount} anomali ·{" "}
-        {sources.causalCount} nedensel bağ · {sources.outcomeCount} vakaya bağlı sonuç
+        {sources.causalCount} nedensel bağ · {sources.outcomeCount} vakaya bağlı sonuç · {sources.externalContextCount} lisanslı dış bağlam gözlemi
       </p>
     </div>
   );

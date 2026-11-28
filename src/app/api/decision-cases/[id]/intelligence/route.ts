@@ -9,6 +9,7 @@ import { forecastSeries } from "@/lib/forecasting";
 import { detectAnomalies } from "@/lib/anomaly";
 import { buildDecisionBrief, type BriefCase } from "@/lib/decision-brief";
 import { listCaseSignals } from "@/lib/db/repos/decision-signals";
+import { listLinkedExternalContext } from "@/lib/db/repos/external-context";
 import type { AiDecisionCase } from "@/lib/ai/provider";
 import { localizedError } from "@/lib/api-i18n";
 
@@ -54,7 +55,7 @@ export async function GET(
   const payload = row.payload;
   const metricLabel = typeof payload.metricLabel === "string" ? payload.metricLabel : null;
 
-  const [caseSignals, contextSignalsResult, causalResult, outcomesResult] = await Promise.all([
+  const [caseSignals, contextSignalsResult, causalResult, outcomesResult, externalContext] = await Promise.all([
     listCaseSignals(session.orgId, id),
     db.query<{ severity: string; title: string }>(
       `SELECT s.severity, s.title
@@ -91,6 +92,7 @@ export async function GET(
         ORDER BY o.created_at DESC LIMIT 5`,
       [session.orgId, id]
     ),
+    listLinkedExternalContext(session.orgId, id),
   ]);
 
   let forecast: Parameters<typeof buildDecisionBrief>[0]["forecast"] = null;
@@ -159,6 +161,21 @@ export async function GET(
       uncertainty: l.uncertainty,
     })),
     outcomes: outcomesResult.rows,
+    externalContext: externalContext.map((item) => ({
+      provider: item.provider,
+      sourceName: item.sourceName,
+      topic: item.topic,
+      geography: item.geography,
+      summary: item.summary,
+      publishedAt: item.publishedAt,
+      observedAt: item.observedAt,
+      retrievedAt: item.retrievedAt,
+      relevanceScore: item.relevanceScore,
+      confidence: item.confidence,
+      licenseId: item.licenseId,
+      attributionText: item.attributionText,
+      sourceUri: item.sourceObservationUri,
+    })),
   });
 
   return NextResponse.json({
@@ -170,6 +187,7 @@ export async function GET(
       anomalyCount: anomalies.length,
       causalCount: causalResult.rows.length,
       outcomeCount: outcomesResult.rows.length,
+      externalContextCount: externalContext.length,
       caseSignalCount: caseSignals.length,
       openSignalCount: contextSignalsResult.rows.length,
       openSignalScope: "organization" as const,

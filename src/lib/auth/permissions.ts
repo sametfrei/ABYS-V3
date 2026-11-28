@@ -27,20 +27,25 @@ export type Permission =
   | "record_decision"  // kabul/ret/değiştir kararı verme
   | "ingest_data"      // veri içe alma ve prototip göçü
   | "edit_kpi"         // KPI metrik serisi kaydetme/düzeltme (ham veri göçü değil)
+  | "validate_kpi_definition" // KPI tanımının formül/birim/eşik tutarlılığını doğrulama
+  | "approve_external_context" // Dış bağlam gözlemini insan incelemesiyle kabul/reddetme
+  | "triage_signals" // Sinyal durumunu güncelleme ve war-room notu ekleme
+  | "manage_reports" // Tenant raporlarını kaydetme ve silme
+  | "approve_kpi_definition" // İnsan onayıyla KPI tanımını yetkili kılma
   | "confirm_business_profile" // org'un sektör/iş bağlamı sınıflandırmasını onaylama
   | "view_audit"       // denetim günlüğünü görme
   | "manage_users";    // kullanıcı/rol yönetimi
 
 const MATRIX: Record<Role, Permission[]> = {
   board:        ["view_decisions", "view_audit"],
-  ceo:          ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "confirm_business_profile"],
-  clevel:       ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "confirm_business_profile"],
-  dept_manager: ["view_decisions", "run_analysis", "record_decision", "edit_kpi"],
-  risk_manager: ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "confirm_business_profile"],
-  analyst:      ["view_decisions", "run_analysis", "edit_kpi"],
+  ceo:          ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "validate_kpi_definition", "approve_kpi_definition", "approve_external_context", "triage_signals", "manage_reports", "confirm_business_profile"],
+  clevel:       ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "validate_kpi_definition", "approve_kpi_definition", "approve_external_context", "triage_signals", "manage_reports", "confirm_business_profile"],
+  dept_manager: ["view_decisions", "run_analysis", "record_decision", "edit_kpi", "validate_kpi_definition", "triage_signals", "manage_reports"],
+  risk_manager: ["view_decisions", "run_analysis", "record_decision", "view_audit", "edit_kpi", "validate_kpi_definition", "approve_kpi_definition", "approve_external_context", "triage_signals", "manage_reports", "confirm_business_profile"],
+  analyst:      ["view_decisions", "run_analysis", "edit_kpi", "validate_kpi_definition", "triage_signals", "manage_reports"],
   auditor:      ["view_decisions", "view_audit"],
-  data_admin:   ["view_decisions", "ingest_data", "edit_kpi"],
-  sys_admin:    ["view_decisions", "view_audit", "manage_users", "edit_kpi", "confirm_business_profile"],
+  data_admin:   ["view_decisions", "ingest_data", "edit_kpi", "validate_kpi_definition", "triage_signals", "manage_reports"],
+  sys_admin:    ["view_decisions", "view_audit", "manage_users", "edit_kpi", "validate_kpi_definition", "approve_kpi_definition", "approve_external_context", "triage_signals", "manage_reports", "confirm_business_profile"],
 };
 
 export function hasPermission(role: string, permission: Permission): boolean {
@@ -55,6 +60,11 @@ export function permissionError(permission: Permission): string {
     record_decision: "karar kaydetme",
     ingest_data: "veri içe alma",
     edit_kpi: "KPI serisi kaydetme",
+    validate_kpi_definition: "KPI tanımını doğrulama",
+    approve_kpi_definition: "KPI tanımını onaylama",
+    approve_external_context: "Dış bağlamı inceleme",
+    triage_signals: "Sinyal triyajı ve war-room notu",
+    manage_reports: "Rapor yönetimi",
     confirm_business_profile: "iş bağlamını onaylama",
     view_audit: "denetim günlüğü görüntüleme",
     manage_users: "kullanıcı yönetimi",

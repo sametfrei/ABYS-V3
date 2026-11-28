@@ -37,10 +37,13 @@ interface ConnectorConfigRow {
   lastScheduledAt: string | null;
   createdAt: string;
   config: {
-    baseUrl: string;
-    path: string;
+    kind?: "rest" | "sql";
+    driver?: "postgres" | "mssql" | "mysql";
+    baseUrl?: string;
+    path?: string;
     entity: string;
-    authType: string;
+    authType?: string;
+    connectionStringEnvVar?: string;
   };
 }
 
@@ -77,7 +80,14 @@ interface SchedulerRunSummary {
   succeeded: number;
   failed: number;
   skipped: number;
-  outcomes: { configId: string }[];
+  outcomes: {
+    configId: string;
+    intelligence?: {
+      status: "success" | "skipped" | "failed";
+      signals?: { generated: number };
+      decisionCases?: { generated: number };
+    };
+  }[];
 }
 
 interface SchedulerHealth {
@@ -233,6 +243,9 @@ export default function ConnectorsPage() {
   const [name, setName] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
   const [apiPath, setApiPath] = useState("");
+  const [sqlConnectionStringEnvVar, setSqlConnectionStringEnvVar] = useState("ERP_READONLY_DATABASE_URL");
+  const [sqlQuery, setSqlQuery] = useState("");
+  const [sqlCheckpointParam, setSqlCheckpointParam] = useState(false);
   const [authType, setAuthType] = useState("none");
   const [secretEnvVar, setSecretEnvVar] = useState("");
   const [oauth2TokenUrl, setOauth2TokenUrl] = useState("");
@@ -351,29 +364,47 @@ export default function ConnectorsPage() {
         body: JSON.stringify({
           connectorId: selectedId,
           name: name.trim() || t(locale, "connectors.defaultConnectorName"),
-          config: {
-            kind: "rest",
-            baseUrl,
-            path: apiPath,
-            authType,
-            secretEnvVar: secretEnvVar || undefined,
-            oauth2TokenUrl: authType === "oauth2_client_credentials" ? oauth2TokenUrl || undefined : undefined,
-            oauth2ClientIdEnvVar:
-              authType === "oauth2_client_credentials" ? oauth2ClientIdEnvVar || undefined : undefined,
-            oauth2Scope: authType === "oauth2_client_credentials" ? oauth2Scope || undefined : undefined,
-            entity,
-            idField,
-            recordsPath: recordsPath || undefined,
-            updatedAtField: updatedAtField || undefined,
-            fieldMap,
-            kpiFieldMap: Object.keys(kpiFieldMap).length > 0 ? kpiFieldMap : undefined,
-            computedKpiMap: Object.keys(computedKpiMap).length > 0 ? computedKpiMap : undefined,
-            kpiObservedAtField: kpiObservedAtField || undefined,
-            eventTypeField: eventTypeField || undefined,
-            eventSubjectField: eventSubjectField || undefined,
-            eventTimeField: eventTimeField || undefined,
-            pagination,
-          },
+          config: ["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "")
+            ? {
+                kind: "sql",
+                driver: selectedId === "postgresql" ? "postgres" : selectedId === "sqlserver" ? "mssql" : "mysql",
+                connectionStringEnvVar: sqlConnectionStringEnvVar.trim(),
+                query: sqlQuery,
+                checkpointParam: sqlCheckpointParam,
+                entity,
+                idField,
+                updatedAtField: updatedAtField || undefined,
+                fieldMap,
+                kpiFieldMap: Object.keys(kpiFieldMap).length > 0 ? kpiFieldMap : undefined,
+                computedKpiMap: Object.keys(computedKpiMap).length > 0 ? computedKpiMap : undefined,
+                kpiObservedAtField: kpiObservedAtField || undefined,
+                eventTypeField: eventTypeField || undefined,
+                eventSubjectField: eventSubjectField || undefined,
+                eventTimeField: eventTimeField || undefined,
+              }
+            : {
+                kind: "rest",
+                baseUrl,
+                path: apiPath,
+                authType,
+                secretEnvVar: secretEnvVar || undefined,
+                oauth2TokenUrl: authType === "oauth2_client_credentials" ? oauth2TokenUrl || undefined : undefined,
+                oauth2ClientIdEnvVar:
+                  authType === "oauth2_client_credentials" ? oauth2ClientIdEnvVar || undefined : undefined,
+                oauth2Scope: authType === "oauth2_client_credentials" ? oauth2Scope || undefined : undefined,
+                entity,
+                idField,
+                recordsPath: recordsPath || undefined,
+                updatedAtField: updatedAtField || undefined,
+                fieldMap,
+                kpiFieldMap: Object.keys(kpiFieldMap).length > 0 ? kpiFieldMap : undefined,
+                computedKpiMap: Object.keys(computedKpiMap).length > 0 ? computedKpiMap : undefined,
+                kpiObservedAtField: kpiObservedAtField || undefined,
+                eventTypeField: eventTypeField || undefined,
+                eventSubjectField: eventSubjectField || undefined,
+                eventTimeField: eventTimeField || undefined,
+                pagination,
+              },
         }),
       });
       const body = await res.json();
@@ -399,24 +430,48 @@ export default function ConnectorsPage() {
     setMessage("");
     try {
       const res = await fetch(`/api/connectors/${id}/sync`, { method: "POST" });
-      const body = await res.json();
+      const body = (await res.json()) as {
+        error?: string;
+        fetchedCount: number;
+        canonicalizedCount: number;
+        kpiObservationCount: number;
+        computedKpiObservationCount?: number;
+        processEventCount: number;
+        skippedCount: number;
+        quarantinedCount?: number;
+        warnings?: string[];
+        intelligence?: {
+          status: "success" | "skipped" | "failed";
+          signals?: { generated: number };
+          decisionCases?: { generated: number };
+        };
+      };
       if (!res.ok) {
         throw new Error(
           body.error ?? formatMessage(locale, "connectors.syncFailedHttp", { status: res.status })
         );
       }
-      setMessage(
-        formatMessage(locale, "connectors.syncSummary", {
-          fetched: body.fetchedCount,
-          canonicalized: body.canonicalizedCount,
-          kpi: body.kpiObservationCount,
-          computed: body.computedKpiObservationCount ?? 0,
-          events: body.processEventCount,
-          skipped: body.skippedCount,
-          quarantined: body.quarantinedCount ?? 0,
-          warnings: body.warnings?.length ?? 0,
-        })
-      );
+      const syncSummary = formatMessage(locale, "connectors.syncSummary", {
+        fetched: body.fetchedCount,
+        canonicalized: body.canonicalizedCount,
+        kpi: body.kpiObservationCount,
+        computed: body.computedKpiObservationCount ?? 0,
+        events: body.processEventCount,
+        skipped: body.skippedCount,
+        quarantined: body.quarantinedCount ?? 0,
+        warnings: body.warnings?.length ?? 0,
+      });
+      const intelligenceSummary = body.intelligence?.status === "success"
+        ? formatMessage(locale, "connectors.intelligenceGenerated", {
+            signals: body.intelligence.signals?.generated ?? 0,
+            cases: body.intelligence.decisionCases?.generated ?? 0,
+          })
+        : body.intelligence?.status === "skipped"
+          ? t(locale, "connectors.intelligenceSkipped")
+          : body.intelligence?.status === "failed"
+            ? t(locale, "connectors.intelligenceFailed")
+            : "";
+      setMessage([syncSummary, intelligenceSummary].filter(Boolean).join(" "));
       const runsRes = await fetch(`/api/connectors/${id}/runs`, { cache: "no-store" });
       if (runsRes.ok) {
         const runsBody = (await runsRes.json()) as {
@@ -628,13 +683,47 @@ export default function ConnectorsPage() {
             formatMessage(locale, "connectors.schedulerRunFailedHttp", { status: res.status })
         );
       }
+      const intelligenceSummary = body.outcomes.reduce(
+        (summary, outcome) => {
+          const intelligence = outcome.intelligence;
+          if (!intelligence) return summary;
+          if (intelligence.status === "success") {
+            summary.signals += intelligence.signals?.generated ?? 0;
+            summary.cases += intelligence.decisionCases?.generated ?? 0;
+          } else if (intelligence.status === "skipped") {
+            summary.skipped++;
+          } else {
+            summary.failed++;
+          }
+          return summary;
+        },
+        { signals: 0, cases: 0, skipped: 0, failed: 0 }
+      );
       setMessage(
-        formatMessage(locale, "connectors.schedulerSummary", {
-          due: body.dueCount,
-          succeeded: body.succeeded,
-          failed: body.failed,
-          skipped: body.skipped,
-        })
+        [
+          formatMessage(locale, "connectors.schedulerSummary", {
+            due: body.dueCount,
+            succeeded: body.succeeded,
+            failed: body.failed,
+            skipped: body.skipped,
+          }),
+          formatMessage(locale, "connectors.schedulerIntelligenceSummary", {
+            signals: intelligenceSummary.signals,
+            cases: intelligenceSummary.cases,
+          }),
+          intelligenceSummary.skipped > 0
+            ? formatMessage(locale, "connectors.schedulerIntelligenceSkipped", {
+                count: intelligenceSummary.skipped,
+              })
+            : "",
+          intelligenceSummary.failed > 0
+            ? formatMessage(locale, "connectors.schedulerIntelligenceFailed", {
+                count: intelligenceSummary.failed,
+              })
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
       );
       await reload();
       const loadedIds = Object.keys(runsByConfig);
@@ -721,8 +810,8 @@ export default function ConnectorsPage() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t(locale, "connectors.connectionName")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={t(locale, "connectors.baseUrlPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              <input value={apiPath} onChange={(e) => setApiPath(e.target.value)} placeholder={t(locale, "connectors.apiPathPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              {!["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "") && <input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={t(locale, "connectors.baseUrlPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />}
+              {!["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "") && <input value={apiPath} onChange={(e) => setApiPath(e.target.value)} placeholder={t(locale, "connectors.apiPathPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />}
               <select value={entity} onChange={(e) => setEntity(e.target.value)} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2">
                 {ENTITIES.map((item) => (
                   <option key={item.value} value={item.value}>
@@ -730,15 +819,15 @@ export default function ConnectorsPage() {
                   </option>
                 ))}
               </select>
-              <select value={authType} onChange={(e) => setAuthType(e.target.value)} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2">
+              {!["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "") && <select value={authType} onChange={(e) => setAuthType(e.target.value)} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2">
                 <option value="none">{t(locale, "connectors.authNone")}</option>
                 <option value="bearer_token">{t(locale, "connectors.authBearer")}</option>
                 <option value="api_key">{t(locale, "connectors.authApiKey")}</option>
                 <option value="basic">{t(locale, "connectors.authBasic")}</option>
                 <option value="oauth2_client_credentials">{t(locale, "connectors.authOAuth2")}</option>
-              </select>
-              <input value={secretEnvVar} onChange={(e) => setSecretEnvVar(e.target.value)} placeholder={authType === "oauth2_client_credentials" ? t(locale, "connectors.secretOAuthPlaceholder") : t(locale, "connectors.secretEnvPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              {authType === "oauth2_client_credentials" && (
+              </select>}
+              {!["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "") && <input value={secretEnvVar} onChange={(e) => setSecretEnvVar(e.target.value)} placeholder={authType === "oauth2_client_credentials" ? t(locale, "connectors.secretOAuthPlaceholder") : t(locale, "connectors.secretEnvPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />}
+              {!["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "") && authType === "oauth2_client_credentials" && (
                 <>
                   <input value={oauth2TokenUrl} onChange={(e) => setOauth2TokenUrl(e.target.value)} placeholder="https://login.example.com/oauth2/token" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 sm:col-span-2" />
                   <input value={oauth2ClientIdEnvVar} onChange={(e) => setOauth2ClientIdEnvVar(e.target.value)} placeholder={t(locale, "connectors.oauthClientIdPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
@@ -746,13 +835,25 @@ export default function ConnectorsPage() {
                 </>
               )}
               <input value={idField} onChange={(e) => setIdField(e.target.value)} placeholder={t(locale, "connectors.idFieldPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              <input value={recordsPath} onChange={(e) => setRecordsPath(e.target.value)} placeholder={t(locale, "connectors.recordsPathPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
               <input value={updatedAtField} onChange={(e) => setUpdatedAtField(e.target.value)} placeholder={t(locale, "connectors.updatedAtFieldPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
-              <select value={paginationType} onChange={(e) => setPaginationType(e.target.value)} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2">
+              {["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "") ? (
+                <>
+                  <input value={sqlConnectionStringEnvVar} onChange={(e) => setSqlConnectionStringEnvVar(e.target.value)} placeholder="ERP_READONLY_DATABASE_URL" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 sm:col-span-2" />
+                  <textarea value={sqlQuery} onChange={(e) => setSqlQuery(e.target.value)} rows={5} placeholder={selectedId === "sqlserver" ? "SELECT id, name, updated_at FROM dbo.source_table WHERE updated_at > @p1" : selectedId === "mysql" ? "SELECT id, name, updated_at FROM source_table WHERE updated_at > ?" : "SELECT id, name, updated_at FROM source_table WHERE updated_at > $1"} className="text-sm font-mono rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2 sm:col-span-2" />
+                  <label className="sm:col-span-2 flex items-center gap-2 text-xs text-abys-muted">
+                    <input type="checkbox" checked={sqlCheckpointParam} onChange={(e) => setSqlCheckpointParam(e.target.checked)} />
+                    Artımlı senkron: PostgreSQL $1, SQL Server @p1, MySQL ? parametresi. Sorgu şablonunu buna göre yaz.
+                  </label>
+                  <p className="sm:col-span-2 text-[11px] text-abys-muted">Bağlantı bilgisi ABYS veritabanına kaydedilmez; yalnızca ortam değişkeni adı saklanır. SQL Server için SELECT-only kullanıcı zorunlu; diğerlerinde de SELECT-only hesap kullanın. En fazla 5.000 satır okunur.</p>
+                </>
+              ) : (
+                <input value={recordsPath} onChange={(e) => setRecordsPath(e.target.value)} placeholder={t(locale, "connectors.recordsPathPlaceholder")} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
+              )}
+              {!["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "") && <select value={paginationType} onChange={(e) => setPaginationType(e.target.value)} className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2">
                 <option value="page">{t(locale, "connectors.paginationPage")}</option>
                 <option value="none">{t(locale, "connectors.paginationNone")}</option>
-              </select>
-              {paginationType === "page" && (
+              </select>}
+              {!["postgresql", "sqlserver", "mysql"].includes(selectedId ?? "") && paginationType === "page" && (
                 <>
                   <input value={pageParam} onChange={(e) => setPageParam(e.target.value)} placeholder="page" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
                   <input value={limitParam} onChange={(e) => setLimitParam(e.target.value)} placeholder="limit" className="text-sm rounded-lg border border-abys-cream-border bg-white/70 px-3 py-2" />
@@ -902,8 +1003,7 @@ export default function ConnectorsPage() {
                       <div>
                         <p className="text-sm text-abys-ink">{c.name}</p>
                         <p className="text-[11px] text-abys-muted">
-                          {c.connectorId} · v{c.configVersion} · {c.config.entity} · {c.config.baseUrl}
-                          {c.config.path}
+                          {c.connectorId} · v{c.configVersion} · {c.config.entity} · {c.config.kind === "sql" ? (c.config.driver || "SQL") : `${c.config.baseUrl || "REST/OData"}${c.config.path || ""}`}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">

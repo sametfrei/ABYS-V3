@@ -1,4 +1,6 @@
 import { PGlite } from "@electric-sql/pglite";
+import { Pool } from "pg";
+import { PostgresDatabaseAdapter } from "./postgres-adapter";
 import { MIGRATIONS } from "./migrations";
 
 /**
@@ -31,9 +33,32 @@ export interface PendingMigrationApproval {
   approvalEnv: string;
 }
 
+function positiveInteger(value: string | undefined, fallback: number, maximum: number): number {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? Math.min(parsed, maximum) : fallback;
+}
+
 export function getDb(): PGlite {
   if (!globalThis.__abysDb) {
-    globalThis.__abysDb = new PGlite(DB_DIR);
+    const backend = process.env.ABYS_DB_BACKEND?.trim().toLowerCase();
+    const connectionString = process.env.ABYS_DATABASE_URL || process.env.DATABASE_URL;
+    if (backend === "postgres" || (!backend && connectionString)) {
+      if (!connectionString) throw new Error("ABYS_DB_BACKEND=postgres requires ABYS_DATABASE_URL or DATABASE_URL.");
+      const ssl = process.env.PGSSLMODE === "require"
+        ? { rejectUnauthorized: process.env.PGSSL_REJECT_UNAUTHORIZED !== "false" }
+        : undefined;
+      const pool = new Pool({
+        connectionString,
+        max: Math.max(2, positiveInteger(process.env.ABYS_DB_POOL_MAX, 10, 50)),
+        connectionTimeoutMillis: positiveInteger(process.env.ABYS_DB_CONNECT_TIMEOUT_MS, 5_000, 60_000),
+        idleTimeoutMillis: positiveInteger(process.env.ABYS_DB_IDLE_TIMEOUT_MS, 30_000, 300_000),
+        ...(ssl ? { ssl } : {}),
+        application_name: "abys-app",
+      });
+      globalThis.__abysDb = new PostgresDatabaseAdapter(pool) as unknown as PGlite;
+    } else {
+      globalThis.__abysDb = new PGlite(DB_DIR);
+    }
   }
   return globalThis.__abysDb;
 }
@@ -80,6 +105,7 @@ export async function migrate(): Promise<void> {
 
 async function runMigrations(): Promise<void> {
   const db = getDb();
+  const run = async () => {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS _migrations (
       id      INTEGER PRIMARY KEY,
@@ -98,15 +124,18 @@ async function runMigrations(): Promise<void> {
       console.warn(approvalError);
       continue;
     }
-    await db.exec("BEGIN");
     try {
-      await db.exec(m.sql);
-      await db.query("INSERT INTO _migrations (id, name) VALUES ($1, $2)", [m.id, m.name]);
-      await db.exec("COMMIT");
+      await db.transaction(async (tx) => {
+        await tx.exec(m.sql);
+        await tx.query("INSERT INTO _migrations (id, name) VALUES ($1, $2)", [m.id, m.name]);
+      });
     } catch (err) {
-      await db.exec("ROLLBACK");
       throw new Error(`Migration ${m.id} (${m.name}) başarısız: ${err instanceof Error ? err.message : err}`);
     }
   }
   globalThis.__abysDbPendingMigrations = pending;
+  };
+  const lockableDb = db as PGlite & { withMigrationLock?: <T>(callback: () => Promise<T>) => Promise<T> };
+  if (lockableDb.withMigrationLock) await lockableDb.withMigrationLock(run);
+  else await run();
 }

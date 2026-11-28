@@ -59,8 +59,6 @@ export type ShellKey =
   | "login.point3"
   | "login.formKicker"
   | "login.secureSession"
-  | "login.demoTitle"
-  | "login.demoHint"
   | "login.error.invalid"
   | "login.error.emailRequired"
   | "login.error.tooMany"
@@ -381,6 +379,9 @@ export type ShellKey =
   | "connectors.syncFailed"
   | "connectors.syncFailedHttp"
   | "connectors.syncSummary"
+  | "connectors.intelligenceGenerated"
+  | "connectors.intelligenceSkipped"
+  | "connectors.intelligenceFailed"
   | "connectors.mappingLoadFailed"
   | "connectors.mappingLoadFailedHttp"
   | "connectors.mappingJsonInvalid"
@@ -395,6 +396,9 @@ export type ShellKey =
   | "connectors.schedulerRunFailed"
   | "connectors.schedulerRunFailedHttp"
   | "connectors.schedulerSummary"
+  | "connectors.schedulerIntelligenceSummary"
+  | "connectors.schedulerIntelligenceSkipped"
+  | "connectors.schedulerIntelligenceFailed"
   | "connectors.scheduleOff"
   | "connectors.durationDays"
   | "connectors.durationHours"
@@ -890,6 +894,7 @@ export type ShellKey =
   | "alerts.warRoom"
   | "alerts.noNotes"
   | "alerts.notePlaceholder"
+  | "alerts.noteSaveFailed"
   | "alerts.send"
   | "alerts.you"
   | "alerts.evidenceRef"
@@ -1113,6 +1118,7 @@ export type ShellKey =
   | "reports.tais.mainDecision"
   | "reports.tais.noMainDecision"
   | "reports.kpi.heading"
+  | "reports.kpi.serverSourceHint"
   | "reports.kpi.source"
   | "reports.counselor.heading"
   | "reports.counselor.colName"
@@ -1180,6 +1186,11 @@ export type ShellKey =
   | "decisions.causal.addButton"
   | "decisions.causal.fromPlaceholder"
   | "decisions.causal.toPlaceholder"
+  | "decisions.causal.suggestionsHeading"
+  | "decisions.causal.suggestionsDisclaimer"
+  | "decisions.causal.lagDays"
+  | "decisions.causal.addSuggestion"
+  | "decisions.causal.associationRate"
   | "decisions.trace.button"
   | "decisions.trace.title"
   | "decisions.trace.loadFailed"
@@ -1908,11 +1919,6 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "login.secureSession": {
     tr: "Sunucu tarafı oturum · 12 saat",
     en: "Server-side session · 12 hours",
-  },
-  "login.demoTitle": { tr: "Demo erişimi", en: "Demo access" },
-  "login.demoHint": {
-    tr: "Parola kurulum ve giriş belgesindedir.",
-    en: "The password is in the setup and sign-in document.",
   },
   "login.error.invalid": {
     tr: "E-posta ya da parola hatalı.",
@@ -2666,6 +2672,18 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
     tr: "Senkron tamam: {fetched} okundu, {canonicalized} kanonikleştirildi, {kpi} KPI gözlemi ({computed} hesaplanan), {events} süreç olayı, {skipped} atlandı, {quarantined} karantinaya alındı, {warnings} uyarı.",
     en: "Sync complete: {fetched} read, {canonicalized} canonicalized, {kpi} KPI observations ({computed} computed), {events} process events, {skipped} skipped, {quarantined} quarantined, {warnings} warnings.",
   },
+  "connectors.intelligenceGenerated": {
+    tr: "KPI zekâsı: {signals} yeni sinyal, {cases} yeni karar taslağı.",
+    en: "KPI intelligence: {signals} new signals, {cases} new decision drafts.",
+  },
+  "connectors.intelligenceSkipped": {
+    tr: "KPI zekâsı atlandı; yeni KPI gözlemi yok.",
+    en: "KPI intelligence skipped; no new KPI observations.",
+  },
+  "connectors.intelligenceFailed": {
+    tr: "KPI zekâsı tamamlanamadı; kaynak senkronu başarılı.",
+    en: "KPI intelligence failed; source sync succeeded.",
+  },
   "connectors.mappingLoadFailed": {
     tr: "Eşleme yüklenemedi.",
     en: "Mapping could not be loaded.",
@@ -2721,6 +2739,18 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "connectors.schedulerSummary": {
     tr: "Zamanlayıcı: {due} vadesi gelen çalıştırma, {succeeded} başarılı, {failed} başarısız, {skipped} atlandı.",
     en: "Scheduler: {due} due runs, {succeeded} succeeded, {failed} failed, {skipped} skipped.",
+  },
+  "connectors.schedulerIntelligenceSummary": {
+    tr: "KPI zekâsı: {signals} yeni sinyal, {cases} yeni karar taslağı.",
+    en: "KPI intelligence: {signals} new signals, {cases} new decision drafts.",
+  },
+  "connectors.schedulerIntelligenceSkipped": {
+    tr: "Analiz {count} bağlantıda yeni KPI gözlemi olmadığı için atlandı.",
+    en: "Analysis skipped for {count} connections with no new KPI observations.",
+  },
+  "connectors.schedulerIntelligenceFailed": {
+    tr: "KPI zekâsı {count} bağlantıda tamamlanamadı; kaynak senkronu başarılı kalmış olabilir.",
+    en: "KPI intelligence failed for {count} connections; their source syncs may still have succeeded.",
   },
   "connectors.scheduleOff": { tr: "Kapalı", en: "Off" },
   "connectors.durationDays": { tr: "{count} gün", en: "{count} days" },
@@ -3667,6 +3697,7 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "alerts.warRoom": { tr: "SAVAŞ ODASI", en: "WAR ROOM" },
   "alerts.noNotes": { tr: "Henüz not yok.", en: "No notes yet." },
   "alerts.notePlaceholder": { tr: "Not ekle...", en: "Add a note..." },
+  "alerts.noteSaveFailed": { tr: "War-room notu kaydedilemedi.", en: "Could not save the war-room note." },
   "alerts.send": { tr: "Gönder", en: "Send" },
   "alerts.you": { tr: "Siz", en: "You" },
   "alerts.evidenceRef": { tr: "{type} kaydı: {id}", en: "{type} record: {id}" },
@@ -3983,6 +4014,7 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   },
   "reports.tais.noMainDecision": { tr: "Bekleyen ana karar yok.", en: "No pending main decision." },
   "reports.kpi.heading": { tr: "TÜM KPI'LAR", en: "ALL KPIs" },
+  "reports.kpi.serverSourceHint": { tr: "KPI geçmişi, senkronize edilmiş kurumsal veri kaynaklarından oluşturulur. Kaydedilmiş analiz raporları aşağıda listelenir.", en: "KPI history is built from synchronized enterprise data sources. Saved analysis reports are listed below." },
   "reports.kpi.source": {
     tr: "Kaynak: {file} · {start} – {end}",
     en: "Source: {file} · {start} – {end}",
@@ -4053,6 +4085,11 @@ const DICTIONARY: Record<ShellKey, Record<Locale, string>> = {
   "decisions.causal.addButton": { tr: "Bağlantı ekle", en: "Add link" },
   "decisions.causal.fromPlaceholder": { tr: "Neden (A)", en: "Cause (A)" },
   "decisions.causal.toPlaceholder": { tr: "Sonuç (B)", en: "Effect (B)" },
+  "decisions.causal.suggestionsHeading": { tr: "ÖNCÜL İLİŞKİ ADAYLARI", en: "UPSTREAM ASSOCIATION CANDIDATES" },
+  "decisions.causal.suggestionsDisclaimer": { tr: "Aynı veri seti/varlıkta tekrarlayan zaman sırası ilişkileri. Nedensellik kanıtı değildir.", en: "Repeated time-order associations within the same dataset/entity. Not causal proof." },
+  "decisions.causal.lagDays": { tr: "ortalama {days} gün önce", en: "avg. {days} days earlier" },
+  "decisions.causal.addSuggestion": { tr: "Gözlem olarak ekle", en: "Add as observed" },
+  "decisions.causal.associationRate": { tr: "%{rate} eşleşme", en: "%{rate} association" },
   "decisions.trace.button": { tr: "🔍 Kökeni göster", en: "🔍 Show provenance" },
   "decisions.trace.title": { tr: "Kanıt kökeni", en: "Evidence provenance" },
   "decisions.trace.loadFailed": { tr: "İzlenebilirlik verisi yüklenemedi.", en: "Traceability data could not be loaded." },

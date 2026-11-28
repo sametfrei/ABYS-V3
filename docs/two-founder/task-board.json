@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-11-23",
+  "updatedAt": "2026-11-28",
   "states": [
     "BACKLOG",
     "READY",
@@ -2571,6 +2571,166 @@
       "acceptanceCriteria": "The discovery page shows sector-independent concepts with confidence and evidence counts, plus up to three possible business models with evidence and an unverified-suggestion caption in Turkish and English. Hidden when no concepts exist; explicit insufficient-evidence message when concepts exist but no model rule fires.",
       "evidence": "Concepts render as compact chips (label + %confidence) with a coverage line; models render with confidence and evidence, capped at three, using the existing cream card language and no new design system. i18n keys added for both locales; i18n test suite passed. Full suite 906 passed / 9 skipped; tsc, eslint and next build clean (discovery route built).",
       "recordedAt": "2026-11-23"
+    },
+    {
+      "id": "TB-129",
+      "commit": null,
+      "title": "Patch production dependency vulnerabilities and verify Next.js build",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "security-qa-reviewer",
+        "qa-engineer"
+      ],
+      "files": [
+        "package.json",
+        "package-lock.json",
+        "docs/ROADMAP.md",
+        "docs/agents/OPERATING-STATE.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Production dependency audit reports zero known vulnerabilities; patched Next.js, Zod and vulnerable transitive PostCSS/Sharp packages are locked; lint, TypeScript, full safe test suite and isolated production build pass. Remaining development-only package findings are documented without an unsafe forced major downgrade.",
+      "evidence": "npm audit --omit=dev: 0 vulnerabilities. next 16.4.6, zod 4.6.7, postcss 8.5.34, sharp 0.35.5. Full audit has 6 Moderate findings only in electron-builder 26.x packaging dependency chain; npm suggested downgrade to electron-builder 25.1.0 (major), intentionally not forced. npm run lint, npx tsc --noEmit, full suite 129 files / 1127 passed / 9 migration-18-gated skipped; isolated Next 16.4.6 production build generated 109 static pages, exit 0.",
+      "recordedAt": "2026-11-28"
+    },
+    {
+      "id": "TB-130",
+      "commit": null,
+      "title": "Strengthen execution-intent idempotency across mode, target and summary",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "backend-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "src/lib/db/repos/execution-intents.ts",
+        "src/app/dashboard/actions/page.tsx",
+        "tests/execution-intents.test.ts",
+        "docs/agents/OPERATING-STATE.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "Reusing an idempotency key with a different action, payload, mode, target system or summary returns 409; successful preparation rotates the UI key for the next preparation; focused tests and full safe suite pass.",
+      "evidence": "tests/execution-intents.test.ts 9/9; regression variants cover mode, target system and summary. Full safe suite 129 files / 1127 passed / 9 migration-18-gated skipped; lint, TypeScript and diff check clean. No external execution is performed.",
+      "recordedAt": "2026-11-28"
+    },
+    {
+      "id": "TB-131",
+      "commit": null,
+      "title": "Authenticated browser E2E using an isolated ABYS test tenant (no TAIS demo credentials)",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer",
+        "security-reviewer"
+      ],
+      "files": [
+        "scripts/connector-browser-smoke.mjs",
+        "docs/ROADMAP.md",
+        "docs/agents/OPERATING-STATE.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The production-mode browser smoke can verify connector, data-governance, external-context, signal, report and RBAC workflows using a disposable ABYS-named tenant and ABYS-only test accounts; no TAIS demo account or production data is used; temporary schedules are disabled at the end.",
+      "evidence": "Real Chromium on isolated Next.js 16.4.6 production build at 127.0.0.1:3232 with PGlite DB /private/tmp/abys-browser-test-db and ABYS Browser Test Organization. smoke:connectors-browser exit 0; connector probe/sync 10 records, schedule disable, mapping v2, golden-record policy, KPI validation/CEO approval, external context licensing/review/case evidence, signal triage/note, report soft-delete, RBAC 403s and workspace routes. Separate CEO /dashboard/decisions browser visit HTTP 200, synthetic case visible, no page errors. Expanded briefing panel browser interaction remains awaiting client safety review. Scheduled-run extension: due scheduler was invoked in the isolated ABYS test tenant; dueCount=1, succeeded=1, failed=0, skipped=0. Scheduled JSONPlaceholder connector runId eb50dddc6d610733 read 10 and wrote 10 records; run history confirms status=success, trigger=scheduled, readCount=10, writtenCount=10. This is synthetic public-fixture data only.",
+      "recordedAt": "2026-11-28"
+    },
+    {
+      "id": "TB-132",
+      "commit": null,
+      "title": "Remove TAIS demo identity from the general ABYS login screen",
+      "priority": "P0",
+      "primaryFounder": "A",
+      "specialists": [
+        "frontend-ux-engineer",
+        "security-qa-reviewer"
+      ],
+      "files": [
+        "src/app/login/LoginForm.tsx",
+        "src/lib/i18n.ts",
+        "tests/login-entry.test.ts"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The general ABYS login screen never presents ceo@tais.demo or TAIS demo credentials as the default ABYS identity. If demo access is intentionally enabled, it is isolated behind an explicit local-demo configuration and clearly labelled as a separate optional demo tenant. TR/EN login, accessible form labels, errors and authentication behaviour remain unchanged.",
+      "evidence": "Frontend UX specialist removed the general-login TAIS demo card from LoginForm.tsx. Lead removed unused login.demoTitle/login.demoHint union entries and translations and added a regression assertion for ceo@tais.demo and both keys. bash scripts/agent-verify.sh src/app/login/LoginForm.tsx src/lib/i18n.ts tests/login-entry.test.ts passed: tsc, ESLint and login-entry.test.ts (11/11). Independent read-only security review found no concrete issues; ABYS_PUBLIC_DEMO remains explicitly gated at src/lib/public-demo.ts:18 and backend demo routes were not changed. Isolated Next.js 16.4.6 production build passed (109 static pages) in /private/tmp/abys-login-preview-src, separate distDir, separate test DB, preview on 127.0.0.1:3234. Real Google Chrome checks passed: TR labels and TR/EN controls, switch to EN with translated labels, no TAIS email/demo card in either locale, 390px mobile viewport has scrollWidth=390 and form visible, pageErrors=0. git diff --check passed. No commit, push, deploy, migration or existing-service restart.",
+      "recordedAt": "2026-11-28"
+    },
+    {
+      "id": "TB-133",
+      "commit": null,
+      "title": "Repeat complete dashboard browser smoke on an ABYS-only isolated tenant",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer"
+      ],
+      "files": [
+        "scripts/browser-smoke.mjs",
+        "docs/ROADMAP.md",
+        "docs/agents/OPERATING-STATE.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "The production browser smoke runs on a disposable ABYS-named tenant without TAIS demo credentials and verifies dashboard routes, locale switching, role-aware data-quality view, overdue filter, mobile overflow and mobile navigation.",
+      "evidence": "Real Google Chrome via scripts/browser-smoke.mjs on Next.js 16.4.6 production preview 127.0.0.1:3232 using ceo@abys.test in isolated ABYS Browser Test Organization. 77 passed / 0 failed: 22 dashboard routes, page content/no application errors, CEO data-quality restriction, overdue filter, TR/EN, six mobile routes with no horizontal overflow, mobile navigation.",
+      "recordedAt": "2026-11-28"
+    },
+    {
+      "id": "TB-134",
+      "commit": null,
+      "title": "Refresh stale Live Preview processes to the patched Next.js runtime",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "devops-engineer",
+        "qa-engineer"
+      ],
+      "files": [
+        "docs/agents/OPERATING-STATE.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "After explicit approval, restart only the owned ABYS preview processes on 3100 and 3101 with the verified Next.js 16.4.6 build, preserve Agent Command Center 3200, and verify /login and /api/health return 200 on both ports.",
+      "evidence": "Explicit user approval received. Replaced only stale Next.js preview processes on ports 3100 and 3101 with the isolated verified Next.js 16.4.6 production build. 3100 uses existing .data/abys-db and returns /login 200 + /api/health 200 (DB up; schemaReady=false only because migration 18 remains pending behind its approval gate). 3101 uses existing .data/dev-preview and returns /login 200 + /api/health 200 (DB up; schemaReady=true). Agent Command Center 3200 remained untouched and returns HTTP 200. No migration was applied.",
+      "recordedAt": "2026-11-28"
+    },
+    {
+      "id": "TB-135",
+      "commit": null,
+      "title": "Verify expanded decision intelligence briefing in authenticated browser",
+      "priority": "P1",
+      "primaryFounder": "B",
+      "specialists": [
+        "qa-engineer",
+        "frontend-ux-engineer"
+      ],
+      "files": [
+        "src/components/DecisionIntelligencePanel.tsx",
+        "src/app/dashboard/decisions/page.tsx"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "On the isolated ABYS test tenant, expand a decision case and verify the intelligence panel, briefing and evidence render without browser errors.",
+      "evidence": "User approved browser automation and it ran in real Chromium against the isolated ABYS test tenant. CEO opened /dashboard/decisions, clicked the first İncele control, and the expanded decision details rendered: KARAR ZEKÂSI — KANIT ÖZETİ, confidence, recommended action, evidence list, external-context source/license metadata, confidence rationale, limitations and actionable options. Synthetic ABYS test case and fixture evidence only. Browser pageErrors=[] (zero uncaught page errors). Initial boolean label checks were case/wording-mismatched (the UI heading says KARAR ZEKÂSI — KANIT ÖZETİ, not briefing); inspected rendered body confirms panel content is present.",
+      "recordedAt": "2026-11-28"
+    },
+    {
+      "id": "TB-136",
+      "commit": null,
+      "title": "Verify the full nine-role RBAC and two-tenant isolation matrix in Chromium",
+      "priority": "P0",
+      "primaryFounder": "B",
+      "specialists": [
+        "test-automation-engineer",
+        "security-qa-reviewer"
+      ],
+      "files": [
+        "scripts/role-tenant-browser-smoke.mjs",
+        "src/app/api/health/route.ts",
+        "tests/health.test.ts",
+        "docs/ROADMAP.md",
+        "docs/agents/OPERATING-STATE.md"
+      ],
+      "status": "VERIFIED",
+      "acceptanceCriteria": "On a dedicated disposable PGlite database and loopback-only preview, authenticate all nine supported roles in two independent organizations (18 role sessions). Verify the independently specified permission matrix for GET/POST /api/connectors, GET/POST /api/reports, POST /api/anomalies, GET /api/audit, and GET/POST /api/users; verify tenant-scoped reads for connector configs, reports, users and audit records; exercise representative dashboard routes in Chromium; assert no uncaught page errors. The smoke must prove the exact disposable DB identity before mutations, never invoke migrations on its health preflight, and reject any enabled migration approval including Migration 18. No external ERP/CRM, customer data, provider sync/probe, scheduled jobs, production DB, or Migration 18 approval bypass.",
+      "evidence": "Verified 2026-11-28. Real Google Chrome run of scripts/role-tenant-browser-smoke.mjs: TOTAL passed=188 failed=0, exit 0. Two separate synthetic PGlite organizations × nine supported roles (18 independent authenticated sessions); independent expected status matrix for GET/POST connectors, GET/POST reports, GET/POST anomalies, GET audit, GET/POST users; tenant-specific connector/report/user/audit marker reads; password hash absence; TR→EN→TR login locale; ten dashboard route checks (five per tenant) all HTTP 200; zero uncaught page errors, zero unexpected browser HTTP errors, zero attempted external origins. Synthetic data DB identity preflight required token, exact /private/tmp/abys-role-tenant-matrix-20261128 path, PGlite backend, zero missing ordinary migrations, Migration 18 sole pending approval, no enabled approval env. Health route test 4/4 passed, including wrong token, unsafe/relative/symlink path, Postgres backend, and ABYS_MIGRATION_18_APPROVED=true returning 409 while migration-18 row stays absent. `bash scripts/agent-verify.sh src/app/api/health/route.ts scripts/role-tenant-browser-smoke.mjs tests/health.test.ts` passed (tsc, ESLint, Vitest 4/4); isolated Next.js 16.4.6 production build passed with 109 static pages; `git diff --check` passed. Independent read-only security-qa-reviewer follow-up reported no new findings within reviewed scope; its report explicitly notes Director thread unavailable and it did not execute tests. Generated records are intentionally retained only in the disposable PGlite DB; script does not delete/reset DB. No customer data, external ERP/CRM calls, provider probes/sync, schedule, production DB, Migration 18 application, commit, push or deploy.",
+      "recordedAt": "2026-11-28"
     }
   ]
 }

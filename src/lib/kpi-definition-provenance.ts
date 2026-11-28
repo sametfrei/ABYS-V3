@@ -42,6 +42,7 @@ export function computeKpiDefinitionHash(
 export interface KpiDefinitionSnapshot {
   id: string;
   name: string;
+  governanceState: "discovered" | "mapped" | "calculable" | "validated" | "approved";
   unit: string | null;
   formulaText: string | null;
   source: string;
@@ -63,6 +64,7 @@ export interface KpiDefinitionSnapshot {
 export function snapshotFromDefinition(row: {
   id: string;
   name: string;
+  governance_state: KpiDefinitionSnapshot["governanceState"];
   unit: string | null;
   formula_text: string | null;
   source: string;
@@ -78,6 +80,7 @@ export function snapshotFromDefinition(row: {
   return {
     id: row.id,
     name: row.name,
+    governanceState: row.governance_state,
     unit: row.unit,
     formulaText: row.formula_text,
     source: row.source,

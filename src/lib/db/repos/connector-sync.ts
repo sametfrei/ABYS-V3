@@ -3,7 +3,7 @@ import type {
   CanonicalRecord,
   ConnectorRecordRejection,
   ObservedSourceField,
-  RestConnectorConfig,
+  ConnectorConfig,
 } from "@/lib/connectors/types";
 import { CANONICAL_CONTRACT_VERSION, type MappingSuggestion } from "@/lib/connectors/contracts";
 import { quarantineIssue } from "./data-quality";
@@ -22,7 +22,7 @@ export interface ConnectorSyncCommitInput {
   orgId: string;
   configId: string;
   configName: string;
-  config: RestConnectorConfig;
+  config: ConnectorConfig;
   runId: string;
   records: CanonicalRecord[];
   rejected: ConnectorRecordRejection[];

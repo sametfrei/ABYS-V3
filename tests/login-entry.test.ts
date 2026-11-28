@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -90,6 +91,13 @@ afterAll(async () => {
 });
 
 describe("sunucu taraflı giriş kapısı", () => {
+  it("genel giriş ekranında TAIS demo kimliğini veya demo kartı çevirilerini içermez", () => {
+    const loginForm = readFileSync("src/app/login/LoginForm.tsx", "utf8");
+    expect(loginForm).not.toContain("ceo@tais.demo");
+    expect(loginForm).not.toContain("login.demoTitle");
+    expect(loginForm).not.toContain("login.demoHint");
+  });
+
   it("oturumsuz korumalı erişimi login'e yönlendirir", async () => {
     await expect(requireSession()).rejects.toMatchObject({ path: "/login" });
   });

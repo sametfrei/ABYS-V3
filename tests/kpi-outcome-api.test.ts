@@ -101,8 +101,8 @@ describe("KPI sonuç ölçümü API sınırı", () => {
     );
     await db.query(
       `INSERT INTO kpi_definitions
-         (id, org_id, name, unit, formula_text, target, warn_threshold, critical_threshold)
-       VALUES ('kpi-api-def', $1, $2, 'saat', 'ortalama(teslim - sipariş)', 24, 36, 48)`,
+         (id, org_id, name, unit, formula_text, target, warn_threshold, critical_threshold, governance_state)
+       VALUES ('kpi-api-def', $1, $2, 'saat', 'ortalama(teslim - sipariş)', 24, 36, 48, 'approved')`,
       [ORG_A, LABEL]
     );
     await db.query(
