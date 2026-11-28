@@ -109,3 +109,65 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: true
           sbom: true
+
+
+      - name: Smoke-test the published Docker image
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          IMAGE="ghcr.io/sametfrei/abys-v3:${EXPECTED_SHA}"
+          CONTAINER="abys-image-smoke-${GITHUB_RUN_ID}"
+          TOKEN="$(openssl rand -hex 32)"
+          HEALTH_FILE="$RUNNER_TEMP/abys-image-health.json"
+          cleanup() {
+            docker logs "$CONTAINER" || true
+            docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker pull "$IMAGE"
+          docker run -d --name "$CONTAINER" \
+            -p 127.0.0.1:3187:3000 \
+            -e ABYS_DB_DIR=/app/.data/abys-db \
+            -e ABYS_BOOTSTRAP_TOKEN="$TOKEN" \
+            -e ABYS_MIGRATION_18_APPROVED=true \
+            "$IMAGE"
+
+          READY=false
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent --show-error http://127.0.0.1:3187/api/health > "$HEALTH_FILE"; then
+              READY=true
+              break
+            fi
+            sleep 2
+          done
+          test "$READY" = true
+
+          node - "$HEALTH_FILE" "$EXPECTED_SHA" <<'NODE'
+          const fs = require("node:fs");
+          const [healthPath, expectedSha] = process.argv.slice(2);
+          const health = JSON.parse(fs.readFileSync(healthPath, "utf8"));
+          if (health.ok !== true || health.db !== "up" || health.schemaReady !== true) {
+            throw new Error("container health or schema readiness failed");
+          }
+          if (health.build?.commit !== expectedSha) {
+            throw new Error(`container SHA mismatch: ${health.build?.commit} != ${expectedSha}`);
+          }
+          if ((health.pendingMigrations ?? []).length !== 0) {
+            throw new Error("container has pending migrations");
+          }
+          console.log(JSON.stringify({
+            ok: health.ok,
+            db: health.db,
+            schemaReady: health.schemaReady,
+            commit: health.build.commit
+          }));
+          NODE
+
+          curl --fail --silent --show-error http://127.0.0.1:3187/login >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3187/setup >/dev/null
+          curl --fail --silent --show-error http://127.0.0.1:3187/api/auth/bootstrap |
+            node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const x=JSON.parse(s);if(x.available!==true)process.exit(1);console.log("first-admin bootstrap is available on empty disposable DB")})'
+
+          echo "Published image smoke test passed: $IMAGE"
