@@ -2636,7 +2636,7 @@
     },
     {
       "id": "TB-132",
-      "commit": null,
+      "commit": "0b55c336a74e80b48aa4fd2f0006d67a42ba7b29",
       "title": "Remove TAIS demo identity from the general ABYS login screen",
       "priority": "P0",
       "primaryFounder": "A",
@@ -2712,7 +2712,7 @@
     },
     {
       "id": "TB-136",
-      "commit": null,
+      "commit": "0b55c336a74e80b48aa4fd2f0006d67a42ba7b29",
       "title": "Verify the full nine-role RBAC and two-tenant isolation matrix in Chromium",
       "priority": "P0",
       "primaryFounder": "B",
