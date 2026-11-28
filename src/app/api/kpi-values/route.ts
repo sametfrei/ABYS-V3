@@ -27,6 +27,7 @@ const postSchema = z.object({
       z.object({
         value: z.number().finite(),
         observedAt: observedAtSchema,
+        period: z.string().trim().max(40).nullable().optional(),
       })
     )
     .min(1)
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
 
   const written = await recordKpiValues(
     session.orgId,
-    entries.map((e) => ({ label, value: e.value, observedAt: new Date(e.observedAt).toISOString() }))
+    entries.map((e) => ({ label, value: e.value, observedAt: new Date(e.observedAt).toISOString(), period: e.period ?? null }))
   );
 
   await recordAuditEvent({

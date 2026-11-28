@@ -17,6 +17,7 @@ export interface KpiPoint {
   label: string;
   value: number;
   observedAt: string;
+  period: string | null;
 }
 
 export interface KpiEntryInput {
@@ -95,8 +96,8 @@ export async function recordKpiValues(
 
 export async function listKpiPoints(orgId: string, label: string, limit = 200): Promise<KpiPoint[]> {
   await migrate();
-  const r = await getDb().query<{ id: string; label: string; value: string; created_at: string | Date }>(
-    `SELECT id, label, value, created_at
+  const r = await getDb().query<{ id: string; label: string; value: string; created_at: string | Date; period: string | null }>(
+    `SELECT id, label, value, created_at, period
        FROM kpi_values
       WHERE org_id = $1 AND label = $2 AND value ~ '^[+-]?[0-9]+(\\.[0-9]+)?$'
       ORDER BY created_at ASC
@@ -112,6 +113,7 @@ export async function listKpiPoints(orgId: string, label: string, limit = 200): 
       label: row.label,
       value,
       observedAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+      period: row.period,
     });
   }
   return points;

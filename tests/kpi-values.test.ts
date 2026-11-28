@@ -118,6 +118,7 @@ describe("KPI değer girişi ve tahmin entegrasyonu", () => {
     const entries = Array.from({ length: 8 }, (_, i) => ({
       value: 100 + i * 10,
       observedAt: `2026-01-${String(i + 1).padStart(2, "0")}T00:00:00Z`,
+      period: `2026-W${String(i + 1).padStart(2, "0")}`,
     }));
     const post = await kpiRoute.POST(kpiReq("POST", { label: "Haftalık gelir", entries }));
     const postText = await post.text();
@@ -125,8 +126,9 @@ describe("KPI değer girişi ve tahmin entegrasyonu", () => {
     expect((JSON.parse(postText) as { written: number }).written).toBe(8);
 
     const get = await kpiRoute.GET(kpiReq("GET", undefined, "http://localhost/api/kpi-values?label=Haftal%C4%B1k%20gelir"));
-    const body = (await get.json()) as { points: { value: number; observedAt: string }[] };
+    const body = (await get.json()) as { points: { value: number; observedAt: string; period: string | null }[] };
     expect(body.points.map((p) => p.value)).toEqual([100, 110, 120, 130, 140, 150, 160, 170]);
+    expect(body.points.map((p) => p.period)).toEqual(entries.map((entry) => entry.period));
     expect(body.points[0].observedAt).toContain("2026-01-01");
 
     const forecast = await forecastGET({
