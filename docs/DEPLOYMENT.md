@@ -67,6 +67,18 @@ curl -s http://127.0.0.1:3000/api/health | jq '.build'
 > Kod güncellenir, eski imaj çalışmaya devam eder. `--build` zorunludur.
 > `--force-recreate` olmadan da eski konteyner ayakta kalabilir.
 
+### Docker Compose: kalıcı DB ve migration kabulü
+
+`docker-compose.yml`, aşağıdaki değişkenleri `abys` konteynerine aktarır:
+
+- PGlite varsayılanı için `ABYS_DB_BACKEND` boş bırakılır; veriler `abys-data` volume'unda kalır.
+- Yönetilen PostgreSQL için secret store'da `ABYS_DB_BACKEND=postgres`, `DATABASE_URL` ve `PGSSLMODE=require` tanımlayın. Sertifika doğrulaması varsayılan olarak açıktır; sağlayıcı gerektirmedikçe `PGSSL_REJECT_UNAUTHORIZED=false` kullanmayın.
+- Havuz sınırları için `ABYS_DB_POOL_MAX`, `ABYS_DB_CONNECT_TIMEOUT_MS` ve `ABYS_DB_IDLE_TIMEOUT_MS` isteğe bağlıdır.
+- Yeni veritabanında Migration 18 bekliyorsa operatör önce yedek/restore planını doğrulayıp migration'ı açıkça onaylamalıdır. Bunun için ilk başlatmada `ABYS_MIGRATION_18_APPROVED=true` verin; `/api/health` `schemaReady=true` ve `pendingMigrations=[]` döndürdüğünde değişkeni kaldırıp servisi yeniden oluşturun. Bu değişkeni sürekli açık bırakmayın; sonraki onay gerektiren migration'ları otomatik uygulama riskini doğurur.
+- Compose healthcheck artık yalnızca HTTP 200'ü değil, `ok=true` ve `schemaReady=true` koşullarını da arar. Bekleyen onay migration'ı olan bir örnek bilerek `unhealthy` kalır.
+
+İlk sistem yöneticisi kurulumu için `ABYS_BOOTSTRAP_TOKEN` değerini aynı secret store üzerinden aktarın; `/setup` tamamlandıktan sonra secret'ı kaldırın. Hiçbir gerçek anahtarı Compose dosyasına veya repoya yazmayın.
+
 ## 4. Node ile dağıtım (Docker yoksa)
 
 ```bash
@@ -109,9 +121,11 @@ Veri volume'u (`abys-data`) dağıtımdan bağımsızdır; imaj değişimi veriy
 ## 7. GitHub Actions doğrulaması ve Container Registry yayını
 
 `.github/workflows/ci-release.yml` ana dal push'larında ve PR'larda şu kapıları
-çalıştırır: Node 22 `npm ci`, ESLint, TypeScript, izole test veritabanlarında
-Migration 18 hiyerarşi testleri dahil Vitest (gerçek EVREN tanılama dosyası hariç),
-üretim bağımlılık denetimi ve standalone üretim derlemesi. Migration 18 onay
+çalıştırır: Node 22 `npm ci`, `docker compose config --quiet`, ESLint, TypeScript,
+izole test veritabanlarında Migration 18 hiyerarşi testleri dahil Vitest (gerçek
+EVREN tanılama dosyası hariç), üretim bağımlılık denetimi ve standalone üretim
+derlemesi. Main push sonrasında yayımlanan imaj, ayrı bir geçici Docker
+konteynerinde sağlık/SHA/şema/ilk-kurulum smoke testinden geçer. Migration 18 onay
 değişkeni yalnızca bu CI job'ının geçici test süreci içindir; hiçbir canlı DB
 bağlantısı veya üretim sırrı iş akışına aktarılmaz.
 
