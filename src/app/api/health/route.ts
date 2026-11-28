@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { basename, dirname, isAbsolute } from "node:path";
+import { tmpdir } from "node:os";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb, getPendingMigrationApprovals, migrate } from "@/lib/db/client";
 import { MIGRATIONS } from "@/lib/db/migrations";
@@ -23,7 +24,7 @@ function smokeDatabaseIdentity(req?: NextRequest) {
     const configuredDir = process.env.ABYS_DB_DIR || ".data/abys-db";
     if (!isAbsolute(configuredDir)) return { disposable: false, backend: "pglite", dir: null };
     const actualDir = realpathSync(/*turbopackIgnore: true*/ configuredDir);
-    const tempRoot = realpathSync(/*turbopackIgnore: true*/ "/private/tmp");
+    const tempRoot = realpathSync(/*turbopackIgnore: true*/ tmpdir());
     const disposable = dirname(actualDir) === tempRoot && basename(actualDir).startsWith("abys-");
     return { disposable, backend: "pglite", dir: actualDir };
   } catch {

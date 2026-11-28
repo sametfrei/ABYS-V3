@@ -211,3 +211,10 @@ otoritedir; buradaki bir yetenek yalnızca kod bulunduğu için tamamlanmış sa
 - Cloudflare Quick Tunnel üzerinden https://hypothetical-facilities-loops-paste.trycloudflare.com geçici HTTPS erişimi açıldı. Dış isteklerle /api/health, /api/auth/bootstrap, /login, /setup HTTP 200 doğrulandı. Chrome setup ekranı 390 px mobilde yatay taşmasız ve JS hatasız render edildi.
 - Quick Tunnel kalıcı üretim yayını değildir: cloudflared prosesi çalıştığı sürece erişilir, URL'yi bilen herkes erişebilir, uptime garantisi yoktur. Kalıcı yayına named tunnel/hesap-domain, kalıcı host, managed PostgreSQL, TLS ve secret store gerekir.
 - 34f3a9c sonrası 16 KiB body limit değişikliği 0175464 commit'i olarak yerel main'e alındı. Bu committen sonra build/rollout yenilenecek; GitHub'da workflow scope OAuth cihaz yetkisi henüz tamamlanmadı.
+
+
+## 2026-11-28 CI Linux temp path compatibility fix
+
+- First GitHub Actions run (46140638778) failed in `tests/health.test.ts`: test hard-coded `/private/tmp`, which does not exist on Ubuntu GitHub runners; the smoke identity gate consequently returned 403/409 and PGlite could not create its DB directory.
+- `src/app/api/health/route.ts` now resolves the disposable DB root via Node `os.tmpdir()` and keeps the direct-child + `abys-` name restriction. `tests/health.test.ts` uses the same platform temp directory for its test DB and symlink cases.
+- Local regression: `tests/health.test.ts` 4/4; full suite 130 files passed, 1 skipped; 1135 tests passed, 10 skipped behind Migration 18 approval gate; separate approved organizations migration tests 10/10; lint, TypeScript, `npm audit --omit=dev` (0 findings), and diff check passed.

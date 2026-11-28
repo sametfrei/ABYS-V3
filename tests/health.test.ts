@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import os from "node:os";
 import { realpathSync, symlinkSync, unlinkSync } from "node:fs";
 import { NextRequest } from "next/server";
 import { afterAll, describe, expect, it } from "vitest";
 
 process.env.ABYS_DB_DIR = path.join(
-  "/private/tmp",
+  os.tmpdir(),
   `abys-health-test-${process.pid}-${randomUUID()}`
 );
 
@@ -67,8 +68,8 @@ describe("GET /api/health", () => {
     expect((await health(req)).status).toBe(409);
     process.env.ABYS_DB_DIR = "relative/abys-health-test";
     expect((await health(req)).status).toBe(409);
-    const linkPath = path.join("/private/tmp", `abys-health-link-${process.pid}-${randomUUID()}`);
-    symlinkSync("/private/tmp", linkPath, "dir");
+    const linkPath = path.join(os.tmpdir(), `abys-health-link-${process.pid}-${randomUUID()}`);
+    symlinkSync(os.tmpdir(), linkPath, "dir");
     process.env.ABYS_DB_DIR = linkPath;
     expect((await health(req)).status).toBe(409);
     unlinkSync(linkPath);
