@@ -50,6 +50,15 @@ describe("tek kullanımlık ilk kurum yöneticisi kurulumu", () => {
     expect(await response.json()).toEqual({ available: true });
   });
 
+  it("16 KB üzerindeki gövdeyi JSON doğrulamasından önce reddeder", async () => {
+    const response = await POST(request(payload({ padding: "x".repeat(17 * 1024) })));
+    expect(response.status).toBe(413);
+    const counts = await getDb().query(
+      "SELECT (SELECT count(*)::int FROM organizations) AS organizations, (SELECT count(*)::int FROM users) AS users"
+    );
+    expect(counts.rows[0]).toEqual({ organizations: 0, users: 0 });
+  });
+
   it("yanlış anahtar kurumu veya kullanıcıyı oluşturmaz", async () => {
     const response = await POST(request(payload({ token: "wrong-bootstrap-token".repeat(2) })));
     expect(response.status).toBe(404);

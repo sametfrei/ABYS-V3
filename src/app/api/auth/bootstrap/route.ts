@@ -13,6 +13,7 @@ import {
 } from "@/lib/rate-limit";
 
 const RATE_KEY = "__initial_admin_bootstrap__";
+const MAX_BOOTSTRAP_BODY_BYTES = 16 * 1024;
 const SECTOR_IDS = SECTORS.map((sector) => sector.id) as [SectorId, ...SectorId[]];
 const schema = z.object({
   token: z.string().min(32).max(128),
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "İlk kurulum kapalı." }, { status: 404 });
   }
 
-  const parsed = await parseBody(req, schema);
+  const parsed = await parseBody(req, schema, { maxBytes: MAX_BOOTSTRAP_BODY_BYTES });
   if (!parsed.ok) return parsed.response;
   const body = parsed.data;
 
