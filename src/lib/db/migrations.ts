@@ -1453,4 +1453,57 @@ export const MIGRATIONS: Migration[] = [
       CREATE INDEX saved_reports_org_created ON saved_reports(org_id, created_at DESC) WHERE deleted_at IS NULL;
     `,
   },
+
+  {
+    id: 46,
+    name: "ilk kurum yoneticisi: tek kullanimlik kurulum kilidi",
+    sql: `
+      -- Tek satırlık kilit UPDATE'i eşzamanlı ilk kurulum isteklerini serialize eder.
+      -- Önce claim alınır, kurum/kullanıcı yazılır, sonra FK alanları tamamlanır.
+      CREATE TABLE initial_admin_bootstrap (
+        id SMALLINT PRIMARY KEY CHECK (id = 1),
+        claimed_at TIMESTAMPTZ,
+        completed_at TIMESTAMPTZ,
+        organization_id TEXT REFERENCES organizations(id),
+        user_id TEXT REFERENCES users(id),
+        CHECK (
+          (completed_at IS NULL AND organization_id IS NULL AND user_id IS NULL)
+          OR
+          (completed_at IS NOT NULL AND claimed_at IS NOT NULL
+            AND organization_id IS NOT NULL AND user_id IS NOT NULL)
+        )
+      );
+      INSERT INTO initial_admin_bootstrap (id) VALUES (1);
+
+      CREATE OR REPLACE FUNCTION prevent_initial_admin_bootstrap_reopen()
+      RETURNS trigger AS $$
+      BEGIN
+        IF TG_OP = 'DELETE' THEN
+          RAISE EXCEPTION 'initial_admin_bootstrap: DELETE yasak';
+        END IF;
+        IF OLD.completed_at IS NOT NULL THEN
+          RAISE EXCEPTION 'initial_admin_bootstrap: tamamlanan kurulum degistirilemez';
+        END IF;
+        IF OLD.claimed_at IS NOT NULL AND NEW.completed_at IS NULL THEN
+          RAISE EXCEPTION 'initial_admin_bootstrap: claim geri alinamaz';
+        END IF;
+        IF NEW.completed_at IS NOT NULL AND (
+          NEW.claimed_at IS NULL OR NEW.organization_id IS NULL OR NEW.user_id IS NULL
+        ) THEN
+          RAISE EXCEPTION 'initial_admin_bootstrap: tamamlanan kurulum eksik';
+        END IF;
+        IF NEW.completed_at IS NULL AND (
+          NEW.organization_id IS NOT NULL OR NEW.user_id IS NOT NULL
+        ) THEN
+          RAISE EXCEPTION 'initial_admin_bootstrap: kurum/user yalnizca tamamlanirken baglanir';
+        END IF;
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+
+      CREATE TRIGGER initial_admin_bootstrap_once
+        BEFORE UPDATE OR DELETE ON initial_admin_bootstrap
+        FOR EACH ROW EXECUTE FUNCTION prevent_initial_admin_bootstrap_reopen();
+    `,
+  },
 ];

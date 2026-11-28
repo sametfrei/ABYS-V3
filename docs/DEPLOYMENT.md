@@ -129,3 +129,17 @@ sürümleri tam commit SHA'larına sabitlenmiştir.
 erişimi başlangıçta GHCR varsayılan görünürlüğüne tabidir; sunucudan private
 imaj çekilecekse `read:packages` erişimi gerekir. Public runtime için ayrıca
 sunucu/hosting, yönetilen PostgreSQL, domain, TLS ve sır yönetimi yapılandırılmalıdır.
+
+## 8. Boş veritabanında ilk kurum ve sistem yöneticisi
+
+Yeni/boş bir ABYS veritabanında ilk kullanıcıyı oluşturmak için `/setup` kullanılır.
+Bu bir açık kayıt ekranı değildir:
+
+1. Sunucuya ait `ABYS_BOOTSTRAP_TOKEN` en az 32 UTF-8 bayt olmalıdır. Rastgele token üretmek için `openssl rand -base64 32` kullanın; değeri yalnızca sunucu secret store veya yerel `.env.local` içinde tutun, repoya koymayın.
+2. `/setup` sayfası yalnızca sunucu token'ı tanımlı, migration onayları beklemeyen, henüz kurum/kullanıcı satırı bulunmayan DB'de açılır.
+3. Form ilk kurumu ve tek `sys_admin` hesabını oluşturur. Kurum, kullanıcı, audit olayı ve tek-seferlik kilit tek transaction içindedir. Parola scrypt ile hash'lenir; açık parola saklanmaz veya loglanmaz.
+4. `initial_admin_bootstrap` kilidi tamamlandıktan sonra trigger üzerinden silinemez veya tekrar açılamaz. Aynı anda gelen kurulum isteklerinden yalnızca biri başarılı olabilir.
+5. Kurulum bitince `/setup` kapanır. Yeni kullanıcılar daha sonra oturum açmış `sys_admin` tarafından Kullanıcı Yönetimi üzerinden oluşturulur.
+
+Örnek yerel hazırlık: `cp .env.example .env.local`, ardından `ABYS_BOOTSTRAP_TOKEN=<rastgele-değer>` satırını kendi secret'ınızla doldurun. Docker Compose bu değişkeni kapsayıcıya aktarır.
+Üretimde token'ı platformun secret manager'ında tanımlayın ve kurulumdan sonra token'ı secret store'dan kaldırın. Veritabanındaki tamamlanmış kilit, secret kaldırılmadan önce kurulumu kalıcı olarak kapatır.

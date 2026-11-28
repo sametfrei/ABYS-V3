@@ -26,7 +26,7 @@ otoritedir; buradaki bir yetenek yalnızca kod bulunduğu için tamamlanmış sa
 ## Güncel doğrulama tabanı (2026-11-21)
 
 - `main` üzerinde son kod entegrasyonu TB-020–TB-055 aralığında odaklı Conventional Commit'ler halinde yapıldı ve `origin/main`e gönderildi; her dilim kendi `docs(tasks)` kaydıyla eşlendi.
-- Migration başı 33. Migration 18 onay kapısı açık ve uygulanmadı.
+- 2026-11-21 snapshot’ında migration başı 33’tü; güncel schema head 46’dır. Migration 18 ve Migration 46 mevcut yerel PGlite DB’de uygulanmıştır.
 - Tam süit kanıtı (2026-11-21): 88 dosya geçti, 1 governance dosyası atlandı; 793 test geçti, 9 atlandı. Tam ESLint 0 hata/0 uyarı ve `npx tsc --noEmit` temiz.
 - Üretim derlemesi (2026-11-20): Next.js 16.2.11, 94 route/sayfa ile başarılı.
 - Çalışan önizleme smoke testi (2026-11-21): 41/41 başarılı; oturum, audit zinciri, CSV dışa aktarımları (karar defteri, tahmin, denetim), 403 sınırı, tahmin kalibrasyonu/saklama planı ve temel ekranlar HTTP üzerinden doğrulandı.
@@ -191,3 +191,15 @@ otoritedir; buradaki bir yetenek yalnızca kod bulunduğu için tamamlanmış sa
 - `npm run lint`, `npx tsc --noEmit`, üretim bağımlılık denetimi (`npm audit --omit=dev`: 0 bulgu) ve `git diff --check` başarılı.
 - Yerel ana DB'deki Migration 18 uygulaması 42 MB DB yedeği alınıp SHA-256 kaydedildikten ve 41 MB kopyada prova geçtikten sonra yapılmıştır. 3100 sağlık kontrolünde `schemaReady=true`, `pendingMigrations=[]`; build SHA bu aşamada `9c496b551dd46c90e1ef67361d88f7d10d85f4d0`.
 - GHCR imaj yayını canlı deploy değildir. İnternete açık çalışma için Render/başka hosting bağlantısı, managed PostgreSQL, domain/TLS ve güvenli secret yapılandırması hâlâ gerekir.
+
+
+## 2026-11-28 ilk kurum / sistem yöneticisi bootstrap ve 3100 rollout
+
+- İlk gerçek kurulum yolu eksikti: /onboarding yalnızca localStorage profilini saklıyordu; giriş ekranında ilk kurum/kullanıcı oluşturma yoktu. ABYS_BOOTSTRAP_TOKEN (en az 32 bayt) ile korunan /setup ve /api/auth/bootstrap eklendi. Bu açık kayıt değildir: yalnızca boş DB, token varlığı ve bekleyen migration onayı olmaması halinde açılır.
+- Migration 46, initial_admin_bootstrap tek satırlık kontrol tablosunu ve trigger korumasını ekler. Transaction önce claim alır, sonra ilk organization + sys_admin + audit event yazar ve guard'ı tamamlar. Aynı anda gelen isteklerden yalnızca biri başarılı; tamamlanan kilit silinemez/yeniden açılamaz.
+- tests/initial-admin-bootstrap.test.ts: 5/5 (uygunluk, yanlış token'da yazım olmaması, paralel 201/409, tamamlandıktan sonra tekrarın reddi, trigger'ın kilidi koruması). Hiyerarşi Migration 18 testleri ayrı onaylı test DB'sinde 10/10 geçti.
+- Güvenli tam süit: 130 dosya geçti, 1 dosya atlandı; 1134 test geçti, 10 test atlandı (Migration 18 onay kapısı). npm run lint, npx tsc --noEmit, npm audit --omit=dev (0 bulgu) ve git diff --check başarılı.
+- Standalone Next.js 16.4.6 production build, yeni /setup ve /api/auth/bootstrap dahil 111 route ile başarılı. 3100 yeni standalone build SHA b987d311f3f8d0c7ff1d5cb46f12764d8e2fae50 ile çalışıyor; health ok=true, DB up, schemaReady=true, pendingMigrations=[]. /setup HTTP 200, /api/auth/bootstrap available=true; yanlış token POST 404 verdi ve endpoint hâlâ available=true kaldı. İlk gerçek kullanıcı/kurum oluşturulmadı; kullanıcı formda kendi bilgilerini belirler.
+- 390 px Chrome viewport'ta setup formu görünür, yatay taşma yok (scrollWidth=390), uncaught page error yok. Tarayıcıdaki hata metni assertion'ı anlık React state render zamanlaması nedeniyle henüz doğrulanmadı; API düzeyindeki 404 negatif testi geçmiştir.
+- Yerel kurulum token'ı /private/tmp/abys-bootstrap-token içinde 0600 izinle saklanır ve yalnızca 3100 sürecine aktarılır; repo/env örneğine gerçek token yazılmadı. Yerel sayfa loopback-only olduğu için yalnızca bu Mac'te açılır. İnternete açık üretim deployment hâlâ yok.
+- GitHub workflow commit'i b987d311f3f8d0c7ff1d5cb46f12764d8e2fae50 yerelde hazır fakat origin'e gönderilemedi: GitHub PAT workflow scope içermiyor. Device-flow OAuth workflow izni de henüz onaylanmadı. origin/main bu sırada 9c496b551dd46c90e1ef67361d88f7d10d85f4d0; yerel branch bir commit ileride.

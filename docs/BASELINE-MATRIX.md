@@ -8,7 +8,7 @@ Bu matris önceki tamamlanma iddialarını otomatik kabul etmez. `VERIFIED_INTEG
 | OIDC Authorization Code + PKCE | Tamam | `VERIFIED_INTEGRATED` | OIDC birim/entegrasyon testleri | Gerçek IdP keşif belgesi, anahtar rotasyonu ve hesap yaşam döngüsü |
 | Tenant izolasyonu | Tamam | `VERIFIED_INTEGRATED` | tenant-isolation ve kapsamlı API testleri | Tüm yeni uçlar için sürekli regresyon |
 | Hash zincirli audit | Tamam | `VERIFIED_INTEGRATED` | audit testleri; smoke `verify.valid=true` | Dışarıdan değiştirilemez WORM/WORM-benzeri saklama gerekirse ayrı tasarım |
-| Migration governance | Tamam | `VERIFIED_INTEGRATED` | migration-governance testleri; migration head 33 | Migration 18 açık insan onayı olmadan uygulanmaz |
+| Migration governance | Tamam | `VERIFIED_INTEGRATED` | migration-governance testleri; migration head 46; Migration 18 mevcut yerel DB’de uygulandı, diğer DB’lerde açık onay kapısı sürer; Migration 46 ilk yönetici kilidini ekler |
 | REST/OData konnektör çekirdeği | Tamam | `VERIFIED_INTEGRATED` | connector/canonical/security süitleri; 22/22 smoke | Daha fazla protokol (SOAP/JDBC/ODBC/OAuth2 client) |
 | Şema keşfi, eşleme sürümleme ve karantina | Tamam | `VERIFIED_INTEGRATED` | connectors/canonical-contracts/data-quality testleri | Tarayıcıda operatör akışı görsel doğrulaması |
 | Zamanlanmış senkron ve sağlık telemetrisi | Tamam | `VERIFIED_INTEGRATED` | scheduler/connector testleri; Command Center gerçek run kayıtları | Uzun süreli üretim yükü ve dağıtık scheduler testi |

@@ -1,7 +1,7 @@
 # ABYS-V3 — Veri Modeli
 
 Tek doğruluk kaynağı `src/lib/db/migrations.ts` dosyasıdır. Bu doküman ondan türetilmiştir
-(45 sıralı, append-only migration; **57 iş tablosu**; ayrıca istemcinin oluşturduğu `_migrations` defteri).
+(46 sıralı, append-only migration; **58 uygulama tablosu** (57 iş tablosu + ilk kurulum kilidi); ayrıca istemcinin oluşturduğu `_migrations` defteri).
 
 ## Kurallar
 
@@ -15,7 +15,7 @@ Tek doğruluk kaynağı `src/lib/db/migrations.ts` dosyasıdır. Bu doküman ond
 
 | Tablo | Alan | `org_id` |
 | --- | --- | --- |
-| `organizations` | Çekirdek: kurum; hiyerarşi (`parent_id`, `kind` = group/company/branch) + `country`, `currency` (migration 18, onay kapılı) | — (kök tablo) |
+| `organizations` | Çekirdek: kurum; hiyerarşi (`parent_id`, `kind` = group/company/branch) + `country`, `currency` (migration 18; mevcut yerel DB’de uygulandı) | — (kök tablo) |
 | `users` | Çekirdek: kullanıcı, rol, parola hash'i | Var |
 | `sessions` | Çekirdek: sunucu taraflı oturum | Var |
 | `audit_events` | Denetim: hash zincirli olay günlüğü | Var |
@@ -51,6 +51,7 @@ Tek doğruluk kaynağı `src/lib/db/migrations.ts` dosyasıdır. Bu doküman ond
 | `decision_case_external_context` | Kabul edilmiş dış gözlemin açık gerekçe ile karar vakasına bağlantısı; append-only (migration 43) | Var |
 | `signal_notes` | Sinyal war-room notları; tenant/aktör bağlantılı ve append-only (migration 44) | Var |
 | `saved_reports` | Tenant kapsamlı analiz raporları; auditli soft-delete ve yazar bilgisi (migration 45) | Var |
+| `initial_admin_bootstrap` | İlk kurum + `sys_admin` kurulumunu tek seferlik claim/completion kilidiyle korur; tamamlandıktan sonra trigger ile silme/yeniden açma engellenir (migration 46) | Hayır (kurulum kontrolü) |
 | `decision_records` | Karar seçimi; sayısal beklenen değer/aralık, para birimi, dayanak ve varsayımlar (migration 25) | Var |
 | `decision_kpi_measurements` | Karar başına tekil, veri seti kaynaklı KPI öncesi/sonrası ölçümü ve sonuç sınıflandırması (migration 25) | Var |
 | `outcomes` | Gerçekleşen sonuç ve ders; sayısal gerçekleşen değer, para birimi, ölçüm aralığı ve kanıt (migration 25) | Var |
@@ -86,7 +87,7 @@ Tek doğruluk kaynağı `src/lib/db/migrations.ts` dosyasıdır. Bu doküman ond
 - `action_execution_intents` ← `action_execution_attempts`.
 - `datasets` ← `kpi_values`, `signals`, `webhook_deliveries`, `decision_kpi_measurements`.
 - `external_context_sources` ← `external_context_observations` ← `external_context_reviews` ve `decision_case_external_context`.
-- `signals` ← `signal_notes`; `organizations` ← `saved_reports`.
+- `signals` ← `signal_notes`; `organizations` ← `saved_reports`; `initial_admin_bootstrap` ilk kurulan `organizations` ve `users` kayıtlarına referans verir.
 - `connector_configs` ← `connector_sync_runs`, `connector_records`, `canonical_entity_links`, `canonical_survivorship_policies`, `connector_record_history`.
 - `connector_sync_runs` ← `data_quality_issues.connector_run_id`.
 - `documents` ← `document_chunks`.

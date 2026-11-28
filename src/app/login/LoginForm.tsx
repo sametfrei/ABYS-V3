@@ -256,6 +256,12 @@ export function LoginForm({
             <p className="max-w-[16rem] text-[11px] leading-relaxed text-abys-muted">
               {t(locale, "login.forgot")}
             </p>
+            <a
+              href="/setup"
+              className="text-[11px] text-abys-muted underline-offset-2 hover:text-abys-accent hover:underline"
+            >
+              {locale === "tr" ? "İlk kurum kurulumu" : "Initial organization setup"}
+            </a>
             <div
               className="flex items-center gap-1"
               role="group"
