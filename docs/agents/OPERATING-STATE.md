@@ -203,3 +203,11 @@ otoritedir; buradaki bir yetenek yalnızca kod bulunduğu için tamamlanmış sa
 - 390 px Chrome viewport'ta setup formu görünür, yatay taşma yok (scrollWidth=390), uncaught page error yok. Tarayıcıdaki hata metni assertion'ı anlık React state render zamanlaması nedeniyle henüz doğrulanmadı; API düzeyindeki 404 negatif testi geçmiştir.
 - Yerel kurulum token'ı /private/tmp/abys-bootstrap-token içinde 0600 izinle saklanır ve yalnızca 3100 sürecine aktarılır; repo/env örneğine gerçek token yazılmadı. Yerel sayfa loopback-only olduğu için yalnızca bu Mac'te açılır. İnternete açık üretim deployment hâlâ yok.
 - GitHub workflow commit'i b987d311f3f8d0c7ff1d5cb46f12764d8e2fae50 yerelde hazır fakat origin'e gönderilemedi: GitHub PAT workflow scope içermiyor. Device-flow OAuth workflow izni de henüz onaylanmadı. origin/main bu sırada 9c496b551dd46c90e1ef67361d88f7d10d85f4d0; yerel branch bir commit ileride.
+
+## 2026-11-28 kurulum API'si gövde sınırı ve geçici HTTPS önizlemesi
+
+- İlk yönetici kurulum API'si 16 KiB üstü gövdeleri JSON parse ve token doğrulamasından önce 413 ile reddeder. tests/initial-admin-bootstrap.test.ts 6/6 geçti; büyük gövde reddinde organization/user sayısı sıfır kaldı.
+- Son tam doğrulama: ESLint + TypeScript başarılı; Vitest 130 dosya geçti, 1 dosya atlandı, 1135 test geçti ve 10 Migration 18 testi varsayılan kapı nedeniyle atlandı; Migration 18 organizasyon testleri ayrı onaylı test DB'sinde 10/10 geçti. npm audit --omit=dev: 0 bulgu.
+- Cloudflare Quick Tunnel üzerinden https://hypothetical-facilities-loops-paste.trycloudflare.com geçici HTTPS erişimi açıldı. Dış isteklerle /api/health, /api/auth/bootstrap, /login, /setup HTTP 200 doğrulandı. Chrome setup ekranı 390 px mobilde yatay taşmasız ve JS hatasız render edildi.
+- Quick Tunnel kalıcı üretim yayını değildir: cloudflared prosesi çalıştığı sürece erişilir, URL'yi bilen herkes erişebilir, uptime garantisi yoktur. Kalıcı yayına named tunnel/hesap-domain, kalıcı host, managed PostgreSQL, TLS ve secret store gerekir.
+- 34f3a9c sonrası 16 KiB body limit değişikliği 0175464 commit'i olarak yerel main'e alındı. Bu committen sonra build/rollout yenilenecek; GitHub'da workflow scope OAuth cihaz yetkisi henüz tamamlanmadı.

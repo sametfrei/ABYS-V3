@@ -143,3 +143,7 @@ Bu bir açık kayıt ekranı değildir:
 
 Örnek yerel hazırlık: `cp .env.example .env.local`, ardından `ABYS_BOOTSTRAP_TOKEN=<rastgele-değer>` satırını kendi secret'ınızla doldurun. Docker Compose bu değişkeni kapsayıcıya aktarır.
 Üretimde token'ı platformun secret manager'ında tanımlayın ve kurulumdan sonra token'ı secret store'dan kaldırın. Veritabanındaki tamamlanmış kilit, secret kaldırılmadan önce kurulumu kalıcı olarak kapatır.
+
+Kurulum API'si JSON request body sınırı 16 KiB'dir; fazla büyük gövde token
+kontrolünden önce HTTP 413 ile reddedilir. Başarısız token denemeleri hız
+sınırlayıcıya yazılır. Token URL parametresine veya loglara konulmamalıdır.
