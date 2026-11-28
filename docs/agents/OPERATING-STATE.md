@@ -180,3 +180,14 @@ otoritedir; buradaki bir yetenek yalnızca kod bulunduğu için tamamlanmış sa
 - Port 3100, son standalone build ile yeniden başlatıldı. `GET /api/health`: HTTP 200, DB `up`, `schemaReady=true`, `pendingMigrations=[]`, build SHA `d1bd77a293d514f14e09b46ff982ca62552321dd`. `/login` HTTP 200. 3101 `/login` HTTP 200, 3200 `/` HTTP 200, 3235 `/login` HTTP 200; bu üç süreç yeniden başlatılmadı.
 - **Dağıtım sınırı:** Bu başarılı rollout Mac üzerinde loopback-only yerel üretim önizlemesidir; 3100 yalnızca `127.0.0.1`'e bağlıdır. Mac'te Docker/Podman veya bağlı bir bulut/compute entegrasyonu yoktur; SentinelX'te yalnızca bu Mac kayıtlıdır. Bu nedenle internete açık uzak production deploy yapılmış değildir. Uzak production için bir sunucu/hosting ve DNS/TLS hedefi hâlâ gereklidir.
 - `tests/evren-real.tmp.test.ts` geçici gerçek-EVREN tanılama dosyası olarak bilerek stage/commit dışında bırakıldı. EVREN yapılandırması ve kimlik bilgileri değiştirilmedi.
+
+
+## 2026-11-28 CI/CD ve Migration 18 kabul paketi
+
+- `.github/workflows/ci-release.yml` eklendi. Pull request ve main push doğrulamasında Node 22 kilitli kurulum, ESLint, TypeScript, Migration 18 onay kapısı kapalı tam Vitest, ayrı izole PGlite üzerinde Migration 18 organizasyon hiyerarşisi testi, `npm audit --omit=dev` ve standalone production build çalışır.
+- Ana dala push sonrası doğrulama başarılıysa GHCR'ye `ghcr.io/sametfrei/abys-v3:latest` ve tam commit SHA etiketi yayınlanır. Docker actions tam commit SHA'larına sabitlenmiştir; imajda build SHA/tarih, provenance ve SBOM etkin.
+- Workflow YAML `js-yaml` ile parse edildi ve iki job/üç trigger doğrulandı. GitHub'a henüz bu yeni workflow commit'i push edilmediği için Actions run ve GHCR image publish sonucu henüz kanıtlanmış değildir.
+- Migration 18 testleri: ana güvenli tam süitte 129 dosya geçti, 1 dosya atlandı; 1129 test geçti, 10 test onay kapısında atlandı. Ayrı ve geçici PGlite test DB'sinde `ABYS_MIGRATION_18_APPROVED=true npx vitest run tests/organizations.test.ts` 10/10 geçti. Yeni regresyon, eski şema biçiminde eklenen kurumun `kind=company`, `currency=TRY`, `parent_id=null`, `country=null` varsayılanlarını doğrular.
+- `npm run lint`, `npx tsc --noEmit`, üretim bağımlılık denetimi (`npm audit --omit=dev`: 0 bulgu) ve `git diff --check` başarılı.
+- Yerel ana DB'deki Migration 18 uygulaması 42 MB DB yedeği alınıp SHA-256 kaydedildikten ve 41 MB kopyada prova geçtikten sonra yapılmıştır. 3100 sağlık kontrolünde `schemaReady=true`, `pendingMigrations=[]`; build SHA bu aşamada `9c496b551dd46c90e1ef67361d88f7d10d85f4d0`.
+- GHCR imaj yayını canlı deploy değildir. İnternete açık çalışma için Render/başka hosting bağlantısı, managed PostgreSQL, domain/TLS ve güvenli secret yapılandırması hâlâ gerekir.

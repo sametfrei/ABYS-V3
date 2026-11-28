@@ -102,3 +102,11 @@ modu çalıştırmasıdır. Ayrıntılı görev geçmişi `docs/two-founder/task
 Migration 18, yıkıcı veritabanı işlemleri, üretim dağıtımı, canlı müşteri verisi
 değişiklikleri ve gerçek vendor write-back işlemleri bu teslimle **yapılmadı**;
 açık onay gerektirir.
+
+
+## 28 Kasım 2026 — onaylı migration ve dağıtım sonrası durum
+
+- Migration 18, kullanıcı onayıyla ana yerel PGlite veritabanında yedek ve ayrı kopya provası sonrasında uygulandı. `/api/health` artık `schemaReady=true`, `pendingMigrations=[]` döndürüyor. Bu, bu yerel veritabanının durumudur; henüz uzak production veritabanı yoktur.
+- Eski kurum kayıtlarının hiyerarşi kolonları varsayılanlarıyla uyumluluğu ayrıca test edildi: migration öncesi kolon listesiyle eklenen kurum `kind=company`, `currency=TRY`, `country=NULL`, `parent_id=NULL` alır; organizasyon hiyerarşisi test grubu 10/10 geçti.
+- 3100 yerel production preview son release commit'ini sunar; 3101, 3200 ve 3235 erişilebilir kaldı. 3100 yalnızca loopback arayüzüne bağlı olduğu için public production deployment olarak kabul edilmez.
+- GitHub Actions + GHCR doğrulama/imaj yayın hattı `.github/workflows/ci-release.yml` ile eklendi. Workflow push sonrası ayrıca doğrulanacaktır.

@@ -157,6 +157,25 @@ hierarchyDescribe("organizasyon hiyerarşisi (migration 18 onay durumuna bağlı
     await getDb().close();
   });
 
+  it("eski kurum kayıtları company ve TRY varsayılanlarıyla korunur", async () => {
+    await getDb().query(
+      "INSERT INTO organizations (id, name, sector_id) VALUES ($1, $2, $3)",
+      ["legacy-default-org", "Eski kurum", "aviation"]
+    );
+    const result = await getDb().query<{
+      kind: string;
+      country: string | null;
+      currency: string;
+      parent_id: string | null;
+    }>(
+      "SELECT kind, country, currency, parent_id FROM organizations WHERE id = $1",
+      ["legacy-default-org"]
+    );
+    expect(result.rows).toEqual([
+      { kind: "company", country: null, currency: "TRY", parent_id: null },
+    ]);
+  });
+
   it("alt ağaç yalnızca kökün altındakileri döner", async () => {
     const ids = (await listOrganizationSubtree(GROUP)).map((o) => o.id).sort();
     expect(ids).toEqual([GROUP, COMPANY_1, COMPANY_2, BRANCH_1].sort());

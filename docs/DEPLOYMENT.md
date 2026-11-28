@@ -47,7 +47,7 @@ ABYS_DB_IDLE_TIMEOUT_MS=30000
 - Pool en az iki bağlantı tutar: migration advisory lock bağlantısı ile migration transaction bağlantısı birbirinden ayrıdır.
 - Migration'lar transaction içinde uygulanır; PostgreSQL modunda uygulama örnekleri arası session advisory lock kullanılır.
 - DB kullanıcısına migration DDL yetkisi ve çalışma zamanı DML yetkisi gerekir. Secret'ı repoya veya loglara koymayın.
-- Migration 18 hâlâ ayrıca `ABYS_MIGRATION_18_APPROVED=true` açık onayını ister.
+- Migration 18 henüz uygulanmamış veritabanlarında `ABYS_MIGRATION_18_APPROVED=true` açık onayı ister. 28 Kasım 2026 itibarıyla Mac üzerindeki `.data/abys-db` yerel veritabanına onaylı migration uygulanmış ve sağlık kontrolünde `schemaReady=true` doğrulanmıştır; uzak production PostgreSQL henüz kurulmamıştır.
 
 **Sınır:** Bu adaptör ve sözleşme testleri eklendi; bu repo çalışmasında canlı/managed PostgreSQL sunucusuna bağlantı yapılmadı. Üretime almadan önce staging PostgreSQL üzerinde migration, rollback, TLS, pool exhaustion ve restore kabul testlerini çalıştırın.
 
@@ -104,3 +104,28 @@ git checkout <önceki-sha> && GIT_SHA=<önceki-sha> docker compose up -d --build
 ```
 
 Veri volume'u (`abys-data`) dağıtımdan bağımsızdır; imaj değişimi veriyi silmez.
+
+
+## 7. GitHub Actions doğrulaması ve Container Registry yayını
+
+`.github/workflows/ci-release.yml` ana dal push'larında ve PR'larda şu kapıları
+çalıştırır: Node 22 `npm ci`, ESLint, TypeScript, izole test veritabanlarında
+Migration 18 hiyerarşi testleri dahil Vitest (gerçek EVREN tanılama dosyası hariç),
+üretim bağımlılık denetimi ve standalone üretim derlemesi. Migration 18 onay
+değişkeni yalnızca bu CI job'ının geçici test süreci içindir; hiçbir canlı DB
+bağlantısı veya üretim sırrı iş akışına aktarılmaz.
+
+Ana dala push'ta doğrulama başarılı olursa Docker imajı şu iki etiketle GHCR'ye
+yayınlanır:
+
+- `ghcr.io/sametfrei/abys-v3:latest`
+- `ghcr.io/sametfrei/abys-v3:<tam-commit-sha>`
+
+İmaj build sırasında `GIT_SHA` ve `BUILD_TIME` ile damgalanır; BuildKit cache,
+provenance ve SBOM çıktısı etkinleştirilir. Kullanılan üçüncü taraf Actions
+sürümleri tam commit SHA'larına sabitlenmiştir.
+
+**Önemli:** GHCR imajının yayınlanması uygulamayı bir sunucuda başlatmaz. Paket
+erişimi başlangıçta GHCR varsayılan görünürlüğüne tabidir; sunucudan private
+imaj çekilecekse `read:packages` erişimi gerekir. Public runtime için ayrıca
+sunucu/hosting, yönetilen PostgreSQL, domain, TLS ve sır yönetimi yapılandırılmalıdır.
